@@ -1,0 +1,15 @@
+[
+  {
+    "name": "heartbeat",
+    "repeat-interval": 10,
+    "wait-for-complete": true,
+    "enabled": true
+  },
+  {
+    "name": "state-updating",
+    "repeat-interval": 10,
+    "wait-for-complete": true,
+    "enabled": true
+  }
+]
+
