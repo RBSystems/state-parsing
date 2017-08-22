@@ -72,7 +72,7 @@ searchresults = json.loads(response.text)
 if searchresults["hits"]["total"] == 0:
     print("No heartbeats have been restored.")
     sys.exit()
-slackchannel = os.environ['HEARTBEAT_SLACK_CHANNEL']
+slackchannel = os.environ['SLACK_HEARTBEAT_CHANNEL']
 
 httpProxy = "http://east.byu.edu:3128"
 httpsProxy = "https://east.byu.edu:3128"

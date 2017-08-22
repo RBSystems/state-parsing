@@ -96,7 +96,14 @@ func (j *Job) runScheduledTask() {
 
 func (j *Job) execute() {
 	//find the script, and run it
-	cmd := exec.Command(fmt.Sprintf("./scripts/%v.py", j.Config.Name))
+	var command string
+	if len(os.Getenv("EVENT_PARSING_SCRIPTS_PATH")) < 1 {
+		command = fmt.Sprintf("./scripts/%v.py", j.Config.Name)
+	} else {
+		command = fmt.Sprintf("%s/%v.py", os.Getenv("EVENT_PARSING_SCRIPTS_PATH"), j.Config.Name)
+	}
+
+	cmd := exec.Command(command)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
