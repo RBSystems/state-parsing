@@ -13,10 +13,6 @@ url = "http://oit-elk-kibana6:9200/oit-static-av-devices/_search"
 
 payload = '''
 {
-  "_source": [
-    "hostname",
-    "last-heartbeat"
-  ],
   "query": {
     "bool": {
       "must": [
@@ -24,36 +20,47 @@ payload = '''
           "match": {
             "_type": "control-processor"
           }
-        },
+        }
+      ],
+      "should": [
         {
-          "match": {
-            "alerts.lost-heartbeat.alerting": true
+          "range": {
+            "alerts.lost-heartbeat.alert-sent": {
+              "lte": "now-20m"
+            }
           }
         },
         {
-          "match": {
-            "alerting": true
+          "bool": {
+            "must_not": {
+              "exists": {
+                "field": "alerts.lost-heartbeat.alert-sent"
+              }
+            }
           }
         }
       ],
+      "minimum_should_match": 1,
       "filter": {
         "range": {
           "last-heartbeat": {
-            "gte": "now-30s"
+            "lte": "now-120s"
           }
         }
       }
     }
-  },
-  "size": -1
+  }
 }
 '''
+
+print(username)
+print(password)
+
 headers = {
     'content-type': "application/json",
     'cache-control': "no-cache"
     }
-print username
-print password
+
 response = requests.request("POST", url, data=payload, headers=headers, auth=(username, password))
 
 print(response.text)
@@ -70,9 +77,10 @@ from datetime import datetime
 
 searchresults = json.loads(response.text)
 if searchresults["hits"]["total"] == 0:
-    print("No heartbeats have been restored.")
+    print("No missing heartbeats to report.")
     sys.exit()
-slackchannel = 'T0311JJTE/B67FHGZ0W/hMtIq8eppuGsaZnTOblwFOut'
+
+slackchannel = os.environ['HEARTBEAT_SLACK_CHANNEL']
 
 httpProxy = "http://east.byu.edu:3128"
 httpsProxy = "https://east.byu.edu:3128"
@@ -133,10 +141,6 @@ for hit in searchresults["hits"]["hits"]:
     lastHeartbeat = datetime_from_utc_to_local(
         heartbeat).strftime("%Y-%m-%d %H:%M:%S")
 
-    body = '''{"mrkdwn": true,"text": "Good news! A device has restored connection! \n*Device*:\t''' + \
-        device + '\n*Last-Heartbeat*:\t' + lastHeartbeat + '"}'
-    print "Sending for device " + device
-    r = requests.put(url, data=body, proxies=proxyDict)
 
     # Set the status in ELK. in Rundeck 2.9 we can call out to another job for
     # this.
@@ -149,25 +153,32 @@ for hit in searchresults["hits"]["hits"]:
     val = r.content.decode('utf-8')
     content = json.loads(val)['_source']
 
-    if errorTypeString not in content:
+    if alertHeader not in content:
         content[alertHeader] = {}
     if errorTypeString not in content[alertHeader]:
         content[alertHeader][errorTypeString] = {}
 
-    content[alertHeader][errorTypeString][errorStringHeader] = ""
-    content[alertHeader][errorTypeString][alertingHeader] = False
-
-    content[alertingHeader] = False
-
-    # we need to check for all the other keys and see if this was the last alert to clear.
-    for key in content[alertHeader]:
-        if content[alertHeader][key][alertingHeader] == True:
-            content[alertingHeader] = True
-            break
-
+    content[alertHeader][errorTypeString][errorStringHeader] = errorString + lastHeartbeat
+    content[alertHeader][errorTypeString][alertingHeader] = True
+    content[alertHeader][errorTypeString][lastUpdateHeader]  = datetime.utcnow().strftime(timestring)
+    content[alertingHeader] = True
 
     payload = json.dumps(content)
     print(payload.decode('utf-8'))
     print elkurl
 
     r = requests.put(elkurl, data=payload, auth=(username, password))
+   ###---------------------------------------------------------------------------------
+   ### NOTIFICATIONS ------------------------------------------------------------------
+   ###---------------------------------------------------------------------------------
+    #Send a slack notification
+
+    #Check if we're suppressing alerts
+    if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']):
+        print("Alerts suppressed for this device " + device)
+        continue
+
+    body = '''{"mrkdwn": true,"text": "A device hasn't sent a heartbeat in a while, you might want to check it out.\n*Device*:\t''' + \
+        device + '\n*Last-Heartbeat*:\t' + lastHeartbeat + '"}'
+    print "Sending for device " + device
+    r = requests.put(url, data=body, proxies=proxyDict)

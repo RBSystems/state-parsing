@@ -10,6 +10,18 @@
     "repeat-interval": 10,
     "wait-for-complete": true,
     "enabled": true
+  },
+  {
+    "name": "heartbeat-lost",
+    "repeat-interval": 30,
+    "wait-for-complete": true,
+    "enabled": true
+  },
+  {
+    "name": "heartbeat-restored",
+    "repeat-interval": 20,
+    "wait-for-complete": true,
+    "enabled": true
   }
 ]
 
