@@ -74,9 +74,8 @@ func (j *Job) runScheduledTask() {
 			color.Set(color.FgGreen)
 			log.Printf("[%v] Starting run...", j.Config.Name)
 			color.Unset()
-			//go j.execute() //we run concurrently
-			//if we need to run concurrently we can just execute this on a go routine
 
+			//if we need to run concurrently we can just execute this on a go routine
 			startTime := time.Now()
 			j.execute()
 			elapsed := time.Since(startTime)
@@ -101,7 +100,17 @@ func (j *Job) execute() {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	log.Printf("%v", cmd.Run())
+	color.Set(color.FgHiGreen)
+	log.Printf("[%v] Executing script", j.Config.Name)
+	color.Unset()
+
+	err := cmd.Run()
+	if err != nil {
+
+		color.Set(color.FgHiRed)
+		log.Printf("[%v]Error: %v", j.Config.Name, err.Error())
+		color.Unset()
+	}
 	return
 }
 

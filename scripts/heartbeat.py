@@ -4,6 +4,7 @@
 # Query
 #
 import requests
+import os
 import sys
 
 username = os.environ['ELK_SA_USERNAME']
@@ -28,7 +29,8 @@ import requests
 from string import digits
 
 searchresults = json.loads(response.text)
-fieldToUpdate = "last-heartbeat"
+fieldToUpdate = "last-heartbeat" 
+
 elkAddr = "http://oit-elk-kibana6:9200"
 index = "oit-static-av-devices"
 
