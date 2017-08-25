@@ -15,9 +15,7 @@ payload = '''
 {
   "_source": [
     "hostname",
-    "last-heartbeat"
-  ],
-  "query": {
+    "last-heartbeat" ], "query": {
     "bool": {
       "must": [
         {
@@ -148,7 +146,8 @@ for hit in searchresults["hits"]["hits"]:
         continue
 
     val = r.content.decode('utf-8')
-    content = json.loads(val)['_source']
+    valDecoded = json.loads(val)
+    content = valDecoded['_source']
 
     if errorTypeString not in content:
         content[alertHeader] = {}
@@ -183,7 +182,7 @@ for hit in searchresults["hits"]["hits"]:
               "must": [
                 {
                   "match": {
-                    "room": "'''+ content["room"]'''"
+                    "room": "'''+ content["room"]+ '''"
                   }
                 },
                 {
@@ -195,7 +194,7 @@ for hit in searchresults["hits"]["hits"]:
               "must_not": [
                 {
                   "match": {
-                    "_id": "'''+ content["_id"] + '''"
+                    "_id": "'''+ valDecoded["_id"] + '''"
                   }
                 }
               ]

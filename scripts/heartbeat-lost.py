@@ -26,7 +26,7 @@ payload = '''
         {
           "range": {
             "alerts.lost-heartbeat.alert-sent": {
-              "lte": "now-20s"
+              "lte": "now-20m"
             }
           }
         },
@@ -210,9 +210,12 @@ for hit in searchresults["hits"]["hits"]:
    ###---------------------------------------------------------------------------------
     #Send a slack notification
     
-    #We need to check to see if alerts have been suppressed at the room level
+    #We need to check to see if alerts have been suppressed at the room levelj
     #Check if we're suppressing alerts
-    if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']) or ('notify' in roomInfo[content["room"]][alertHeader] and not roomInfo[content["room"]][alertHeader]):
+    
+    print roomInfo[content["room"]]
+
+    if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']) or ('notify' in roomInfo[content["room"]][alertHeader] and not roomInfo[content["room"]][alertHeader]['notify']):
         print("Alerts suppressed for this device " + device)
         continue
 
