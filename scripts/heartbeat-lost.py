@@ -26,7 +26,7 @@ payload = '''
         {
           "range": {
             "alerts.lost-heartbeat.alert-sent": {
-              "lte": "now-20m"
+              "lte": "now-20s"
             }
           }
         },
@@ -44,7 +44,7 @@ payload = '''
       "filter": {
         "range": {
           "last-heartbeat": {
-            "lte": "now-120s"
+            "lte": "now-20s"
           }
         }
       }

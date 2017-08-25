@@ -20,7 +20,7 @@
   {
     "name": "heartbeat-restored",
     "repeat-interval": 20,
-    "wait-for-complete": true,
+    "wait-for-complete": false,
     "enabled": true
  },
  {

@@ -112,6 +112,7 @@ def datetime_from_utc_to_local(utc_datetime):
         now_timestamp) - datetime.utcfromtimestamp(now_timestamp)
     return utc_datetime + offset
 
+roomsToDo = {}
 
 for hit in searchresults["hits"]["hits"]:
     heartbeatPreParse = hit["_source"]["last-heartbeat"]
@@ -171,9 +172,27 @@ for hit in searchresults["hits"]["hits"]:
     r = requests.put(elkurl, data=payload, auth=(username, password))
 
     ##We may need to clear the error in the room index as well.
-    countURL = elkAddr + "/" + index + "/_count"
+    print content[alertingHeader]
+    print (content["room"] in roomsToDo)
 
-    if content[alertingHeader] == False: 
+    if not content[alertingHeader] :
+        if content["room"] not in roomsToDo:
+            print "adding remove all"
+            roomsToDo[content["room"]] = {"all": True}
+    else: 
+        roomsToDo[content["room"]] = {"all": False}
+
+
+countURL = elkAddr + "/" + index + "/_count"
+
+print "giving ELK time to Update"
+time.sleep(5)
+print "checking for room alerts to clear"
+print len(roomsToDo), " rooms to check"
+
+for room in roomsToDo:
+    if roomsToDo[room]["all"]:
+        print "Removing alerting status for room " + room
         ##check if any devices in the room (besides this one) are still alerting
         query = '''
         {
@@ -182,7 +201,7 @@ for hit in searchresults["hits"]["hits"]:
               "must": [
                 {
                   "match": {
-                    "room": "'''+ content["room"]+ '''"
+                    "room": "'''+ room + '''"
                   }
                 },
                 {
@@ -190,34 +209,108 @@ for hit in searchresults["hits"]["hits"]:
                     "alerting": true
                 }
                 }
-              ],
-              "must_not": [
+              ]
+            }
+          }
+        }
+        '''
+        r = requests.post(countURL, data=query, auth=(username, password))
+
+        if r.status_code != 200:
+            print "non-200 code: " + str(r.status_code)
+            continue
+        val = json.loads(r.content.decode('utf-8'))
+        print val
+
+        if val["count"] == 0:
+            #Get the split hostname  
+            splitRoom = room.split("-")
+            
+            #If count = 0; get the room, set alerting to false and then continue
+            roomURL = elkAddr + "/" + roomIndex + "/" + splitRoom[0] + "/" + splitRoom[1]
+            print roomURL
+
+            r = requests.get(roomURL, auth=(username, password))
+
+            if r.status_code != 200:
+                print "non-200 code: " + str(r.status_code)
+                continue
+
+            val = r.content.decode('utf-8')
+            valDecoded = json.loads(val)
+            
+            content = valDecoded['_source']
+          
+            content[alertingHeader] = False
+            
+            if alertHeader not in content:
+                content[alertHeader] = {}
+            if errorTypeString not in content[alertHeader]:
+                content[alertHeader][errorTypeString]= {}
+
+            content[alertHeader][errorTypeString][alertingHeader] = False
+
+            payload = json.dumps(content)
+            
+            print "removing alerting status from ", room
+            r = requests.put(roomURL, data=payload, auth=(username,password))
+        else:
+            print "there is another alert in room ", room
+    else:
+        #since all the alerts didn't clear, we need to check if at least the heatbeat alerts have cleared
+        #Check if any devices, (besides this one) are alerting with a heartbeat-lost
+        query = '''
+        {
+          "query": {
+            "bool": {
+              "must": [
                 {
                   "match": {
-                    "_id": "'''+ valDecoded["_id"] + '''"
-                  }
+                    "room": "'''+ room + '''"
+                   }
+                },
+                {
+                  "match": {
+                    "alerts.lost-heartbeat.alerting": true
+                }
                 }
               ]
             }
           }
         }
         '''
-        r = requests.put(countURL, data=query, auth=(username, password))
+
+        r = requests.post(countURL, data=query, auth=(username, password))
 
         if r.status_code != 200:
             print "non-200 code: " + str(r.status_code)
             continue
 
         if json.loads(r.content.decode('utf-8'))["count"] == 0:
-            #Get the split hostname  
-            splitRoom = content["room"].split("-")
+            splitRoom = room.split("-")
             
             #If count = 0; get the room, set alerting to false and then continue
             roomURL = elkAddr + "/" + roomIndex + "/" + splitRoom[0] + "/" + splitRoom[1]
             r = requests.get(roomURL, auth=(username, password))
 
+            if r.status_code != 200:
+                print "non-200 code: " + str(r.status_code)
+                continue
 
+            val = r.content.decode('utf-8')
+            valDecoded = json.loads(val)
+            content = valDecoded['_source']
 
-    #since all the alerts didn't clear, we need to check if at least the heatbeat alerts have cleared
-    ##Check if any devices, (besides this one) are alerting with a heartbeat-lost
+            if alertHeader not in content:
+                content[alertHeader] = {}
+            if errorTypeString not in content[alertHeader]:
+                content[alertHeader][errorTypeString]= {}
 
+            content[alertHeader][errorTypeString][alertingHeader] = False
+
+            payload = json.dumps(content)
+
+            print "removing heartbeat alerts for ", room
+            r = requests.put(roomURL, data=payload, auth=(username,password))
+        else:
+            print "there is another heartbeat alert in room ", room
