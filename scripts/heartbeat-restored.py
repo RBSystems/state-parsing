@@ -91,6 +91,7 @@ TranslationTable = {
 
 elkAddr = "http://oit-elk-kibana6:9200"
 index = "oit-static-av-devices"
+roomIndex = "oit-static-av-rooms"
 
 alertHeader = "alerts"
 errorTypeString = "lost-heartbeat"
@@ -167,7 +168,57 @@ for hit in searchresults["hits"]["hits"]:
 
 
     payload = json.dumps(content)
-    print(payload.decode('utf-8'))
-    print elkurl
 
     r = requests.put(elkurl, data=payload, auth=(username, password))
+
+    ##We may need to clear the error in the room index as well.
+    countURL = elkAddr + "/" + index + "/_count"
+
+    if content[alertingHeader] == False: 
+        ##check if any devices in the room (besides this one) are still alerting
+        query = '''
+        {
+          "query": {
+            "bool": {
+              "must": [
+                {
+                  "match": {
+                    "room": "'''+ content["room"]'''"
+                  }
+                },
+                {
+                  "match": {
+                    "alerting": true
+                }
+                }
+              ],
+              "must_not": [
+                {
+                  "match": {
+                    "_id": "'''+ content["_id"] + '''"
+                  }
+                }
+              ]
+            }
+          }
+        }
+        '''
+        r = requests.put(countURL, data=query, auth=(username, password))
+
+        if r.status_code != 200:
+            print "non-200 code: " + str(r.status_code)
+            continue
+
+        if json.loads(r.content.decode('utf-8'))["count"] == 0:
+            #Get the split hostname  
+            splitRoom = content["room"].split("-")
+            
+            #If count = 0; get the room, set alerting to false and then continue
+            roomURL = elkAddr + "/" + roomIndex + "/" + splitRoom[0] + "/" + splitRoom[1]
+            r = requests.get(roomURL, auth=(username, password))
+
+
+
+    #since all the alerts didn't clear, we need to check if at least the heatbeat alerts have cleared
+    ##Check if any devices, (besides this one) are alerting with a heartbeat-lost
+

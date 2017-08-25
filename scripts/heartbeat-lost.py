@@ -26,7 +26,7 @@ payload = '''
         {
           "range": {
             "alerts.lost-heartbeat.alert-sent": {
-              "lte": "now-20m"
+              "lte": "now-20s"
             }
           }
         },
@@ -99,6 +99,7 @@ TranslationTable = {
 
 elkAddr = "http://oit-elk-kibana6:9200"
 index = "oit-static-av-devices"
+roomIndex = "oit-static-av-rooms"
 
 alertHeader = "alerts"
 errorTypeString = "lost-heartbeat"
@@ -167,31 +168,51 @@ for hit in searchresults["hits"]["hits"]:
     content[alertingHeader] = True
 
     payload = json.dumps(content)
-    print(payload.decode('utf-8'))
-    print elkurl
+    #print(payload.decode('utf-8'))
+    #print elkurl
 
     r = requests.put(elkurl, data=payload, auth=(username, password))
+
+   ### We need to update the room, mark it as alerting
+    if content["room"] in roomInfo:
+        curRoom = roomInfo[content["room"]]
+    else:
+        #We need to get the information
+        splitRoom = content["room"].split("-")
+
+        roomURL = elkAddr +  "/" + roomIndex + "/" + splitRoom[0] + "/" + splitRoom[1]
+
+        print "roomURL: " + roomURL
+        r = requests.get(roomURL, auth=(username, password))
+        val = r.content.decode('utf-8')
+
+        print val
+
+        curRoom = json.loads(val)['_source']
+        roomInfo[content["room"]] = curRoom
+   
+    if alertHeader not in roomInfo[content["room"]] or (errorTypeString not in roomInfo[content["room"]][alertHeader] or alertingHeader not in roomInfo[content["room"]][alertHeader][errorTypeString] or not roomInfo[content["room"]][alertHeader][errorTypeString][alertingHeader]) or (alertingHeader not in roomInfo[content["room"]] or not roomInfo[content["room"]][alertingHeader]):
+
+        if alertHeader not in roomInfo[content["room"]]:
+            roomInfo[content["room"]][alertHeader] = {}
+
+        if errorTypeString not in roomInfo[content["room"]][alertHeader]:
+            roomInfo[content["room"]][alertHeader][errorTypeString] = {}
+
+        roomInfo[content["room"]][alertHeader][errorTypeString][alertingHeader] = True
+        roomInfo[content["room"]][alertingHeader] = True
+
+        payload = json.dumps(roomInfo[content["room"]])
+        r = requests.put(roomURL, auth=(username, password), data=payload)
+
    ###---------------------------------------------------------------------------------
    ### NOTIFICATIONS ------------------------------------------------------------------
    ###---------------------------------------------------------------------------------
     #Send a slack notification
     
     #We need to check to see if alerts have been suppressed at the room level
-    roomIndex = "oit-static-av-devices"
-    if content["room"] in roomInfo:
-        curRoom = roomInfo[content["room"]]
-    else:
-        #We need to get the information
-        splitRoom = content["room"].split("-")
-        roomURL = elkAddr +  "/" + roomIndex + "/" + splitRoom[0] + "/" + splitRoom[1]
-        r = requests.get(roomURL, auth=(username, password))
-        val = r.content.decode('utf-8')
-        curRoom = json.loads(val)['_source']
-        roomInfo[content["room"]] = curRoom
-
-
     #Check if we're suppressing alerts
-    if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']) or ('notify' in roomInfo[alertHeader] and not roomInfo[alertHeader]):
+    if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']) or ('notify' in roomInfo[content["room"]][alertHeader] and not roomInfo[content["room"]][alertHeader]):
         print("Alerts suppressed for this device " + device)
         continue
 
