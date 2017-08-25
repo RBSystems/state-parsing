@@ -22,6 +22,12 @@
     "repeat-interval": 20,
     "wait-for-complete": true,
     "enabled": true
-  }
+ },
+ {
+    "name": "detailstate-updating",
+    "repeat-interval": 180,
+    "wait-for-complete": true,
+    "enabled": true
+ }
 ]
 

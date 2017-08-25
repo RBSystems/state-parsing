@@ -12,7 +12,49 @@ password = os.environ['ELK_SA_PASSWORD']
 
 url = "http://oit-elk-kibana6:9200/oit-heartbeat-av%2A/_search"
 
-payload = "{\n\t\"query\": {\n\t\t\"bool\": {\n\t\t\t\"must\": {\n\t\t\t\t\"match\": {\n\t\t\t\t\t\"hosttype\": \"control processor\"\n\t\t\t\t}\n\t\t\t},\n\t\t\t\"filter\": {\n\t\t\t\t\"range\": {\n\t\t\t\t\t\"timestamp\": {\n\t\t\t\t\t\t\"gte\": \"now-17s\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t},\n\t\"_source\": [\n\t\t\"hostname\",\n\t\t\"@timestamp\"\n\t],\n\t\"size\": 0,\n\t\"aggs\": {\n\t\t\"unique_hostname\": {\n\t\t\t\"terms\": {\n\t\t\t\t\"field\": \"hostname.raw\",\n\t\t\t\t\"size\": 1000\n\t\t\t},\n\t\t\t\"aggs\": {\n\t\t\t\t\"last_timestamp\": {\n\t\t\t\t\t\"max\": {\n\t\t\t\t\t\t\"field\": \"@timestamp\"\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t},\n\t\t\"num_hostnames\": {\n\t\t\t\"cardinality\": {\n\t\t\t\t\"field\": \"hostname.raw\"\n\t\t\t}\n\t\t}\n\t}\n}"
+payload ='''
+{
+	"query": {
+		"bool": {
+			"must": {
+				"match": {
+					"hosttype": "control processor"
+				}
+			},
+			"filter": {
+				"range": {
+					"timestamp": {
+						"gte": "now-15s"
+					}
+				}
+			}
+		}
+	},
+	"_source": [
+		"hostname",
+		"@timestamp"
+	],
+	"size": 0,
+	"aggs": {
+		"unique_hostname": {
+			"terms": { "field": "hostname.raw", "size": 1000
+			},
+			"aggs": {
+				"last_timestamp": {
+					"max": {
+						"field": "@timestamp"
+					}
+				}
+			}
+		},
+		"num_hostnames": {
+			"cardinality": {
+				"field": "hostname.raw"
+			}
+		}
+	}
+}
+'''
 headers = {
     'content-type': "application/json",
     'cache-control': "no-cache"
@@ -29,7 +71,7 @@ import requests
 from string import digits
 
 searchresults = json.loads(response.text)
-fieldToUpdate = "last-heartbeat" 
+fieldToUpdate = "last-heartbeat"
 
 elkAddr = "http://oit-elk-kibana6:9200"
 index = "oit-static-av-devices"
@@ -68,7 +110,7 @@ for bucket in searchresults["aggregations"]["unique_hostname"]["buckets"]:
 
     if r.status_code == 404:
         print("Not Found")
-        content = {fieldToUpdate: bucket["last_timestamp"]["value_as_string"], "room": room, "hostname": hostname}
+        content = {fieldToUpdate: bucket["last_timestamp"]["value_as_string"], "room": room, "hostname": hostname, "suppress-notifications": hostname}
     elif r.status_code == 200:
         print("200")
         val = r.content.decode('utf-8')

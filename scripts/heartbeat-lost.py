@@ -110,6 +110,9 @@ errorString = "Too much time elapsed since last heartbeat. Last heartbeat was at
 
 timestring = "%Y-%m-%dT%H:%M:%S.%f%Z"
 
+#We'll cache the room information so that if we need it we don't have to go back up to ELK to get it 
+roomInfo = {} 
+
 print(searchresults)
 
 url = "https://hooks.slack.com/services/" + slackchannel
@@ -172,9 +175,23 @@ for hit in searchresults["hits"]["hits"]:
    ### NOTIFICATIONS ------------------------------------------------------------------
    ###---------------------------------------------------------------------------------
     #Send a slack notification
+    
+    #We need to check to see if alerts have been suppressed at the room level
+    roomIndex = "oit-static-av-devices"
+    if content["room"] in roomInfo:
+        curRoom = roomInfo[content["room"]]
+    else:
+        #We need to get the information
+        splitRoom = content["room"].split("-")
+        roomURL = elkAddr +  "/" + roomIndex + "/" + splitRoom[0] + "/" + splitRoom[1]
+        r = requests.get(roomURL, auth=(username, password))
+        val = r.content.decode('utf-8')
+        curRoom = json.loads(val)['_source']
+        roomInfo[content["room"]] = curRoom
+
 
     #Check if we're suppressing alerts
-    if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']):
+    if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']) or ('notify' in roomInfo[alertHeader] and not roomInfo[alertHeader]):
         print("Alerts suppressed for this device " + device)
         continue
 
