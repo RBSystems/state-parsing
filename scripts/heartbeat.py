@@ -4,8 +4,7 @@
 # Query
 #
 import requests
-import os
-import sys
+import os import sys
 
 username = os.environ['ELK_SA_USERNAME']
 password = os.environ['ELK_SA_PASSWORD']
@@ -108,7 +107,7 @@ for bucket in searchresults["aggregations"]["unique_hostname"]["buckets"]:
 
     if r.status_code == 404:
         print("Not Found")
-        content = {fieldToUpdate: bucket["last_timestamp"]["value_as_string"], "room": room, "hostname": hostname, "suppress-notifications": hostname, "enable-notifications": hostname}
+        content = {fieldToUpdate: bucket["last_timestamp"]["value_as_string"], "room": room, "hostname": hostname, "suppress-notifications": hostname, "enable-notifications": hostname, "control": hostname}
     elif r.status_code == 200:
         print("200")
         val = r.content.decode('utf-8')
