@@ -201,7 +201,7 @@ for bucket in searchresults["aggregations"]["building"]["buckets"]:
             r = requests.get(url, auth = (username, password))
 
             if r.status_code == 404:
-                content = {"room": room, "building": building, "alerting": False, "view-devices": building + "-" + room, "view-alerts": building + "-" + room}
+                content = {"room": room, "building": building, "alerting": False, "view-devices": building + "-" + room, "view-alerts": building + "-" + room, "enable-alerts": building + "-" + room, "suspend-alerts": building + "-" + room}
             elif r.status_code == 200:
                 value = r.content.decode('utf-8')
                 content = json.loads(value)["_source"]
