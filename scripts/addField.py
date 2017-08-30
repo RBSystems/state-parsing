@@ -31,7 +31,7 @@ for v in searchresults['hits']['hits']:
     baseURL = "http://oit-elk-kibana6:9200/"
 
     content = vals
-    content['enable-notifications'] = content['hostname']
+    content['view-dashboard'] = content['hostname']
 
     payload = json.dumps(content)
 
