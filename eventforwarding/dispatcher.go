@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 	"unicode"
 
 	"github.com/fatih/color"
@@ -102,6 +103,15 @@ func dispatchLocalState(stateMap map[string]map[string]string) {
 				devType = translationMap[split[2][:pos]]
 			}
 		}
+
+		//put our static piece in.
+		v["hostname"] = k
+		v["room"] = split[0] + "-" + split[1]
+		v["control"] = k
+		v["view-dashboard"] = k
+		v["suppress-notifications"] = k
+		v["enable-notifications"] = k
+		v["last-state-recieved"] = time.Now().Format(time.RFC3339)
 
 		//build our first line
 		headerWrapper["update"] = updateHeader{ID: k, Type: devType, Index: index}

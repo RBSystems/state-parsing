@@ -67,10 +67,25 @@ func distributeEvent(event elkreporting.ElkEvent) {
 	//log.Printf("buildilng event and sending")
 	//we need to pull out the values for stateDistributionm
 	toSend := stateDistribution{Key: event.Event.Event.EventInfoKey, Value: event.Event.Event.EventInfoValue}
+
 	if runLocal {
+		//we need to check if it's a userinput event, if so we need to update the last-user-input field
 		localStateBuffering(toSend, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
+
+		if event.EventCauseString == "USERINPUT" {
+			localStateBuffering(stateDistribution{
+				Key:   "last-user-input",
+				Value: event.Timestamp,
+			}, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
+		}
 	} else {
 		sendToStateBuffering(toSend, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
+		if event.EventCauseString == "USERINPUT" {
+			sendToStateBuffering(stateDistribution{
+				Key:   "last-user-input",
+				Value: event.Timestamp,
+			}, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
+		}
 	}
 
 	//log.Printf("sent")
