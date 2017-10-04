@@ -1,16 +1,39 @@
 package main
 
 import (
-	"sync"
+	"net/http"
 
+	"github.com/byuoitav/state-parsing/eventforwarding"
 	"github.com/byuoitav/state-parsing/jobs"
+	"github.com/labstack/echo"
+	"github.com/labstack/echo/middleware"
 )
 
 func main() {
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-
 	o := jobs.Orchestrator{}
 	o.Start()
-	wg.Wait()
+
+	go eventforwarding.StartDistributor()
+	go eventforwarding.StartTicker(3000)
+	go eventforwarding.Init()
+
+	port := ":10010"
+	router := echo.New()
+	router.Pre(middleware.RemoveTrailingSlash())
+	router.Use(middleware.CORS())
+
+	router.GET("/test", eventforwarding.Test)
+
+	router.PUT("/heartbeat", eventforwarding.AddHeartbeat)
+	router.PUT("/event", eventforwarding.AddEvent)
+
+	router.POST("/heartbeat", eventforwarding.AddHeartbeat)
+	router.POST("/event", eventforwarding.AddEvent)
+
+	server := http.Server{
+		Addr:           port,
+		MaxHeaderBytes: 1024 * 10,
+	}
+
+	router.StartServer(&server)
 }
