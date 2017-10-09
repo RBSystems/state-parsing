@@ -25,6 +25,9 @@ var stateCacheMap map[string]chan stateDistribution
 //this is for local
 var localStateMap map[string]map[string]string
 
+//this is for local
+var localRoomStateMap map[string]map[string]string
+
 func StartDistributor() {
 
 	log.Printf("[Distributor] Starting")
@@ -35,6 +38,7 @@ func StartDistributor() {
 
 	stateCacheMap = make(map[string]chan stateDistribution)
 	localStateMap = make(map[string]map[string]string)
+	localRoomStateMap = make(map[string]map[string]string)
 
 	//our loop for ingestion and distribution
 	for {
@@ -48,9 +52,12 @@ func StartDistributor() {
 			distributeHeartbeat(e)
 		case <-localTickerChan:
 			//ship it out
-			go dispatchLocalState(localStateMap)
+			go dispatchLocalState(localStateMap, "device")
+			go dispatchLocalState(localRoomStateMap, "room")
 
+			//refresh the maps
 			localStateMap = make(map[string]map[string]string)
+			localRoomStateMap = make(map[string]map[string]string)
 		}
 
 		//we need to send it on to the ELK stack as-is
@@ -70,21 +77,35 @@ func distributeEvent(event elkreporting.ElkEvent) {
 
 	if runLocal {
 		//we need to check if it's a userinput event, if so we need to update the last-user-input field
-		localStateBuffering(toSend, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
+		localStateBuffering(toSend, event.Building+"-"+event.Room+"-"+event.Event.Event.Device, "device")
 
 		if event.EventCauseString == "USERINPUT" {
 			localStateBuffering(stateDistribution{
 				Key:   "last-user-input",
 				Value: event.Timestamp,
-			}, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
+			}, event.Building+"-"+event.Room+"-"+event.Event.Event.Device, "device")
+
+			//we need to update the room as well.
+			localStateBuffering(stateDistribution{
+				Key:   "last-user-input",
+				Value: event.Timestamp,
+			}, event.Building+"-"+event.Room, "room")
+
 		}
+		localStateBuffering(stateDistribution{
+			Key:   "last-state-received",
+			Value: event.Timestamp,
+		}, event.Building+"-"+event.Room, "room")
+
+		//we need to update the room state
+
 	} else {
 		sendToStateBuffering(toSend, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
 		if event.EventCauseString == "USERINPUT" {
 			sendToStateBuffering(stateDistribution{
 				Key:   "last-user-input",
 				Value: event.Timestamp,
-			}, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
+			}, event.Building+"-"+event.Room)
 		}
 	}
 
@@ -103,19 +124,32 @@ func distributeHeartbeat(event heartbeat.Event) {
 	toSend := stateDistribution{Key: "last-heartbeat", Value: event.Data["_stamp"].(string)}
 
 	if runLocal {
-		localStateBuffering(toSend, event.Hostname)
+		localStateBuffering(toSend, event.Hostname, "device")
+		localStateBuffering(stateDistribution{
+			Key:   "last-heartbeat-received",
+			Value: event.Timestamp,
+		}, event.Building+"-"+event.Room, "room")
 	} else {
 		sendToStateBuffering(toSend, event.Hostname)
 	}
 }
 
-func localStateBuffering(state stateDistribution, hostname string) {
+func localStateBuffering(state stateDistribution, hostname string, mapType string) {
 	if len(state.Value) == 0 {
 		return
 	}
-	//log.Printf("%v", localStateMap)
-	//check if it's in the map
-	if val, ok := localStateMap[hostname]; ok {
+
+	switch mapType {
+	case "room":
+
+		bufferLocally(state, hostname, localRoomStateMap)
+	case "device":
+		bufferLocally(state, hostname, localStateMap)
+	}
+}
+
+func bufferLocally(state stateDistribution, hostname string, mapToUse map[string]map[string]string) {
+	if val, ok := mapToUse[hostname]; ok {
 		val[state.Key] = state.Value
 		return
 	}
@@ -123,8 +157,8 @@ func localStateBuffering(state stateDistribution, hostname string) {
 	log.Printf("Adding state map for %v", hostname)
 	color.Unset()
 
-	localStateMap[hostname] = make(map[string]string)
-	localStateMap[hostname][state.Key] = state.Value
+	mapToUse[hostname] = make(map[string]string)
+	mapToUse[hostname][state.Key] = state.Value
 }
 
 //here's where we decide if we want to distribute to the child processes or if we want to just put it in a map here

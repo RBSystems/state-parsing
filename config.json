@@ -2,32 +2,32 @@
   {
     "name": "heartbeat",
     "repeat-interval": 10,
-    "wait-for-complete": true,
-    "enabled": true
+    "wait-for-complete": false,
+    "enabled": false
   },
   {
     "name": "state-updating",
     "repeat-interval": 10,
-    "wait-for-complete": true,
-    "enabled": true
+    "wait-for-complete": false,
+    "enabled": false
   },
   {
     "name": "heartbeat-lost",
     "repeat-interval": 30,
-    "wait-for-complete": true,
-    "enabled": true
+    "wait-for-complete": false,
+    "enabled": false
   },
   {
     "name": "heartbeat-restored",
     "repeat-interval": 20,
     "wait-for-complete": false,
-    "enabled": true
+    "enabled": false
  },
  {
     "name": "detailstate-updating",
     "repeat-interval": 180,
-    "wait-for-complete": true,
-    "enabled": true
+    "wait-for-complete": false,
+    "enabled": false
  }
 ]
 

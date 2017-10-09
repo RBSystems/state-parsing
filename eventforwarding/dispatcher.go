@@ -3,6 +3,8 @@ package eventforwarding
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -20,15 +22,6 @@ var dispatchChan chan string
 var sizeChan chan int
 
 var count int
-
-var translationMap = map[string]string{
-	"D":  "display",
-	"CP": "control-processor",
-
-	"DSP": "digital-signal-processor",
-	"PC":  "general-computer",
-	"SW":  "video-switcher",
-}
 
 func startDispatcher() {
 	log.Printf("[Dispatcher] Starting dispatcher")
@@ -66,7 +59,7 @@ type updateBody struct {
 	Upsert bool              `json:"doc_as_upsert"`
 }
 
-func dispatchLocalState(stateMap map[string]map[string]string) {
+func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 	if len(stateMap) < 1 {
 		count++
 		if count%10 == 0 {
@@ -85,36 +78,25 @@ func dispatchLocalState(stateMap map[string]map[string]string) {
 	payload := []byte{}
 
 	elkaddr := os.Getenv("ELK_DIRECT_ADDRESS")
-	index := os.Getenv("ELK_STATIC_DEVICE_INDEX")
+
+	index := getIndexName(mapType)
 
 	headerWrapper := make(map[string]updateHeader)
 
 	for k, v := range stateMap {
 
-		var devType string
-		//get our dev type
-		split := strings.Split(k, "-")
-		if len(split) < 3 {
-			log.Printf("[dispatcher] Invalid hostname: %v", k)
+		recordType, err := getRecordType(k, mapType)
+		if err != nil {
+			//get our dev type split := strings.Split(k, "-") if len(split) < 3 {
+			log.Printf("[dispatcher] Invalid hostname: %v", err.Error())
 			continue
 		}
-		for pos, char := range split[2] {
-			if unicode.IsDigit(char) {
-				devType = translationMap[split[2][:pos]]
-			}
-		}
 
-		//put our static piece in.
-		v["hostname"] = k
-		v["room"] = split[0] + "-" + split[1]
-		v["control"] = k
-		v["view-dashboard"] = k
-		v["suppress-notifications"] = k
-		v["enable-notifications"] = k
-		v["last-state-recieved"] = time.Now().Format(time.RFC3339)
+		//fill our meta data
+		fillMeta(k, mapType, v)
 
 		//build our first line
-		headerWrapper["update"] = updateHeader{ID: k, Type: devType, Index: index}
+		headerWrapper["update"] = updateHeader{ID: k, Type: recordType, Index: index}
 		ub := updateBody{Doc: v, Upsert: true}
 
 		b, err := json.Marshal(headerWrapper)
@@ -142,6 +124,7 @@ func dispatchLocalState(stateMap map[string]map[string]string) {
 		log.Printf("[Dispatcher] Added line for device %v.", k)
 		color.Unset()
 	}
+
 	color.Set(color.FgGreen)
 	log.Printf("[Dispatcher] Done adding lines.")
 	log.Printf("[Dispatcher] %v devices getting updates....", len(stateMap))
@@ -165,7 +148,9 @@ func dispatchLocalState(stateMap map[string]map[string]string) {
 		color.Set(color.FgRed)
 		log.Printf("[Dispatcher] There was a problem sending the request: %v", err.Error())
 		color.Unset()
+		return
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
 		color.Set(color.FgRed)
@@ -180,4 +165,113 @@ func dispatchLocalState(stateMap map[string]map[string]string) {
 	color.Set(color.FgGreen)
 	log.Printf("[Dispatcher] Done dispatching state.")
 	color.Unset()
+}
+
+func getRecordType(hostname, mapType string) (string, error) {
+	switch mapType {
+	case "room":
+		return getRoomRecordType(hostname)
+	case "device":
+		return getDeviceRecordType(hostname)
+	}
+	return "", errors.New("Invalid mapType")
+}
+
+func fillMeta(name, mapType string, toFill map[string]string) {
+	switch mapType {
+	case "room":
+		fillRoomMeta(name, toFill)
+		return
+	case "device":
+		fillDeviceMeta(name, toFill)
+		return
+	}
+}
+
+func fillDeviceMeta(name string, toFill map[string]string) {
+	split := strings.Split(name, "-")
+
+	if len(split) != 3 {
+		log.Printf(color.HiRedString("[dispatcher] Invalid hostname for device: %v", name))
+		return
+	}
+
+	toFill["hostname"] = name
+	toFill["room"] = split[0] + "-" + split[1]
+	toFill["control"] = name
+	toFill["view-dashboard"] = name
+	toFill["suppress-notifications"] = name
+	toFill["enable-notifications"] = name
+	toFill["last-state-recieved"] = time.Now().Format(time.RFC3339)
+}
+func fillRoomMeta(name string, toFill map[string]string) {
+	split := strings.Split(name, "-")
+
+	if len(split) != 2 {
+		log.Printf(color.HiRedString("[dispatcher] Invalid name for room: %v", name))
+		return
+	}
+
+	toFill["enable-alerts"] = name
+	toFill["suspend-alerts"] = name
+	toFill["room"] = name
+	toFill["view-alerts"] = name
+	toFill["view-devices"] = name
+	toFill["building"] = split[0]
+	toFill["last-state-recieved"] = time.Now().Format(time.RFC3339)
+}
+
+//room record type is just 'room'
+func getRoomRecordType(name string) (string, error) {
+	split := strings.Split(name, "-")
+
+	if len(split) != 2 {
+		msg := fmt.Sprintf("[dispatcher] Invalid name for room: %v", name)
+		log.Printf(color.HiRedString(msg))
+		return "", errors.New(msg)
+	}
+	return "room", nil
+}
+
+var translationMap = map[string]string{
+	"D":  "display",
+	"CP": "control-processor",
+
+	"DSP": "digital-signal-processor",
+	"PC":  "general-computer",
+	"SW":  "video-switcher",
+}
+
+//device record type is determined usin the translation map
+func getDeviceRecordType(name string) (string, error) {
+	split := strings.Split(name, "-")
+	if len(split) != 3 {
+		msg := fmt.Sprintf("[dispatcher] Invalid hostname for device: %v", name)
+		log.Printf(color.HiRedString(msg))
+		return "", errors.New(msg)
+	}
+	for pos, char := range split[2] {
+		if unicode.IsDigit(char) {
+			val, ok := translationMap[split[2][:pos]]
+			if !ok {
+				msg := fmt.Sprintf("Invalid device type: %v", split[2][:pos])
+				log.Printf(color.HiRedString(msg))
+				return "", errors.New(msg)
+			}
+			return val, nil
+		}
+	}
+	msg := fmt.Sprintf("no valid translation for :%v", split[2])
+	log.Printf(color.HiRedString(msg))
+	return "", errors.New(msg)
+}
+
+func getIndexName(mapType string) string {
+	switch mapType {
+	case "room":
+		return os.Getenv("ELK_STATIC_ROOM_INDEX")
+	case "device":
+		return os.Getenv("ELK_STATIC_DEVICE_INDEX")
+	}
+	return ""
 }

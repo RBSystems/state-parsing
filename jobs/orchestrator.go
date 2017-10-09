@@ -130,11 +130,13 @@ func (o *Orchestrator) Start() {
 	}
 
 	for _, c := range o.Config {
-		log.Printf("Starting to job for %v", c.Name)
-		stopChan := make(chan string, 1)
-		j := Job{StopChan: stopChan}
-		go j.Run(c)
+		if c.Enabled {
+			log.Printf("Starting to job for %v", c.Name)
+			stopChan := make(chan string, 1)
+			j := Job{StopChan: stopChan}
+			go j.Run(c)
 
-		o.Jobs = append(o.Jobs, j)
+			o.Jobs = append(o.Jobs, j)
+		}
 	}
 }

@@ -60,6 +60,7 @@ func forwardEvent(e interface{}, url string) {
 		log.Printf("[forwarder] There was a problem sending the event: %v", err.Error())
 		return
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode/100 != 2 {
 		log.Printf("[forwarder] Non-200 response recieved: %v.", resp.StatusCode)
