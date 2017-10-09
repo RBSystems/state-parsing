@@ -28,6 +28,12 @@
     "repeat-interval": 180,
     "wait-for-complete": false,
     "enabled": false
+ },
+ {
+    "name": "room-update",
+    "repeat-interval": 5,
+    "wait-for-complete": true,
+    "enabled": true
  }
 ]
 
