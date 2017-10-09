@@ -24,6 +24,7 @@ func GetConfiguration() ([]Configuration, error) {
 	path := os.Getenv("PARSER_CONFIG_LOCATION")
 	if len(path) < 1 {
 		path = "./config.json"
+		log.Printf("Getting configuration from %v", path)
 	}
 	log.Printf("Getting configuration from %v", path)
 

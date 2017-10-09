@@ -122,6 +122,7 @@ func (j *Job) execute() {
 }
 
 func (o *Orchestrator) Start() {
+	log.Printf("Starting orchestrator")
 	config, err := common.GetConfiguration()
 	o.Config = config
 	if err != nil {

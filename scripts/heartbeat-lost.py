@@ -18,9 +18,7 @@ payload = '''
       "must": [
         {
           "match": {
-            "_type": "control-processor"
-          }
-        }
+            "_type": "control-processor" } }
       ],
       "should": [
         {
@@ -141,7 +139,7 @@ for hit in searchresults["hits"]["hits"]:
 
     elkurl = elkAddr + "/" + index + "/" + devType + "/" + device
 
-    heartbeat = datetime.strptime(heartbeatPreParse, '%Y-%m-%dT%H:%M:%S.%fZ')
+    heartbeat = datetime.strptime(heartbeatPreParse, '%Y-%m-%dT%H:%M:%S.%f')
     lastHeartbeat = datetime_from_utc_to_local(
         heartbeat).strftime("%Y-%m-%d %H:%M:%S")
 
@@ -173,47 +171,12 @@ for hit in searchresults["hits"]["hits"]:
 
     r = requests.put(elkurl, data=payload, auth=(username, password))
 
-   ### We need to update the room, mark it as alerting
-    if content["room"] in roomInfo:
-        curRoom = roomInfo[content["room"]]
-    else:
-        #We need to get the information
-        splitRoom = content["room"].split("-")
-
-        roomURL = elkAddr +  "/" + roomIndex + "/" + splitRoom[0] + "/" + splitRoom[1]
-
-        print "roomURL: " + roomURL
-        r = requests.get(roomURL, auth=(username, password))
-        val = r.content.decode('utf-8')
-
-        print val
-
-        curRoom = json.loads(val)['_source']
-        roomInfo[content["room"]] = curRoom
-   
-    if alertHeader not in roomInfo[content["room"]] or (errorTypeString not in roomInfo[content["room"]][alertHeader] or alertingHeader not in roomInfo[content["room"]][alertHeader][errorTypeString] or not roomInfo[content["room"]][alertHeader][errorTypeString][alertingHeader]) or (alertingHeader not in roomInfo[content["room"]] or not roomInfo[content["room"]][alertingHeader]):
-
-        if alertHeader not in roomInfo[content["room"]]:
-            roomInfo[content["room"]][alertHeader] = {}
-
-        if errorTypeString not in roomInfo[content["room"]][alertHeader]:
-            roomInfo[content["room"]][alertHeader][errorTypeString] = {}
-
-        roomInfo[content["room"]][alertHeader][errorTypeString][alertingHeader] = True
-        roomInfo[content["room"]][alertingHeader] = True
-
-        payload = json.dumps(roomInfo[content["room"]])
-        r = requests.put(roomURL, auth=(username, password), data=payload)
-
-   ###---------------------------------------------------------------------------------
    ### NOTIFICATIONS ------------------------------------------------------------------
    ###---------------------------------------------------------------------------------
     #Send a slack notification
     
     #We need to check to see if alerts have been suppressed at the room levelj
     #Check if we're suppressing alerts
-    
-    print roomInfo[content["room"]]
 
     if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']) or ('notify' in roomInfo[content["room"]][alertHeader] and not roomInfo[content["room"]][alertHeader]['notify']):
         print("Alerts suppressed for this device " + device)

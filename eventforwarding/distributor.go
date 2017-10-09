@@ -121,7 +121,7 @@ func distributeHeartbeat(event heartbeat.Event) {
 		return
 	}
 
-	toSend := stateDistribution{Key: "last-heartbeat", Value: event.Data["_stamp"].(string)}
+	toSend := stateDistribution{Key: "last-heartbeat", Value: event.Timestamp}
 
 	if runLocal {
 		localStateBuffering(toSend, event.Hostname, "device")
