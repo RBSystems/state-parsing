@@ -99,7 +99,7 @@ alertingHeader = 'alerting'
 
 errorString = "Too much time elapsed since last heartbeat. Last heartbeat was at : "
 
-timestring = "%Y-%m-%dT%H:%M:%S.%f%Z"
+timestring = "%Y-%m-%dT%H:%M:%S.%f"
 
 print(searchresults)
 
@@ -129,7 +129,7 @@ for hit in searchresults["hits"]["hits"]:
 
     elkurl = elkAddr + "/" + index + "/" + devType + "/" + device
 
-    heartbeat = datetime.strptime(heartbeatPreParse, '%Y-%m-%dT%H:%M:%S.%fZ')
+    heartbeat = datetime.strptime(heartbeatPreParse, '%Y-%m-%dT%H:%M:%S.%f')
     lastHeartbeat = datetime_from_utc_to_local(
         heartbeat).strftime("%Y-%m-%d %H:%M:%S")
 

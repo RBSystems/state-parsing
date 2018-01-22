@@ -24,7 +24,7 @@ payload = '''
         {
           "range": {
             "alerts.lost-heartbeat.alert-sent": {
-              "lte": "now-20m"
+              "lte": "now"
             }
           }
         },
@@ -66,7 +66,7 @@ print(response.text)
 #
 # Handle response from elk
 #
-import json
+import json 
 import sys
 import requests
 import time
@@ -175,9 +175,9 @@ for hit in searchresults["hits"]["hits"]:
    ###---------------------------------------------------------------------------------
     #Send a slack notification
     
-    #We need to check to see if alerts have been suppressed at the room levelj
-    #Check if we're suppressing alerts
+    #We need to check to see if alerts have been suppressed at the room level
 
+    #Check if we're suppressing alerts
     if ('notify' in content[alertHeader][errorTypeString] and not content[alertHeader][errorTypeString]) or ('notify' in content[alertHeader] and not content[alertHeader]['notify']) or ('notify' in roomInfo[content["room"]][alertHeader] and not roomInfo[content["room"]][alertHeader]['notify']):
         print("Alerts suppressed for this device " + device)
         continue
