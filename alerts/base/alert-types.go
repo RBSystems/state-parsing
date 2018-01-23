@@ -1,4 +1,4 @@
-package alerts
+package base
 
 const SLACK = "slack"
 const MOM = "mom"

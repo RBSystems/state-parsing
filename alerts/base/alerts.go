@@ -1,4 +1,4 @@
-package alerts
+package base
 
 //AlertFactory corresponds to a struct that is run to generate alerts.
 type AlertFactory interface {
@@ -9,4 +9,9 @@ type AlertFactory interface {
 type Alert struct {
 	AlertType string //The type of alert, see constants.go to see the available values
 	Content   []byte //The content of the alert to send
+}
+
+type SlackAlert struct {
+	Markdown bool   `json:"mrkdwn"`
+	Text     string `json:"text'`
 }

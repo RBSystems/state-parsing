@@ -1,6 +1,6 @@
 package heartbeat
 
-const HeartbeatLostQuery = ```{
+const HeartbeatLostQuery = `{
   "query": {
     "bool": {
       "must": [
@@ -12,7 +12,7 @@ const HeartbeatLostQuery = ```{
         {
           "range": {
             "alerts.lost-heartbeat.alert-sent": {
-              "lte": "now-30m"
+              "lte": "now-0m"
             }
           }
         },
@@ -37,5 +37,4 @@ const HeartbeatLostQuery = ```{
     }
   }
 }
-```
-
+`

@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/byuoitav/state-parsing/common"
 	"github.com/fatih/color"
 )
 
@@ -48,17 +49,6 @@ func startDispatcher() {
 	}()
 }
 
-type updateHeader struct {
-	ID    string `json:"_id"`
-	Type  string `json:"_type"`
-	Index string `json:"_index"`
-}
-
-type updateBody struct {
-	Doc    map[string]string `json:"doc"`
-	Upsert bool              `json:"doc_as_upsert"`
-}
-
 func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 	if len(stateMap) < 1 {
 		count++
@@ -81,7 +71,7 @@ func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 
 	index := getIndexName(mapType)
 
-	headerWrapper := make(map[string]updateHeader)
+	headerWrapper := make(map[string]commmon.UpdateHeader)
 
 	for k, v := range stateMap {
 
@@ -96,8 +86,8 @@ func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 		fillMeta(k, mapType, v)
 
 		//build our first line
-		headerWrapper["update"] = updateHeader{ID: k, Type: recordType, Index: index}
-		ub := updateBody{Doc: v, Upsert: true}
+		headerWrapper["update"] = commmon.UpdateHeader{ID: k, Type: recordType, Index: index}
+		ub := common.UpdateBody{Doc: v, Upsert: true}
 
 		b, err := json.Marshal(headerWrapper)
 		if err != nil {
