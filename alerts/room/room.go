@@ -35,7 +35,7 @@ type StaticRoom struct {
 	ViewDevices       string `json:"view-devices"`
 	Power             string `json:"power"`
 	Alerting          bool   `json:"alerting"`
-	Alerts            []device.Alert
+	Alerts            map[string]device.Alert
 	Suppressed        bool `json:"suppressed"`
 }
 

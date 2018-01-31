@@ -94,16 +94,21 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		return toReturn, err
 	}
 
+	alerting, suppressed := AlertingSuppressedRooms(rooms)
+
 	return toReturn, nil
 }
 
-func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[string]bool) {
+func AlertingSuppressedRooms(toCheck []room.StaticRoom, specificAlerts []string) (map[string]bool, map[string]bool) {
+
 	alerting := make(map[string]bool)
 	suppressed := make(map[string]bool)
 	//go through each room in the array and check if it's already alerting
+
 	for i := range toCheck {
 		alerting[toCheck[i].Room] = toCheck[i].Alerting
 		suppressed[toCheck[i].Room] = toCheck[i].Suppressed
 	}
+
 	return alerting, suppressed
 }
