@@ -7,6 +7,7 @@ import (
 
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
+	"github.com/byuoitav/state-parsing/alerts/room"
 	"github.com/byuoitav/state-parsing/common"
 	"github.com/fatih/color"
 )
@@ -57,6 +58,7 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		})
 		if err != nil {
 			log.Printf(color.HiRedString("Couldn't marshal the slack alert for %v. Error: %v", curHit.Hostname, err.Error()))
+			continue
 		}
 
 		//we need to validate before this that the room in question isn't alerting
@@ -73,18 +75,35 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 				Content:   content,
 			}}
 		}
-
 	}
-
 	/*
 		Now we need to:
 		1) check to see if the rooms in question are suppressing alerts/alerting
 		2) update the device/rooms that weren't alerting already to be alerting
 	*/
+	rooms, err := GetRoomsBulk(func(vals map[string]bool) []string {
+		toReturn := []string{}
+		for k, _ := range vals {
+			toReturn = append(toReturn, k)
+		}
+		return toReturn
+	}(roomsToCheck))
+
+	if err != nil {
+		log.Printf(color.HiRedString("Error: %v", err.Error()))
+		return toReturn, err
+	}
 
 	return toReturn, nil
 }
 
-func checkRooms() {
-
+func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[string]bool) {
+	alerting := make(map[string]bool)
+	suppressed := make(map[string]bool)
+	//go through each room in the array and check if it's already alerting
+	for i := range toCheck {
+		alerting[toCheck[i].Room] = toCheck[i].Alerting
+		suppressed[toCheck[i].Room] = toCheck[i].Suppressed
+	}
+	return alerting, suppressed
 }
