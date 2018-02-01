@@ -96,6 +96,17 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 
 	alerting, suppressed := AlertingSuppressedRooms(rooms)
 
+	roomsToMark := []string{}
+	//check the rooms that we have in roomsToCheck, if they're already alerting, remove them from the list
+	for k, _ := range roomsToCheck {
+		if _, ok := alerting[k]; !ok {
+			//add it to the list to mark as alerting
+			roomsToMark = append(roomsToMark, k)
+		}
+	}
+
+	rooms.MarkAsAlerting(roomsToMark)
+
 	return toReturn, nil
 }
 
