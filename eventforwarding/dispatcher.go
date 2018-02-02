@@ -49,7 +49,7 @@ func startDispatcher() {
 	}()
 }
 
-func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
+func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType string) {
 	if len(stateMap) < 1 {
 		count++
 		if count%10 == 0 {
@@ -71,7 +71,7 @@ func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 
 	index := getIndexName(mapType)
 
-	headerWrapper := make(map[string]commmon.UpdateHeader)
+	headerWrapper := make(map[string]common.UpdateHeader)
 
 	for k, v := range stateMap {
 
@@ -86,7 +86,7 @@ func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 		fillMeta(k, mapType, v)
 
 		//build our first line
-		headerWrapper["update"] = commmon.UpdateHeader{ID: k, Type: recordType, Index: index}
+		headerWrapper["update"] = common.UpdateHeader{ID: k, Type: recordType, Index: index}
 		ub := common.UpdateBody{Doc: v, Upsert: true}
 
 		b, err := json.Marshal(headerWrapper)
@@ -167,7 +167,7 @@ func getRecordType(hostname, mapType string) (string, error) {
 	return "", errors.New("Invalid mapType")
 }
 
-func fillMeta(name, mapType string, toFill map[string]string) {
+func fillMeta(name, mapType string, toFill map[string]interface{}) {
 	switch mapType {
 	case "room":
 		fillRoomMeta(name, toFill)
@@ -178,7 +178,7 @@ func fillMeta(name, mapType string, toFill map[string]string) {
 	}
 }
 
-func fillDeviceMeta(name string, toFill map[string]string) {
+func fillDeviceMeta(name string, toFill map[string]interface{}) {
 	split := strings.Split(name, "-")
 
 	if len(split) != 3 {
@@ -194,7 +194,7 @@ func fillDeviceMeta(name string, toFill map[string]string) {
 	toFill["enable-notifications"] = name
 	toFill["last-state-recieved"] = time.Now().Format(time.RFC3339)
 }
-func fillRoomMeta(name string, toFill map[string]string) {
+func fillRoomMeta(name string, toFill map[string]interface{}) {
 	split := strings.Split(name, "-")
 
 	if len(split) != 2 {

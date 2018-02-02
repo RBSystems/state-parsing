@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
@@ -15,7 +16,7 @@ import (
 func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, error) {
 
 	roomsToCheck := make(map[string]bool)
-	devicesToUpdate := make(map[string]common.UpdateHeader)
+	devicesToUpdate := make(map[string]common.DeviceUpdateInfo)
 	alertsByRoom := make(map[string][]base.Alert)
 	toReturn := []base.Alert{}
 
@@ -39,10 +40,9 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		//make sure that it's marked as alerting
 		if curHit.Alerting == false || curHit.Alerts["heartbeat-lost"].Alerting == false {
 			//we need to mark it to be updated as alerting
-			devicesToUpdate[resp.Hits.Hits[i].ID] = common.UpdateHeader{
-				ID:    resp.Hits.Hits[i].ID,
-				Type:  resp.Hits.Hits[i].Type,
-				Index: resp.Hits.Hits[i].Index,
+			devicesToUpdate[resp.Hits.Hits[i].ID] = common.DeviceUpdateInfo{
+				Name: resp.Hits.Hits[i].ID,
+				Info: curHit.LastHeartbeat,
 			}
 		}
 
@@ -97,7 +97,7 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 	alerting, suppressed := AlertingSuppressedRooms(rooms)
 
 	roomsToMark := []string{}
-	//check the rooms that we have in roomsToCheck, if they're already alerting, remove them from the list
+	//check the rooms that we have in roomsToCheck to validate that we need to mark them as alerting
 	for k, _ := range roomsToCheck {
 		if _, ok := alerting[k]; !ok {
 			//add it to the list to mark as alerting
@@ -105,7 +105,19 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		}
 	}
 
-	rooms.MarkAsAlerting(roomsToMark)
+	//mark our rooms as alerting
+	rooms.MarkGeneraleAlerting(roomsToMark)
+
+	for i := range devicesToUpdate {
+		//we need to make a copy of the Secondary Alert Structure so we can use it
+		secondaryAlertStructure := make(map[string]interface{})
+		secondaryAlertStructure["alert-sent"] = time.Now()
+		secondaryAlertStructure["alerting"] = true
+		secondaryAlertStructure["message"] = fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info)
+
+		//mark the devices as alerting
+		device.MarkGeneralAlerting(roomsToMark, base.LOST_HEARTBEAT, secondaryAlertStructure)
+	}
 
 	return toReturn, nil
 }

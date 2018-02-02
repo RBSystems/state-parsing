@@ -1,6 +1,9 @@
 package room
 
-import "github.com/byuoitav/state-parsing/alerts/device"
+import (
+	"github.com/byuoitav/state-parsing/alerts/device"
+	"github.com/byuoitav/state-parsing/eventforwarding"
+)
 
 type RoomQueryResponse struct {
 	Took     int  `json:"took"`
@@ -43,4 +46,18 @@ type StatiRoomWrapper struct {
 	Index string `json:"_index"`
 	Type  string `json:"_type"`
 	ID    string `json:"_id"`
+}
+
+func MarkGeneralAlerting(toMark []string) {
+
+	//build our state
+	alerting := eventforwarding.StateDistribution{
+		Key:   "alerting",
+		Value: true,
+	}
+
+	//ship it off to go with the rest
+	for i := range toMark {
+		eventforwarding.SendToStateBuffer(alerting, toMark[i], "room")
+	}
 }
