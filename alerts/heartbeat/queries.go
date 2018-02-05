@@ -12,7 +12,7 @@ const HeartbeatLostQuery = `{
         {
           "range": {
             "alerts.lost-heartbeat.alert-sent": {
-              "lte": "now-0m"
+              "lte": "now-20m"
             }
           }
         },

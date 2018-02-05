@@ -167,6 +167,7 @@ func localStateBuffering(state StateDistribution, hostname string, mapType strin
 }
 
 func bufferLocally(state StateDistribution, hostname string, mapToUse map[string]map[string]interface{}) {
+	log.Printf(color.HiYellowString("ready to buffer: %v", hostname))
 	if _, ok := mapToUse[hostname]; ok {
 
 		//pardon the switch statements - you can't use the .(type) assertion in an if statement
@@ -210,6 +211,8 @@ func bufferLocally(state StateDistribution, hostname string, mapToUse map[string
 
 	mapToUse[hostname] = make(map[string]interface{})
 	mapToUse[hostname][state.Key] = state.Value
+
+	log.Printf(color.GreenString("Entry created."))
 }
 
 //here's where we decide if we want to distribute to the child processes or if we want to just put it in a map here

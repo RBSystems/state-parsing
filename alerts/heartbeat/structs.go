@@ -1,4 +1,4 @@
 package heartbeat
 
-type alertReport struct 
-
+type alertReport struct {
+}

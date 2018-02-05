@@ -13,16 +13,16 @@ import (
 	"github.com/fatih/color"
 )
 
-func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, error) {
+func processResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.Alert, error) {
 
 	roomsToCheck := make(map[string]bool)
 	devicesToUpdate := make(map[string]common.DeviceUpdateInfo)
 	alertsByRoom := make(map[string][]base.Alert)
-	toReturn := []base.Alert{}
+	toReturn := map[string][]base.Alert{}
 
 	if len(resp.Hits.Hits) <= 0 {
 		log.Printf(color.HiGreenString("[Heartbeat-lost] No heartbeats lost"))
-		return []base.Alert{}, nil
+		return toReturn, nil
 	}
 
 	/*
@@ -38,7 +38,7 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		roomsToCheck[curHit.Room] = true
 
 		//make sure that it's marked as alerting
-		if curHit.Alerting == false || curHit.Alerts["heartbeat-lost"].Alerting == false {
+		if curHit.Alerting == false || curHit.Alerts[base.LOST_HEARTBEAT].Alerting == false {
 			//we need to mark it to be updated as alerting
 			devicesToUpdate[resp.Hits.Hits[i].ID] = common.DeviceUpdateInfo{
 				Name: resp.Hits.Hits[i].ID,
@@ -62,18 +62,17 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		}
 
 		//we need to validate before this that the room in question isn't alerting
+		toSend := base.Alert{
+			AlertType: base.SLACK,
+			Content:   content,
+			Device:    curHit.Hostname,
+		}
 
 		_, ok := alertsByRoom[curHit.Room]
 		if ok {
-			alertsByRoom[curHit.Room] = append(alertsByRoom[curHit.Room], base.Alert{
-				AlertType: base.SLACK,
-				Content:   content,
-			})
+			alertsByRoom[curHit.Room] = append(alertsByRoom[curHit.Room], toSend)
 		} else {
-			alertsByRoom[curHit.Room] = []base.Alert{base.Alert{
-				AlertType: base.SLACK,
-				Content:   content,
-			}}
+			alertsByRoom[curHit.Room] = []base.Alert{toSend}
 		}
 	}
 	/*
@@ -81,7 +80,7 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		1) check to see if the rooms in question are suppressing alerts/alerting
 		2) update the device/rooms that weren't alerting already to be alerting
 	*/
-	rooms, err := GetRoomsBulk(func(vals map[string]bool) []string {
+	rms, err := room.GetRoomsBulk(func(vals map[string]bool) []string {
 		toReturn := []string{}
 		for k, _ := range vals {
 			toReturn = append(toReturn, k)
@@ -94,20 +93,25 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		return toReturn, err
 	}
 
-	alerting, suppressed := AlertingSuppressedRooms(rooms)
+	alerting, suppressed := AlertingSuppressedRooms(rms)
 
 	roomsToMark := []string{}
+
 	//check the rooms that we have in roomsToCheck to validate that we need to mark them as alerting
 	for k, _ := range roomsToCheck {
 		if _, ok := alerting[k]; !ok {
 			//add it to the list to mark as alerting
 			roomsToMark = append(roomsToMark, k)
+			log.Printf(color.HiBlueString("Need to mark room %v as alerting", k))
 		}
 	}
 
-	//mark our rooms as alerting
-	rooms.MarkGeneraleAlerting(roomsToMark)
+	log.Printf(color.HiBlueString("%v rooms to mark as alerting: ", len(roomsToMark)))
 
+	//mark our rooms as alerting
+	room.MarkGeneralAlerting(roomsToMark)
+
+	log.Printf(color.HiBlueString("Starting to mark devices as alerting..."))
 	for i := range devicesToUpdate {
 		//we need to make a copy of the Secondary Alert Structure so we can use it
 		secondaryAlertStructure := make(map[string]interface{})
@@ -115,14 +119,38 @@ func processResponse(resp device.HeartbeatLostQueryResponse) ([]base.Alert, erro
 		secondaryAlertStructure["alerting"] = true
 		secondaryAlertStructure["message"] = fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info)
 
+		log.Printf(color.HiBlueString("Need to mark device %v as alerting", devicesToUpdate[i]))
 		//mark the devices as alerting
-		device.MarkGeneralAlerting(roomsToMark, base.LOST_HEARTBEAT, secondaryAlertStructure)
+		device.MarkAsAlerting([]string{devicesToUpdate[i].Name}, base.LOST_HEARTBEAT, secondaryAlertStructure)
 	}
+
+	//now we check to make sure that the alerts we're going to send aren't in rooms that are suppressed - build
+	//the list and then return
+
+	for k, v := range alertsByRoom {
+
+		//if the room is suppressing notifications skip these devices
+		if v, ok := suppressed[k]; !ok || v {
+			continue
+		}
+
+		//otherwise add them to the list to be returned
+		for i := range v {
+			//check if it's been included already
+			if _, ok := toReturn[v[i].AlertType]; !ok {
+				toReturn[v[i].AlertType] = []base.Alert{v[i]}
+			}
+
+			toReturn[v[i].AlertType] = append(toReturn[v[i].AlertType], v[i])
+		}
+	}
+
+	log.Printf(color.HiBlueString("%v alerts to be sent", len(toReturn)))
 
 	return toReturn, nil
 }
 
-func AlertingSuppressedRooms(toCheck []room.StaticRoom, specificAlerts []string) (map[string]bool, map[string]bool) {
+func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[string]bool) {
 
 	alerting := make(map[string]bool)
 	suppressed := make(map[string]bool)
