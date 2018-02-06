@@ -47,7 +47,7 @@ type StaticRoom struct {
 	Power             string `json:"power"`
 	Alerting          bool   `json:"alerting"`
 	Alerts            map[string]device.Alert
-	Suppressed        bool `json:"suppressed"`
+	Suppressed        bool `json:"notifications-suppressed"`
 }
 
 type StatiRoomWrapper struct {
