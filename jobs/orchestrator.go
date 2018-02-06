@@ -7,6 +7,9 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/byuoitav/state-parsing/alerts"
+	"github.com/byuoitav/state-parsing/alerts/base"
+	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/common"
 	"github.com/fatih/color"
 )
@@ -95,6 +98,21 @@ func (j *Job) runScheduledTask() {
 }
 
 func (j *Job) execute() {
+
+	log.Printf(color.HiGreenString("'[%v] Starting run.", j.Config.Name))
+	startTime := time.Now()
+	switch j.Config.Type {
+
+	case "script":
+		j.executeScript()
+	case "alert-factory":
+		j.executeAlertFactory()
+	}
+	log.Printf(color.HiGreenString("'[%v] Time Elapsed: %v. ", j.Config.Name, time.Since(startTime)))
+	log.Printf(color.HiGreenString("'[%v] Done. ", j.Config.Name))
+}
+
+func (j *Job) executeScript() {
 	//find the script, and run it
 	var command string
 	if len(os.Getenv("EVENT_PARSING_SCRIPTS_PATH")) < 1 {
@@ -119,6 +137,36 @@ func (j *Job) execute() {
 		color.Unset()
 	}
 	return
+
+}
+
+func (j *Job) executeAlertFactory() {
+	factory, ok := alerts.GetAlertFactory(j.Config.Name)
+	if !ok {
+		log.Printf(color.HiRedString("[%v]Error: No alert factory found for %v", j.Config.Name, j.Config.Name))
+		return
+	}
+
+	alertsToSend, err := factory.Run(1)
+	if err != nil {
+		log.Printf(color.HiRedString("[%v]error: %v", j.Config.Name, err.Error()))
+	}
+
+	reports := []base.AlertReport{}
+	engines := alerts.GetNotificationEngines()
+	log.Printf(color.HiGreenString("'[%v] Sending notifications...", j.Config.Name))
+
+	for k, v := range alertsToSend {
+		reps, err := engines[k].SendNotifications(v)
+		if err != nil {
+			log.Printf(color.HiRedString("Issue sending the %v notifications. Error: %v", k, err.Error()))
+		}
+		reports = append(reports, reps...)
+	}
+
+	log.Printf(color.HiGreenString("'[%v] Marking Alert as sent.", j.Config.Name))
+	//now we mark the reports as sent
+	device.MarkLastAlertSent(reports)
 }
 
 func (o *Orchestrator) Start() {

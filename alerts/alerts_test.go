@@ -6,7 +6,6 @@ import (
 
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
-	"github.com/byuoitav/state-parsing/alerts/heartbeat"
 	"github.com/byuoitav/state-parsing/eventforwarding"
 	"github.com/fatih/color"
 )
@@ -15,7 +14,12 @@ func TestStuff(t *testing.T) {
 
 	go eventforwarding.StartDistributor()
 
-	ha := heartbeat.HeartbeatAlertFactory{}
+	ha, ok := GetAlertFactory(base.LOST_HEARTBEAT)
+	if !ok {
+		log.Printf("no alert factory for: %v", base.LOST_HEARTBEAT)
+		return
+	}
+
 	alerts, err := ha.Run(1)
 	if err != nil {
 		log.Printf("error: %v", err.Error())

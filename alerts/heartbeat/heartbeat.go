@@ -14,10 +14,10 @@ import (
 
 const DeviceIndex = "oit-static-av-devices"
 
-type HeartbeatAlertFactory struct {
+type LostHeartbeatAlertFactory struct {
 }
 
-func (h *HeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base.Alert, error) {
+func (h *LostHeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base.Alert, error) {
 	return Run(loggingLevel)
 }
 

@@ -6,6 +6,7 @@ import json
 
 username = sys.argv[1]
 password = sys.argv[2]
+enable = sys.argv[3].lower()
 roomName = '@option.RoomName@'
 
 elkAddr = "http://oit-elk-kibana6:9200"
@@ -20,7 +21,7 @@ building = splitRoom[0]
 room = splitRoom[1]
 
 
-content = {'doc': {'notifications-suppressed': False}}
+content = {'doc': {'notifications-suppressed': enable in ['true', 't']}}
 
 payload = json.dumps(content)
 print(payload.decode('utf-8'))
