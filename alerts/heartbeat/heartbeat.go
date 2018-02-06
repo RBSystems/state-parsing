@@ -24,7 +24,7 @@ func (h *LostHeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base.Ale
 func Run(loggingLevel int) (map[string][]base.Alert, error) {
 
 	if loggingLevel > 0 {
-		log.Printf(color.HiGreenString("[Heartbeat-Lost] starting run"))
+		log.Printf(color.HiGreenString("[lost-heartbeat] starting run"))
 	}
 
 	addr := fmt.Sprintf("%s/%s/_search", os.Getenv("ELK_ADDR"), DeviceIndex)
@@ -32,11 +32,11 @@ func Run(loggingLevel int) (map[string][]base.Alert, error) {
 	respCode, body, err := base.MakeELKRequest(addr, "POST", []byte(HeartbeatLostQuery), loggingLevel)
 	if err != nil {
 		//there's an error
-		log.Printf(color.HiRedString("[Heartbeat-Lost] There was an error with the initial query: %v", err.Error()))
+		log.Printf(color.HiRedString("[lost-heartbeat] There was an error with the initial query: %v", err.Error()))
 		return nil, err
 	}
 	if respCode/100 != 2 {
-		msg := fmt.Sprintf("[Heartbeat-Lost] Non 200 response received from the initial query: %v, %s", respCode, body)
+		msg := fmt.Sprintf("[lost-heartbeat] Non 200 response received from the initial query: %v, %s", respCode, body)
 		log.Printf(color.HiRedString(msg))
 		return nil, errors.New(msg)
 

@@ -21,7 +21,7 @@ func processResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.
 	toReturn := map[string][]base.Alert{}
 
 	if len(resp.Hits.Hits) <= 0 {
-		log.Printf(color.HiGreenString("[Heartbeat-lost] No heartbeats lost"))
+		log.Printf(color.HiGreenString("[lost-heartbeat] No heartbeats lost"))
 		return toReturn, nil
 	}
 
@@ -136,16 +136,19 @@ func processResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.
 
 		//otherwise add them to the list to be returned
 		for i := range v {
-			//check if it's been included already
+			//check if the alert type been included already
 			if _, ok := toReturn[v[i].AlertType]; !ok {
 				toReturn[v[i].AlertType] = []base.Alert{v[i]}
+				continue
 			}
 
 			toReturn[v[i].AlertType] = append(toReturn[v[i].AlertType], v[i])
 		}
 	}
 
-	log.Printf(color.HiBlueString("%v alerts to be sent", len(toReturn)))
+	for k, v := range toReturn {
+		log.Printf(color.HiBlueString("%v %v alerts to be sent", len(v), k))
+	}
 
 	return toReturn, nil
 }

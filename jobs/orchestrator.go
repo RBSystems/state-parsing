@@ -99,7 +99,7 @@ func (j *Job) runScheduledTask() {
 
 func (j *Job) execute() {
 
-	log.Printf(color.HiGreenString("'[%v] Starting run.", j.Config.Name))
+	log.Printf(color.HiGreenString("[%v] Starting run.", j.Config.Name))
 	startTime := time.Now()
 	switch j.Config.Type {
 
@@ -107,6 +107,8 @@ func (j *Job) execute() {
 		j.executeScript()
 	case "alert-factory":
 		j.executeAlertFactory()
+	default:
+		log.Printf(color.HiRedString("[%v] no type associated with: %v", j.Config.Name, j.Config.Type))
 	}
 	log.Printf(color.HiGreenString("'[%v] Time Elapsed: %v. ", j.Config.Name, time.Since(startTime)))
 	log.Printf(color.HiGreenString("'[%v] Done. ", j.Config.Name))
@@ -141,6 +143,7 @@ func (j *Job) executeScript() {
 }
 
 func (j *Job) executeAlertFactory() {
+	log.Printf(color.HiRedString("[%v] Starting Factory run...", j.Config.Name))
 	factory, ok := alerts.GetAlertFactory(j.Config.Name)
 	if !ok {
 		log.Printf(color.HiRedString("[%v]Error: No alert factory found for %v", j.Config.Name, j.Config.Name))

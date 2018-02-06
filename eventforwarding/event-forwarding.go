@@ -48,7 +48,7 @@ func Init() {
 }
 
 func forwardEvent(e interface{}, url string) {
-	log.Printf("[forwarder] Forwarding event to %v", url)
+	//	log.Printf("[forwarder] Forwarding event to %v", url)
 	b, err := json.Marshal(e)
 	if err != nil {
 		log.Printf("[forwarder] There was a problem marshalling the event: %v", err.Error())

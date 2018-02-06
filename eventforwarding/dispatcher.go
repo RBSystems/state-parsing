@@ -111,7 +111,7 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 		payload = append(payload, '\n')
 
 		color.Set(color.FgYellow)
-		log.Printf("[Dispatcher] Added line for device %v.", k)
+		//	log.Printf("[Dispatcher] Added line for device %v.", k)
 		color.Unset()
 	}
 
