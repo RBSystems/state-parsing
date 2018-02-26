@@ -15,7 +15,7 @@
   },
   {
     "name": "lost-heartbeat",
-    "repeat-interval": 10,
+    "repeat-interval": 5,
     "wait-for-complete": false,
     "enabled": true,
     "type": "alert-factory"

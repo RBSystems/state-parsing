@@ -12,6 +12,7 @@ import (
 	"github.com/fatih/color"
 )
 
+//var url = "https://hooks.slack.com/services/"
 var url = "https://hooks.slack.com/services/"
 
 //note don't forget to set the HTTP_PROXY or HTTPS_PROXY env variables if proxies are needed

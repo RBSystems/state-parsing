@@ -1,8 +1,11 @@
 package device
 
 import (
+	"log"
+
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/eventforwarding"
+	"github.com/fatih/color"
 )
 
 //toMark is the list of rooms, There may be one or more of them
@@ -27,6 +30,7 @@ func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertDa
 
 	//ship it off to go with the rest
 	for i := range toMark {
+		log.Printf(color.HiYellowString("Marking as alerting %v", toMark[i]))
 		eventforwarding.SendToStateBuffer(alerting, toMark[i], "device")
 		eventforwarding.SendToStateBuffer(secondaryAlert, toMark[i], "device")
 	}

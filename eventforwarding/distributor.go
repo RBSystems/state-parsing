@@ -66,7 +66,6 @@ func StartDistributor() {
 }
 
 func distributeEvent(event elkreporting.ElkEvent) {
-	log.Printf("[distributor] state recieved")
 	if event.EventTypeString != "CORESTATE" && event.EventTypeString != "DETAILSTATE" {
 		//we don't care about it for now
 		return
@@ -201,8 +200,16 @@ func bufferLocally(state StateDistribution, hostname string, mapToUse map[string
 		a = state.Value.(map[string]interface{})
 		var b map[string]interface{}
 		b = mapToUse[hostname][state.Key].(map[string]interface{})
+
+		//log.Printf(color.HiYellowString("merging maps: %v, %v", a, b))
+
 		//now we get to compare the child values
 		replaceMapValues(&a, &b)
+
+		//log.Printf(color.HiYellowString("Got map back: %v", a))
+		//log.Printf(color.HiYellowString("Got map back: %v", mapToUse[hostname][state.Key]))
+
+		return
 	}
 
 	color.Set(color.FgGreen)

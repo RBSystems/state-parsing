@@ -13,7 +13,7 @@ import (
 	"github.com/fatih/color"
 )
 
-func processResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.Alert, error) {
+func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.Alert, error) {
 
 	roomsToCheck := make(map[string]bool)
 	devicesToUpdate := make(map[string]common.DeviceUpdateInfo)
@@ -39,6 +39,10 @@ func processResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.
 
 		//make sure that it's marked as alerting
 		if curHit.Alerting == false || curHit.Alerts[base.LOST_HEARTBEAT].Alerting == false {
+
+			//debug
+			//		log.Printf(color.HiYellowString("Need to mark %v as alerting", curHit.Hostname))
+
 			//we need to mark it to be updated as alerting
 			devicesToUpdate[resp.Hits.Hits[i].ID] = common.DeviceUpdateInfo{
 				Name: resp.Hits.Hits[i].ID,
@@ -53,9 +57,22 @@ func processResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.
 
 		//otherwise we create an alert to be returned, for now we just return a slack alert
 		content, err := json.Marshal(base.SlackAlert{
-			Markdown: true,
-			Text:     fmt.Sprintf("Heartbeat lost!\nDevice:\t%v\nLastHeartbeat:\t%v", curHit.Hostname, curHit.LastHeartbeat),
-		})
+			Markdown: false,
+			Attachments: []base.SlackAttachment{base.SlackAttachment{
+				Fallback: fmt.Sprintf("Lost Heartbeat. Device %v stopped sending heartbeats at %v ", curHit.Hostname, curHit.LastHeartbeat),
+				Title:    "Lost Heartbeat",
+				Fields: []base.SlackAlertField{base.SlackAlertField{
+					Title: "Device",
+					Value: curHit.Hostname,
+					Short: true,
+				},
+					base.SlackAlertField{
+						Title: "Last Heartbeat",
+						Value: curHit.LastHeartbeat,
+						Short: true,
+					}},
+				Color: "danger",
+			}}})
 		if err != nil {
 			log.Printf(color.HiRedString("Couldn't marshal the slack alert for %v. Error: %v", curHit.Hostname, err.Error()))
 			continue

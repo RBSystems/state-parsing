@@ -1,6 +1,8 @@
 package alerts
 
 import (
+	"os"
+
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/slacknotifications"
 )
@@ -12,7 +14,7 @@ type NotificationEngine interface {
 func GetNotificationEngines() map[string]NotificationEngine {
 	toReturn := make(map[string]NotificationEngine)
 
-	toReturn[base.SLACK] = &slacknotifications.SlackNotificationEngine{ChannelIdentifier: "/T0311JJTE/B6ZMQBZ2B/dwVLO10Iu03mJ9IqmPExGoy3"}
+	toReturn[base.SLACK] = &slacknotifications.SlackNotificationEngine{ChannelIdentifier: os.Getenv("SLACK_HEARTBEAT_CHANNEL")}
 
 	return toReturn
 }
