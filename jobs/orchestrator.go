@@ -69,11 +69,11 @@ func (j *Job) runScheduledTask() {
 	//run forever until a stop message is receieved
 
 	//start a ticker, as we're running at the same schedule
-	timer := time.NewTicker(time.Second * time.Duration(j.Config.Interval))
+	ticker := time.NewTicker(time.Second * time.Duration(j.Config.Interval))
 	for true {
 
 		select {
-		case <-timer.C:
+		case <-ticker.C:
 			color.Set(color.FgGreen)
 			log.Printf("[%v] Starting run...", j.Config.Name)
 			color.Unset()

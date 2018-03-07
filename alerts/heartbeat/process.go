@@ -13,6 +13,10 @@ import (
 	"github.com/fatih/color"
 )
 
+const (
+	RESTORED = "restored-heartbeat"
+)
+
 func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.Alert, error) {
 
 	roomsToCheck := make(map[string]bool)
@@ -182,4 +186,36 @@ func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[st
 	}
 
 	return alerting, suppressed
+}
+
+func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse) (map[string][]base.Alert, error) {
+	roomsToCheck := make(map[string]bool)
+	devicesToUpdate := make(map[string]common.DeviceUpdateInfo)
+	alertsByRoom := make(map[string][]base.Alert)
+	toReturn := map[string][]base.Alert{}
+
+	// there are no devices that have heartbeats restored
+	if len(resp.Hits.Hits) <= 0 {
+		log.Printf(color.HiGreenString("[%s] No heartbeats restored"), RESTORED)
+		return toReturn, nil
+	}
+
+	// loop through all the devices that have had restored heartbeats
+	// and update their indicies
+	for i := range resp.Hits.Hits {
+		device := resp.Hits.Hits[i].Source
+
+		// make sure to check this room later
+		roomsToCheck[device.Room] = true
+
+		// if it wasn't alerting before, we don't want to do anything with it
+		if device.Alerting == true {
+		}
+
+		// if notifications are suppressed, don't build a notification
+		if device.Suppress == false {
+		}
+	}
+
+	return nil, nil
 }
