@@ -120,7 +120,7 @@ func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[s
 
 	//check the rooms that we have in roomsToCheck to validate that we need to mark them as alerting
 	for k, _ := range roomsToCheck {
-		if _, ok := alerting[k]; !ok {
+		if alerting[k] {
 			//add it to the list to mark as alerting
 			roomsToMark = append(roomsToMark, k)
 			log.Printf(color.HiBlueString("Need to mark room %v as alerting", k))
@@ -190,7 +190,8 @@ func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[st
 
 func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse) (map[string][]base.Alert, error) {
 	roomsToCheck := make(map[string]bool)
-	devicesToUpdate := make(map[string]common.DeviceUpdateInfo)
+	//	devicesToUpdate := make(map[string]common.DeviceUpdateInfo)
+	deviceIDsToUpdate := []string{}
 	alertsByRoom := make(map[string][]base.Alert)
 	toReturn := map[string][]base.Alert{}
 
@@ -210,12 +211,96 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 
 		// if it wasn't alerting before, we don't want to do anything with it
 		if device.Alerting == true {
+
+			deviceIDsToUpdate = append(deviceIDsToUpdate, resp.Hits.Hits[i].ID)
+
+			// mark the device as not alerting
+			// clear the alerting status
+			/*
+				devicesToUpdate[resp.Hits.Hits[i].ID] = common.DeviceUpdateInfo{
+					Name: resp.Hits.Hits[i].ID,
+					Info: device.LastHeartbeat,
+				}
+			*/
 		}
 
-		// if notifications are suppressed, don't build a notification
+		// if a device's alerts aren't suppressed, create the alert
 		if device.Suppress == false {
+			content, err := json.Marshal(base.SlackAlert{
+				Markdown: false,
+				Attachments: []base.SlackAttachment{base.SlackAttachment{
+					Fallback: fmt.Sprintf("Restored Heartbeat. Device %v sent heartbeat at %v.", device.Hostname, device.LastHeartbeat),
+					Title:    "Restored Heartbeat",
+					Fields: []base.SlackAlertField{base.SlackAlertField{
+						Title: "Device",
+						Value: device.Hostname,
+						Short: true,
+					},
+						base.SlackAlertField{
+							Title: "Received at",
+							Value: device.LastHeartbeat,
+							Short: true,
+						}},
+					Color: "good",
+				}}})
+
+			if err != nil {
+				log.Printf(color.HiRedString("Couldn't marshal the slack alert for %v. Error: %v", device.Hostname, err.Error()))
+			}
+
+			alert := base.Alert{
+				AlertType: base.SLACK,
+				Content:   content,
+				Device:    device.Hostname,
+			}
+
+			_, ok := alertsByRoom[device.Room]
+			if ok {
+				alertsByRoom[device.Room] = append(alertsByRoom[device.Room], alert)
+			} else {
+				alertsByRoom[device.Room] = []base.Alert{alert}
+			}
 		}
 	}
 
-	return nil, nil
+	// mark devices as not alerting
+	device.MarkDevicesAsNotAlerting(deviceIDsToUpdate)
+
+	/* send alerts */
+	// get the rooms
+	rooms, err := room.GetRoomsBulk(func(vals map[string]bool) []string {
+		ret := []string{}
+		for k, _ := range vals {
+			ret = append(ret, k)
+		}
+		return ret
+	}(roomsToCheck))
+	if err != nil {
+		log.Printf(color.HiRedString("Error: %v", err.Error()))
+		return toReturn, err
+	}
+
+	// figure out if a room's alerts are suppressed
+	_, suppressed := AlertingSuppressedRooms(rooms)
+
+	// send alerts to rooms that aren't suppressed
+	for room, alerts := range alertsByRoom {
+		if !suppressed[room] {
+
+			// fill out a map of AlertType -> alert
+			for _, a := range alerts {
+				if _, ok := toReturn[a.AlertType]; ok {
+					toReturn[a.AlertType] = append(toReturn[a.AlertType], a)
+				} else {
+					toReturn[a.AlertType] = []base.Alert{a}
+				}
+			}
+		}
+	}
+
+	for k, v := range toReturn {
+		log.Printf(color.HiBlueString("%v %v alerts to be sent", len(v), k))
+	}
+
+	return toReturn, nil
 }

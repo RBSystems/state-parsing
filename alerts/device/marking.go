@@ -59,3 +59,26 @@ func MarkLastAlertSent(reps []base.AlertReport) error {
 	}
 	return nil
 }
+
+func MarkDevicesAsNotAlerting(deviceIDs []string) {
+	baseStatus := eventforwarding.StateDistribution{
+		Key:   "alerting",
+		Value: false,
+	}
+
+	secondaryData := make(map[string]map[string]interface{})
+	secondaryData[base.LOST_HEARTBEAT]["alert-sent"] = ""
+	secondaryData[base.LOST_HEARTBEAT]["alerting"] = false
+	secondaryData[base.LOST_HEARTBEAT]["message"] = ""
+
+	secondaryStatus := eventforwarding.StateDistribution{
+		Key:   "alerts",
+		Value: secondaryData,
+	}
+
+	for _, id := range deviceIDs {
+		log.Printf(color.HiYellowString("Marking as not alerting %v", id))
+		eventforwarding.SendToStateBuffer(baseStatus, id, "device")
+		eventforwarding.SendToStateBuffer(secondaryStatus, id, "device")
+	}
+}
