@@ -56,13 +56,15 @@ type RestoredHeartbeatAlertFactory struct {
 }
 
 func (h *RestoredHeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base.Alert, error) {
-	log.Printf(color.HiGreenString("[restored-heartbeat] starting run"))
+
+	if loggingLevel > 0 {
+		log.Printf(color.HiGreenString("[restored-heartbeat] starting run"))
+	}
 
 	addr := fmt.Sprintf("%s/%s/_search", os.Getenv("ELK_ADDR"), DeviceIndex)
 
 	respCode, body, err := base.MakeELKRequest(addr, "POST", []byte(HeartbeatRestoredQuery), loggingLevel)
 	if err != nil {
-		//there's an error
 		log.Printf(color.HiRedString("[restored-heartbeat] There was an error with the initial query: %v", err.Error()))
 		return nil, err
 	}
@@ -73,5 +75,15 @@ func (h *RestoredHeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base
 		return nil, errors.New(msg)
 	}
 
-	hrresp := device.HeartbeatRestoredResponse{}
+	hrresp := device.HeartbeatRestoredQueryResponse{}
+
+	err = json.Unmarshal(body, &hrresp)
+	if err != nil {
+		log.Printf(color.HiRedString("Couldn't unmmarshal response: %v", err.Error()))
+		return nil, err
+	}
+
+	// process the alerts
+	alerts, err := processHeartbeatRestoredResponse(hrresp)
+	return alerts, err
 }
