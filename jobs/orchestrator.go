@@ -11,6 +11,7 @@ import (
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/common"
+	"github.com/byuoitav/state-parsing/update"
 	"github.com/fatih/color"
 )
 
@@ -107,6 +108,8 @@ func (j *Job) execute() {
 		j.executeScript()
 	case "alert-factory":
 		j.executeAlertFactory()
+	case "updater":
+		j.executeUpdater()
 	default:
 		log.Printf(color.HiRedString("[%v] no type associated with: %v", j.Config.Name, j.Config.Type))
 	}
@@ -170,6 +173,25 @@ func (j *Job) executeAlertFactory() {
 	log.Printf(color.HiGreenString("'[%v] Marking Alert as sent.", j.Config.Name))
 	//now we mark the reports as sent
 	device.MarkLastAlertSent(reports)
+}
+
+func (j *Job) executeUpdater() {
+	name := j.Config.Name
+
+	log.Printf(color.HiRedString("[%v] Starting Update run...", name))
+
+	updater, ok := update.GetUpdater(name)
+	if !ok {
+		log.Printf(color.HiRedString("[%v]Error: No alert factory found for %v", name, name))
+		return
+	}
+
+	log.Printf(color.HiYellowString("[%v]Running updater %v", name, name))
+
+	err := updater.Run(1)
+	if err != nil {
+		log.Printf(color.HiRedString("[%v]error: %v", name, err))
+	}
 }
 
 func (o *Orchestrator) Start() {

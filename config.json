@@ -38,7 +38,7 @@
     "name": "room-update",
     "repeat-interval": 5,
     "wait-for-complete": true,
-    "type": "script",
+    "type": "updater",
     "enabled": false
  }
 ]

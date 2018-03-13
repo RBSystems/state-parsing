@@ -45,11 +45,10 @@ func (h *LostHeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base.Ale
 		return nil, err
 	}
 
-	alerts, err := processHeartbeatLostResponse(hrresp)
 	//process the alerts
+	alerts, err := processHeartbeatLostResponse(hrresp)
 
 	return alerts, err
-
 }
 
 type RestoredHeartbeatAlertFactory struct {
