@@ -190,7 +190,6 @@ func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[st
 
 func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse) (map[string][]base.Alert, error) {
 	roomsToCheck := make(map[string]bool)
-	//	devicesToUpdate := make(map[string]common.DeviceUpdateInfo)
 	deviceIDsToUpdate := []string{}
 	alertsByRoom := make(map[string][]base.Alert)
 	toReturn := map[string][]base.Alert{}
@@ -202,30 +201,20 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 	}
 
 	// loop through all the devices that have had restored heartbeats
-	// and update their indicies
+	// and create an alert for them
 	for i := range resp.Hits.Hits {
 		device := resp.Hits.Hits[i].Source
 
 		// make sure to check this room later
 		roomsToCheck[device.Room] = true
 
-		// if it wasn't alerting before, we don't want to do anything with it
-		if device.Alerting == true {
-
+		// if it's alerting, we need to set alerting to false
+		if device.Alerting {
 			deviceIDsToUpdate = append(deviceIDsToUpdate, resp.Hits.Hits[i].ID)
-
-			// mark the device as not alerting
-			// clear the alerting status
-			/*
-				devicesToUpdate[resp.Hits.Hits[i].ID] = common.DeviceUpdateInfo{
-					Name: resp.Hits.Hits[i].ID,
-					Info: device.LastHeartbeat,
-				}
-			*/
 		}
 
 		// if a device's alerts aren't suppressed, create the alert
-		if device.Suppress == false {
+		if !device.Suppress {
 			content, err := json.Marshal(base.SlackAlert{
 				Markdown: false,
 				Attachments: []base.SlackAttachment{base.SlackAttachment{
@@ -246,6 +235,7 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 
 			if err != nil {
 				log.Printf(color.HiRedString("Couldn't marshal the slack alert for %v. Error: %v", device.Hostname, err.Error()))
+				continue
 			}
 
 			alert := base.Alert{
@@ -254,8 +244,7 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 				Device:    device.Hostname,
 			}
 
-			_, ok := alertsByRoom[device.Room]
-			if ok {
+			if _, ok := alertsByRoom[device.Room]; ok {
 				alertsByRoom[device.Room] = append(alertsByRoom[device.Room], alert)
 			} else {
 				alertsByRoom[device.Room] = []base.Alert{alert}
@@ -286,8 +275,6 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 	// send alerts to rooms that aren't suppressed
 	for room, alerts := range alertsByRoom {
 		if !suppressed[room] {
-
-			// fill out a map of AlertType -> alert
 			for _, a := range alerts {
 				if _, ok := toReturn[a.AlertType]; ok {
 					toReturn[a.AlertType] = append(toReturn[a.AlertType], a)
