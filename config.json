@@ -17,7 +17,7 @@
     "name": "lost-heartbeat",
     "repeat-interval": 5,
     "wait-for-complete": false,
-    "enabled": true,
+    "enabled": false,
     "type": "alert-factory"
   },
   {
@@ -39,7 +39,7 @@
     "repeat-interval": 5,
     "wait-for-complete": true,
     "type": "updater",
-    "enabled": false
+    "enabled": true
  }
 ]
 
