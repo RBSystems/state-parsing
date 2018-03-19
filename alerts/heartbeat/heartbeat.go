@@ -4,85 +4,89 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"os"
 
+	"github.com/byuoitav/state-parsing/alerts"
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
-	"github.com/fatih/color"
+	"github.com/byuoitav/state-parsing/logger"
+	"github.com/byuoitav/state-parsing/tasks/names"
 )
 
 const DeviceIndex = "oit-static-av-devices"
 
 type LostHeartbeatAlertFactory struct {
+	alerts.AlertFactory
 }
 
-func (h *LostHeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base.Alert, error) {
+func (h *LostHeartbeatAlertFactory) Init() {
+	h.Name = names.LOST_HEARTBEAT
+	h.LogLevel = logger.VERBOSE
+}
 
-	if loggingLevel > 0 {
-		log.Printf(color.HiGreenString("[lost-heartbeat] starting run"))
-	}
+func (h *LostHeartbeatAlertFactory) Run() error {
+	h.I("Starting run")
 
 	addr := fmt.Sprintf("%s/%s/_search", os.Getenv("ELK_ADDR"), DeviceIndex)
 
-	respCode, body, err := base.MakeELKRequest(addr, "POST", []byte(HeartbeatLostQuery), loggingLevel)
+	respCode, body, err := base.MakeELKRequest(addr, "POST", []byte(HeartbeatLostQuery), h.LogLevel)
 	if err != nil {
-		//there's an error
-		log.Printf(color.HiRedString("[lost-heartbeat] There was an error with the initial query: %v", err.Error()))
-		return nil, err
+		h.E("error with the initial query: %s", err)
+		return err
 	}
 	if respCode/100 != 2 {
 		msg := fmt.Sprintf("[lost-heartbeat] Non 200 response received from the initial query: %v, %s", respCode, body)
-		log.Printf(color.HiRedString(msg))
-		return nil, errors.New(msg)
-
+		h.E(msg)
+		return errors.New(msg)
 	}
 	hrresp := device.HeartbeatLostQueryResponse{}
 
 	err = json.Unmarshal(body, &hrresp)
 	if err != nil {
-		log.Printf(color.HiRedString("Couldn't unmmarshal response: %v", err.Error()))
-		return nil, err
+		h.E("couldn't unmarshal response: %s", err)
+		return err
 	}
 
 	//process the alerts
-	alerts, err := processHeartbeatLostResponse(hrresp)
-
-	return alerts, err
+	h.AlertsToSend, err = processHeartbeatLostResponse(hrresp)
+	return err
 }
 
 type RestoredHeartbeatAlertFactory struct {
+	alerts.AlertFactory
 }
 
-func (h *RestoredHeartbeatAlertFactory) Run(loggingLevel int) (map[string][]base.Alert, error) {
+func (h *RestoredHeartbeatAlertFactory) Init() {
+	h.Name = names.HEARTBEAT_RESTORED
+	h.LogLevel = logger.VERBOSE
+}
 
-	if loggingLevel > 0 {
-		log.Printf(color.HiGreenString("[restored-heartbeat] starting run"))
-	}
+func (h *RestoredHeartbeatAlertFactory) Run() error {
+	h.I("Starting run")
 
 	addr := fmt.Sprintf("%s/%s/_search", os.Getenv("ELK_ADDR"), DeviceIndex)
 
-	respCode, body, err := base.MakeELKRequest(addr, "POST", []byte(HeartbeatRestoredQuery), loggingLevel)
+	respCode, body, err := base.MakeELKRequest(addr, "POST", []byte(HeartbeatRestoredQuery), h.LogLevel)
 	if err != nil {
-		log.Printf(color.HiRedString("[restored-heartbeat] There was an error with the initial query: %v", err.Error()))
-		return nil, err
+		h.E("error with initial query: %s", err)
+		return err
 	}
 
 	if respCode/100 != 2 {
 		msg := fmt.Sprintf("[restored-heartbeat] Non 200 response received from the initial query: %v, %s", respCode, body)
-		log.Printf(color.HiRedString(msg))
-		return nil, errors.New(msg)
+		h.E(msg)
+		return errors.New(msg)
 	}
 
 	hrresp := device.HeartbeatRestoredQueryResponse{}
 
 	err = json.Unmarshal(body, &hrresp)
 	if err != nil {
-		log.Printf(color.HiRedString("Couldn't unmmarshal response: %v", err.Error()))
-		return nil, err
+		h.E("couldn't unmarshal response: %s", err)
+		return err
 	}
 
 	// process the alerts
-	alerts, err := processHeartbeatRestoredResponse(hrresp)
-	return alerts, err
+	h.AlertsToSend, err = processHeartbeatRestoredResponse(hrresp)
+	return err
 }

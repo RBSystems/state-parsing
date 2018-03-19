@@ -2,27 +2,39 @@ package alerts
 
 import (
 	"github.com/byuoitav/state-parsing/alerts/base"
-	"github.com/byuoitav/state-parsing/alerts/heartbeat"
+	"github.com/byuoitav/state-parsing/alerts/device"
+	"github.com/byuoitav/state-parsing/tasks/task"
 )
 
-var alertFactories = map[string]AlertFactory{}
+type AlertFactory struct {
+	task.Task
 
-//AlertFactory corresponds to a struct that is run to generate alerts.
-type AlertFactory interface {
-	Run(loggingLevel int) (map[string][]base.Alert, error)
+	AlertsToSend map[string][]base.Alert
 }
 
-//returns the alert factory, the bool indicates if it was a valid name
-func GetAlertFactory(name string) (AlertFactory, bool) {
-	if len(alertFactories) == 0 {
-		alertFactories = make(map[string]AlertFactory)
+func (a *AlertFactory) Pre() (error, bool) {
+	a.AlertsToSend = make(map[string][]base.Alert)
+	return nil, true
+}
 
-		//add the factories here
+func (a *AlertFactory) Post(err error) {
+	// ignore the error, try to send things anyways
 
-		alertFactories[base.LOST_HEARTBEAT] = &heartbeat.LostHeartbeatAlertFactory{}
+	engines := GetNotificationEngines()
+	reports := []base.AlertReport{}
+
+	a.I("Sending notifications...")
+
+	for k, v := range a.AlertsToSend {
+		reps, err := engines[k].SendNotifications(v)
+		if err != nil {
+			a.E("issue sending the %v notifications. error: %s", k, err)
+		}
+
+		reports = append(reports, reps...)
 	}
 
-	v, ok := alertFactories[name]
-	return v, ok
+	a.I("Marking alert as sent.")
 
+	device.MarkLastAlertSent(reports)
 }
