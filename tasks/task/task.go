@@ -31,6 +31,7 @@ type Interface interface {
 /*
  * Compose this struct into another struct to make it a Task.
  */
+
 type Task struct {
 	i Interface
 	logger.Logger

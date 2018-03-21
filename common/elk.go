@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -14,6 +15,12 @@ import (
 
 var apiAddr, username, password string
 
+type ElkQuery struct {
+	Method   string
+	Endpoint string
+	Query    string
+}
+
 func init() {
 	apiAddr = os.Getenv("ELASTIC_API_EVENTS")
 	username = os.Getenv("ELK_SA_USERNAME")
@@ -24,13 +31,7 @@ func init() {
 	}
 }
 
-type ElkQuery struct {
-	Method   string
-	Endpoint string
-	Query    string
-}
-
-func (q *ElkQuery) MakeELKRequest(logLevel int, caller string) (int, []byte, error) {
+func (q *ElkQuery) MakeELKRequest(logLevel int, caller string) ([]byte, error) {
 	l := logger.Logger{
 		LogLevel: logLevel,
 		Name:     caller,
@@ -44,7 +45,7 @@ func (q *ElkQuery) MakeELKRequest(logLevel int, caller string) (int, []byte, err
 	req, err := http.NewRequest(q.Method, addr, bytes.NewReader([]byte(q.Query)))
 	if err != nil {
 		l.E("there was a problem forming the request: %s", err)
-		return 0, []byte{}, err
+		return []byte{}, err
 	}
 
 	// add auth
@@ -55,20 +56,23 @@ func (q *ElkQuery) MakeELKRequest(logLevel int, caller string) (int, []byte, err
 	resp, err := client.Do(req)
 	if err != nil {
 		l.E("there was a problem making the request: %s", err)
-		return 0, []byte{}, err
+		return []byte{}, err
 	}
 
 	// read the resp
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		l.E("there was a problem reading the response body: %s", err)
-		return 0, []byte{}, err
+		return []byte{}, err
 	}
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
-		l.E("non 200 response code received. code: %v, body: %s", resp.StatusCode, b)
+		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, b)
+		l.E(msg)
+
+		return []byte{}, errors.New(msg)
 	}
 
-	return resp.StatusCode, b, nil
+	return b, nil
 }

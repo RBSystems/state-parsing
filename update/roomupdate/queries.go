@@ -117,9 +117,9 @@ type RoomQueryResponse struct {
 }
 
 type Bucket struct {
-	Key      string `json:"key"`
-	DocCount int    `json:"doc_count"`
-	Field    map[string]Field
+	Key      string           `json:"key"`
+	DocCount int              `json:"doc_count"`
+	Field    map[string]Field `json:""`
 }
 
 type Field struct {
