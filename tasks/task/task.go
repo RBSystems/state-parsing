@@ -1,6 +1,10 @@
 package task
 
-import "github.com/byuoitav/state-parsing/logger"
+import (
+	"log"
+
+	"github.com/byuoitav/state-parsing/logger"
+)
 
 type Interface interface {
 	/*
@@ -34,7 +38,7 @@ type Interface interface {
 
 type Task struct {
 	i Interface
-	logger.Logger
+	*logger.Logger
 }
 
 func NewTask(i Interface) Task {
@@ -48,26 +52,28 @@ func NewTask(i Interface) Task {
 }
 
 func (t *Task) Run(loggingLevel int) error {
+	log.Printf("task logging level: %v", t.LogLevel)
+
 	if t.LogLevel != loggingLevel {
-		t.E("Changing logging level to %v", loggingLevel)
+		t.Error("Changing logging level to %v", loggingLevel)
 		t.LogLevel = loggingLevel
 	}
 
 	err, cont := t.i.Pre()
 	if err != nil || !cont {
-		t.E("error in PreRun: %s", err)
+		t.Error("error in PreRun: %s", err)
 
 		if !cont {
-			t.E("quitting Run.")
+			t.Error("quitting Run.")
 			return nil
 		}
 
-		t.W("Continuing anyways...")
+		t.Warn("Continuing anyways...")
 	}
 
 	err = t.i.Run()
 	if err != nil {
-		t.E("error in Run: %s", err)
+		t.Error("error in Run: %s", err)
 	}
 
 	t.i.Post(err)
@@ -81,8 +87,7 @@ func (t *Task) Run(loggingLevel int) error {
  * This one should probably be overridden.
  */
 func (t *Task) Init() {
-	t.Name = "Task"
-	t.LogLevel = logger.VERBOSE
+	t.Logger = logger.New("Task", logger.VERBOSE)
 }
 
 func (t *Task) Pre() (error, bool) {

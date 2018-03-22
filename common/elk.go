@@ -32,19 +32,16 @@ func init() {
 }
 
 func (q *ElkQuery) MakeELKRequest(logLevel int, caller string) ([]byte, error) {
-	l := logger.Logger{
-		LogLevel: logLevel,
-		Name:     caller,
-	}
+	l := logger.New(caller, logLevel)
 
 	// format whole address
 	addr := fmt.Sprintf("%s%s", apiAddr, q.Endpoint)
-	l.I("Making ELK request against %s", addr)
+	l.Info("Making ELK request against %s", addr)
 
 	// create the request
 	req, err := http.NewRequest(q.Method, addr, bytes.NewReader([]byte(q.Query)))
 	if err != nil {
-		l.E("there was a problem forming the request: %s", err)
+		l.Error("there was a problem forming the request: %s", err)
 		return []byte{}, err
 	}
 
@@ -55,21 +52,21 @@ func (q *ElkQuery) MakeELKRequest(logLevel int, caller string) ([]byte, error) {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		l.E("there was a problem making the request: %s", err)
+		l.Error("there was a problem making the request: %s", err)
 		return []byte{}, err
 	}
 
 	// read the resp
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		l.E("there was a problem reading the response body: %s", err)
+		l.Error("there was a problem reading the response body: %s", err)
 		return []byte{}, err
 	}
 
 	// check resp code
 	if resp.StatusCode/100 != 2 {
 		msg := fmt.Sprintf("non 200 reponse code received. code: %v, body: %s", resp.StatusCode, b)
-		l.E(msg)
+		l.Error(msg)
 
 		return []byte{}, errors.New(msg)
 	}

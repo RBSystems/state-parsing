@@ -151,11 +151,11 @@ func (j *Job) executeTask() {
 		return
 	}
 
-	task.I("Running task %s", name)
+	task.Info("Running task %s", name)
 
 	err := task.Run(4)
 	if err != nil {
-		task.E("error: %v", err)
+		task.Error("error: %v", err)
 	}
 }
 

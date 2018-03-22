@@ -23,18 +23,18 @@ func (a *AlertFactory) Post(err error) {
 	engines := GetNotificationEngines()
 	reports := []base.AlertReport{}
 
-	a.I("Sending notifications...")
+	a.Info("Sending notifications...")
 
 	for k, v := range a.AlertsToSend {
 		reps, err := engines[k].SendNotifications(v)
 		if err != nil {
-			a.E("issue sending the %v notifications. error: %s", k, err)
+			a.Error("issue sending the %v notifications. error: %s", k, err)
 		}
 
 		reports = append(reports, reps...)
 	}
 
-	a.I("Marking alert as sent.")
+	a.Info("Marking alert as sent.")
 
 	device.MarkLastAlertSent(reports)
 }

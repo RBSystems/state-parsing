@@ -2,6 +2,7 @@ package roomupdate
 
 import (
 	"encoding/json"
+	"log"
 
 	"github.com/byuoitav/state-parsing/eventforwarding"
 	"github.com/byuoitav/state-parsing/logger"
@@ -24,15 +25,15 @@ type RoomUpdater struct {
 }
 
 func (r *RoomUpdater) Init() {
-	r.Name = names.ROOM_UPDATE
-	r.LogLevel = logger.INFO
+	r.Logger = logger.New(names.ROOM_UPDATE, logger.INFO)
+	log.Printf("setting log level to %v", logger.INFO)
 }
 
 func (r *RoomUpdater) Run() error {
 	/* get data from ELK */
 	body, err := RoomUpdateQuery.MakeELKRequest(r.LogLevel, r.Name)
 	if err != nil {
-		r.E("error with the initial query: %s", err)
+		r.Error("error with the initial query: %s", err)
 		return err
 	}
 
@@ -40,7 +41,7 @@ func (r *RoomUpdater) Run() error {
 
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		r.E("couldn't unmarshal response: %s", err)
+		r.Error("couldn't unmarshal response: %s", err)
 		return err
 	}
 
@@ -51,12 +52,12 @@ func (r *RoomUpdater) Run() error {
 }
 
 func (r *RoomUpdater) processData(data RoomQueryResponse) {
-	r.I("Processing room update data.")
+	r.Info("Processing room update data.")
 	updatePower := make(map[string]string)
 	updateAlerting := make(map[string]int)
 
 	for _, room := range data.Aggregations.Rooms.Buckets {
-		r.V("Processing room: %s", room.Key)
+		r.Verbose("Processing room: %s", room.Key)
 
 		// make sure both indicies are there
 		if len(room.Index.Buckets) > 2 || len(room.Index.Buckets) == 0 {
@@ -67,20 +68,20 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 				indicies = append(indicies, index.Key)
 			}
 
-			r.E("%s has more than >2 or 0 incidies. ignoring this room...", room.Key)
-			r.E("indicies of %s: %v", room.Key, indicies)
+			r.Error("%s has more than >2 or 0 incidies. ignoring this room...", room.Key)
+			r.Error("indicies of %s: %v", room.Key, indicies)
 			continue
 
 		} else if len(room.Index.Buckets) == 1 {
 			// one of the indicies is missing
 
 			if room.Index.Buckets[0].Key == DEVICE_INDEX {
-				r.W("%s doesn't have a room index. i'll create it.", room.Key)
+				r.Warn("%s doesn't have a room index. i'll create it.", room.Key)
 			} else if room.Index.Buckets[0].Key == ROOM_INDEX {
-				r.E("%s doesn't have a device index. this room probably should be deleted", room.Key)
+				r.Error("%s doesn't have a device index. this room probably should be deleted", room.Key)
 				continue
 			} else {
-				r.E("%s is missing it's room index and device index. it has index: %v", room.Key, room.Index.Buckets[0].Key)
+				r.Error("%s is missing it's room index and device index. it has index: %v", room.Key, room.Index.Buckets[0].Key)
 				continue
 			}
 		}
@@ -97,11 +98,11 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 			roomIndex = room.Index.Buckets[0]
 		}
 
-		r.V("processing device index: %v", deviceIndex.Key)
+		r.Verbose("processing device index: %v", deviceIndex.Key)
 
 		// check if any devices are powered on
 		for _, p := range deviceIndex.Power.Buckets {
-			r.V("power: %v", p.Key)
+			r.Verbose("power: %v", p.Key)
 
 			if p.Key == ON {
 				poweredOn = true
@@ -110,17 +111,17 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 
 		// check if any devices are alerting
 		for _, a := range deviceIndex.Alerting.Buckets {
-			r.V("alerting: %v", a.Key)
+			r.Verbose("alerting: %v", a.Key)
 
 			if a.Key == ALERTING {
 				alerting = true
 			}
 		}
 
-		r.V("processing room index: %v", roomIndex.Key)
+		r.Verbose("processing room index: %v", roomIndex.Key)
 
 		if len(roomIndex.Power.Buckets) == 1 {
-			r.V("room power set to: %v", roomIndex.Power.Buckets[0].Key)
+			r.Verbose("room power set to: %v", roomIndex.Power.Buckets[0].Key)
 
 			if roomIndex.Power.Buckets[0].Key == STANDBY && poweredOn {
 				// the room is in standby, but there is at least one device powered on
@@ -130,7 +131,7 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 				updatePower[room.Key] = STANDBY
 			}
 		} else if len(roomIndex.Power.Buckets) == 0 {
-			r.W("%s doesn't have a power state. i'll create one for it.", room.Key)
+			r.Warn("%s doesn't have a power state. i'll create one for it.", room.Key)
 
 			// set the power state to whatever it's supposed to be
 			if poweredOn {
@@ -141,12 +142,12 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 		} else {
 			// this room has more than one power state?
 			// we'll just skip this room
-			r.W("room %s has more than one power state. power buckets: %v", room.Key, roomIndex.Power.Buckets)
+			r.Warn("room %s has more than one power state. power buckets: %v", room.Key, roomIndex.Power.Buckets)
 			continue
 		}
 
 		if len(roomIndex.Alerting.Buckets) == 1 {
-			r.V("room alerting set to: %v", roomIndex.Alerting.Buckets[0].Key)
+			r.Verbose("room alerting set to: %v", roomIndex.Alerting.Buckets[0].Key)
 
 			if roomIndex.Alerting.Buckets[0].Key == NOT_ALERTING && alerting {
 				// the room is in not alerting, but there is at least one device alerting
@@ -156,7 +157,7 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 				updateAlerting[room.Key] = NOT_ALERTING
 			}
 		} else if len(roomIndex.Alerting.Buckets) == 0 {
-			r.W("%s doesn't have an alerting state. i'll create one for it.", room.Key)
+			r.Warn("%s doesn't have an alerting state. i'll create one for it.", room.Key)
 
 			// set the power state to whatever it's supposed to be
 			if alerting {
@@ -167,7 +168,7 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 		} else {
 			// this room has more than one alerting state?
 			// we'll just skip this room
-			r.W("%s has more than one alerting state. alerting buckets: %v", roomIndex.Key, roomIndex.Power.Buckets)
+			r.Warn("%s has more than one alerting state. alerting buckets: %v", roomIndex.Key, roomIndex.Power.Buckets)
 			continue
 		}
 	}
@@ -181,7 +182,7 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 			Value: power,
 		}
 
-		r.I("marking %s power as %v", room, power)
+		r.Info("marking %s power as %v", room, power)
 		eventforwarding.SendToStateBuffer(state, room, "room")
 	}
 
@@ -192,9 +193,9 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 			Value: alerting == 1, // to turn it into a bool
 		}
 
-		r.I("marking %s alerting as %v", room, alerting)
+		r.Info("marking %s alerting as %v", room, alerting)
 		eventforwarding.SendToStateBuffer(state, room, "room")
 	}
 
-	r.I("Successfully updated room state.")
+	r.Info("Successfully updated room state.")
 }
