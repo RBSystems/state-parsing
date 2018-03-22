@@ -109,8 +109,8 @@ func (j *Job) execute() {
 	default:
 		log.Printf(color.HiRedString("[%v] no type associated with: %v", j.Config.Name, j.Config.Type))
 	}
-	log.Printf(color.HiGreenString("'[%v] Time Elapsed: %v. ", j.Config.Name, time.Since(startTime)))
-	log.Printf(color.HiGreenString("'[%v] Done. ", j.Config.Name))
+	log.Printf(color.HiGreenString("[%v] Time Elapsed: %v. ", j.Config.Name, time.Since(startTime)))
+	log.Printf(color.HiGreenString("[%v] Done. ", j.Config.Name))
 }
 
 func (j *Job) executeScript() {
