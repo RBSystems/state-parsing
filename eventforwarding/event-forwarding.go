@@ -7,9 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/salt-translator-service/elk"
+	"github.com/fatih/color"
 )
 
 var apiForwardingChannel chan elkreporting.ElkEvent
@@ -42,12 +44,16 @@ func Init() {
 				forwardEvent(e, apiurl)
 			case e := <-heartbeatForwardingChannel:
 				forwardEvent(e, heartbeaturl)
+				//print out the length
+				log.Printf(color.HiMagentaString("Heartbeat Forwarding Channel Size: %v.", len(heartbeatForwardingChannel)))
 			}
 		}
 	}()
 }
 
 func forwardEvent(e interface{}, url string) {
+	start := time.Now()
+
 	//	log.Printf("[forwarder] Forwarding event to %v", url)
 	b, err := json.Marshal(e)
 	if err != nil {
@@ -73,4 +79,6 @@ func forwardEvent(e interface{}, url string) {
 		log.Printf("[forwarder] response: %s", b)
 		return
 	}
+
+	log.Printf(color.HiMagentaString("elapsed time on forward: %v", time.Since(start).Nanoseconds()))
 }

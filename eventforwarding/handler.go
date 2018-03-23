@@ -2,10 +2,12 @@ package eventforwarding
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	heartbeat "github.com/byuoitav/salt-translator-service/elk"
+	"github.com/fatih/color"
 	"github.com/labstack/echo"
 )
 
@@ -33,6 +35,8 @@ func AddHeartbeat(context echo.Context) error {
 	if err != nil {
 		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Error with the body, not a valid event: %v: ", err.Error()))
 	}
+
+	log.Printf(color.HiBlueString("ingesting"))
 
 	heartbeatIngestionChannel <- event
 	return context.JSON(http.StatusOK, "Success.")

@@ -4,6 +4,7 @@ import (
 	"log"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/fatih/color"
@@ -43,15 +44,21 @@ func StartDistributor() {
 
 	//our loop for ingestion and distribution
 	for {
+		log.Printf(color.HiCyanString("top of select"))
 
 		select {
 		case e := <-eventIngestionChannel:
+			log.Printf(color.HiCyanString("Event Forward"))
 			apiForwardingChannel <- e
+			log.Printf(color.HiCyanString("Event Ingest"))
 			distributeEvent(e)
 		case e := <-heartbeatIngestionChannel:
+			log.Printf(color.HiCyanString("Heartbeat Forward"))
 			heartbeatForwardingChannel <- e
+			log.Printf(color.HiCyanString("Heartbeat Ingest"))
 			distributeHeartbeat(e)
 		case <-localTickerChan:
+			log.Printf(color.HiGreenString("Ticker Hit"))
 			//ship it out
 			go dispatchLocalState(localStateMap, "device")
 			go dispatchLocalState(localRoomStateMap, "room")
@@ -59,6 +66,7 @@ func StartDistributor() {
 			//refresh the maps
 			localStateMap = make(map[string]map[string]interface{})
 			localRoomStateMap = make(map[string]map[string]interface{})
+			log.Printf(color.HiGreenString("Maps reset"))
 		}
 
 		//we need to send it on to the ELK stack as-is
@@ -144,6 +152,9 @@ func SendToStateBuffer(state StateDistribution, hostname string, mapType string)
 
 func localStateBuffering(state StateDistribution, hostname string, mapType string) {
 
+	//check how long this takes
+	starttime := time.Now()
+
 	//check for a nil interface
 	if state.Value == nil {
 		return
@@ -163,6 +174,8 @@ func localStateBuffering(state StateDistribution, hostname string, mapType strin
 	case "device":
 		bufferLocally(state, hostname, localStateMap)
 	}
+
+	log.Printf(color.HiYellowString("Time to buffer: %v", time.Since(starttime).Nanoseconds()))
 }
 
 func bufferLocally(state StateDistribution, hostname string, mapToUse map[string]map[string]interface{}) {
