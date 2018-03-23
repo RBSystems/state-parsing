@@ -2,7 +2,6 @@ package roomupdate
 
 import (
 	"encoding/json"
-	"log"
 
 	"github.com/byuoitav/state-parsing/eventforwarding"
 	"github.com/byuoitav/state-parsing/logger"
@@ -26,7 +25,6 @@ type RoomUpdater struct {
 
 func (r *RoomUpdater) Init() {
 	r.Logger = logger.New(names.ROOM_UPDATE, logger.INFO)
-	log.Printf("setting log level to %v", logger.INFO)
 }
 
 func (r *RoomUpdater) Run() error {

@@ -20,8 +20,8 @@ type Logger struct {
 	LogLevel int
 }
 
-func New(name string, logLevel int) *Logger {
-	return &Logger{
+func New(name string, logLevel int) Logger {
+	return Logger{
 		Name:     name,
 		LogLevel: logLevel,
 	}

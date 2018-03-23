@@ -17,15 +17,15 @@
     "name": "lost-heartbeat",
     "repeat-interval": 5,
     "wait-for-complete": false,
-    "enabled": false,
+    "enabled": true,
     "type": "alert-factory"
   },
   {
     "name": "heartbeat-restored",
     "repeat-interval": 20,
     "wait-for-complete": false,
-    "type": "script",
-    "enabled": false
+    "type": "alert-factory",
+    "enabled": true
  },
  {
     "name": "detailstate-updating",

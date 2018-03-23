@@ -1,8 +1,6 @@
 package task
 
 import (
-	"log"
-
 	"github.com/byuoitav/state-parsing/logger"
 )
 
@@ -38,7 +36,7 @@ type Interface interface {
 
 type Task struct {
 	i Interface
-	*logger.Logger
+	logger.Logger
 }
 
 func NewTask(i Interface) Task {
@@ -52,8 +50,6 @@ func NewTask(i Interface) Task {
 }
 
 func (t *Task) Run(loggingLevel int) error {
-	log.Printf("task logging level: %v", t.LogLevel)
-
 	if t.LogLevel != loggingLevel {
 		t.Error("Changing logging level to %v", loggingLevel)
 		t.LogLevel = loggingLevel
