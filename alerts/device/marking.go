@@ -62,6 +62,8 @@ func MarkLastAlertSent(reps []base.AlertReport) error {
 
 func MarkDevicesAsNotAlerting(deviceIDs []string) {
 	secondaryData := make(map[string]map[string]interface{})
+	secondaryData[base.LOST_HEARTBEAT] = make(map[string]interface{})
+
 	secondaryData[base.LOST_HEARTBEAT]["alert-sent"] = ""
 	secondaryData[base.LOST_HEARTBEAT]["alerting"] = false
 	secondaryData[base.LOST_HEARTBEAT]["message"] = ""
