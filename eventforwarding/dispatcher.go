@@ -227,9 +227,14 @@ var translationMap = map[string]string{
 	"D":  "display",
 	"CP": "control-processor",
 
-	"DSP": "digital-signal-processor",
-	"PC":  "general-computer",
-	"SW":  "video-switcher",
+	"DSP":  "digital-signal-processor",
+	"PC":   "general-computer",
+	"SW":   "video-switcher",
+	"MIC":  "microphone",
+	"DS":   "divider-sensor",
+	"GW":   "gateway",
+	"VIA":  "kramer-via",
+	"HDMI": "hdmi-input",
 }
 
 //device record type is determined usin the translation map

@@ -35,20 +35,27 @@ func Init() {
 	apiForwardingChannel = make(chan elkreporting.ElkEvent, 5000)
 	heartbeatForwardingChannel = make(chan elk.Event, 5000)
 
-	go func() {
-		//we just send it up
-		for {
+	ForwardingWorkers := 5
 
-			select {
-			case e := <-apiForwardingChannel:
-				forwardEvent(e, apiurl)
-			case e := <-heartbeatForwardingChannel:
-				forwardEvent(e, heartbeaturl)
-				//print out the length
-				log.Printf(color.HiMagentaString("Heartbeat Forwarding Channel Size: %v.", len(heartbeatForwardingChannel)))
+	for i := 0; i < ForwardingWorkers; i++ {
+
+		log.Printf(color.HiMagentaString("Starting forwarding worker %v", i))
+
+		go func() {
+			//we just send it up
+			for {
+
+				select {
+				case e := <-apiForwardingChannel:
+					forwardEvent(e, apiurl)
+				case e := <-heartbeatForwardingChannel:
+					forwardEvent(e, heartbeaturl)
+					//print out the length
+					log.Printf(color.HiMagentaString("Heartbeat Forwarding Channel Size: %v.", len(heartbeatForwardingChannel)))
+				}
 			}
-		}
-	}()
+		}()
+	}
 }
 
 func forwardEvent(e interface{}, url string) {
