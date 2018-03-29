@@ -14,6 +14,7 @@ type Configuration struct {
 	Interval        int    `json:"repeat-interval"`
 	WaitForComplete bool   `json:"wait-for-complete"`
 	Enabled         bool   `json:"enabled"`
+	Type            string `json:"type"`
 }
 
 func GetConfiguration() ([]Configuration, error) {

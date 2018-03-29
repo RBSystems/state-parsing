@@ -13,6 +13,7 @@ import (
 	"time"
 	"unicode"
 
+	"github.com/byuoitav/state-parsing/common"
 	"github.com/fatih/color"
 )
 
@@ -48,18 +49,7 @@ func startDispatcher() {
 	}()
 }
 
-type updateHeader struct {
-	ID    string `json:"_id"`
-	Type  string `json:"_type"`
-	Index string `json:"_index"`
-}
-
-type updateBody struct {
-	Doc    map[string]string `json:"doc"`
-	Upsert bool              `json:"doc_as_upsert"`
-}
-
-func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
+func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType string) {
 	if len(stateMap) < 1 {
 		count++
 		if count%10 == 0 {
@@ -81,7 +71,7 @@ func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 
 	index := getIndexName(mapType)
 
-	headerWrapper := make(map[string]updateHeader)
+	headerWrapper := make(map[string]common.UpdateHeader)
 
 	for k, v := range stateMap {
 
@@ -96,8 +86,8 @@ func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 		fillMeta(k, mapType, v)
 
 		//build our first line
-		headerWrapper["update"] = updateHeader{ID: k, Type: recordType, Index: index}
-		ub := updateBody{Doc: v, Upsert: true}
+		headerWrapper["update"] = common.UpdateHeader{ID: k, Type: recordType, Index: index}
+		ub := common.UpdateBody{Doc: v, Upsert: true}
 
 		b, err := json.Marshal(headerWrapper)
 		if err != nil {
@@ -120,9 +110,9 @@ func dispatchLocalState(stateMap map[string]map[string]string, mapType string) {
 		payload = append(payload, bb...)
 		payload = append(payload, '\n')
 
-		color.Set(color.FgYellow)
-		log.Printf("[Dispatcher] Added line for device %v.", k)
-		color.Unset()
+		//color.Set(color.FgYellow)
+		//log.Printf("[Dispatcher] Added line for device %v: %+v.", k, ub)
+		//color.Unset()
 	}
 
 	color.Set(color.FgGreen)
@@ -177,7 +167,7 @@ func getRecordType(hostname, mapType string) (string, error) {
 	return "", errors.New("Invalid mapType")
 }
 
-func fillMeta(name, mapType string, toFill map[string]string) {
+func fillMeta(name, mapType string, toFill map[string]interface{}) {
 	switch mapType {
 	case "room":
 		fillRoomMeta(name, toFill)
@@ -188,7 +178,7 @@ func fillMeta(name, mapType string, toFill map[string]string) {
 	}
 }
 
-func fillDeviceMeta(name string, toFill map[string]string) {
+func fillDeviceMeta(name string, toFill map[string]interface{}) {
 	split := strings.Split(name, "-")
 
 	if len(split) != 3 {
@@ -204,7 +194,7 @@ func fillDeviceMeta(name string, toFill map[string]string) {
 	toFill["enable-notifications"] = name
 	toFill["last-state-recieved"] = time.Now().Format(time.RFC3339)
 }
-func fillRoomMeta(name string, toFill map[string]string) {
+func fillRoomMeta(name string, toFill map[string]interface{}) {
 	split := strings.Split(name, "-")
 
 	if len(split) != 2 {
@@ -237,9 +227,14 @@ var translationMap = map[string]string{
 	"D":  "display",
 	"CP": "control-processor",
 
-	"DSP": "digital-signal-processor",
-	"PC":  "general-computer",
-	"SW":  "video-switcher",
+	"DSP":  "digital-signal-processor",
+	"PC":   "general-computer",
+	"SW":   "video-switcher",
+	"MIC":  "microphone",
+	"DS":   "divider-sensor",
+	"GW":   "gateway",
+	"VIA":  "kramer-via",
+	"HDMI": "hdmi-input",
 }
 
 //device record type is determined usin the translation map

@@ -4,7 +4,8 @@
 # Query
 #
 import requests
-import os import sys
+import os 
+import sys
 
 username = os.environ['ELK_SA_USERNAME']
 password = os.environ['ELK_SA_PASSWORD']

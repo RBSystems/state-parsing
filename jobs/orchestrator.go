@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/byuoitav/state-parsing/common"
+	"github.com/byuoitav/state-parsing/tasks"
 	"github.com/fatih/color"
 )
 
@@ -66,11 +67,11 @@ func (j *Job) runScheduledTask() {
 	//run forever until a stop message is receieved
 
 	//start a ticker, as we're running at the same schedule
-	timer := time.NewTicker(time.Second * time.Duration(j.Config.Interval))
+	ticker := time.NewTicker(time.Second * time.Duration(j.Config.Interval))
 	for true {
 
 		select {
-		case <-timer.C:
+		case <-ticker.C:
 			color.Set(color.FgGreen)
 			log.Printf("[%v] Starting run...", j.Config.Name)
 			color.Unset()
@@ -95,6 +96,24 @@ func (j *Job) runScheduledTask() {
 }
 
 func (j *Job) execute() {
+	log.Printf(color.HiGreenString("[%v] Starting run.", j.Config.Name))
+	startTime := time.Now()
+	switch j.Config.Type {
+
+	case "script":
+		j.executeScript()
+	case "alert-factory":
+		j.executeTask()
+	case "updater":
+		j.executeTask()
+	default:
+		log.Printf(color.HiRedString("[%v] no type associated with: %v", j.Config.Name, j.Config.Type))
+	}
+	log.Printf(color.HiGreenString("[%v] Time Elapsed: %v. ", j.Config.Name, time.Since(startTime)))
+	log.Printf(color.HiGreenString("[%v] Done. ", j.Config.Name))
+}
+
+func (j *Job) executeScript() {
 	//find the script, and run it
 	var command string
 	if len(os.Getenv("EVENT_PARSING_SCRIPTS_PATH")) < 1 {
@@ -119,6 +138,25 @@ func (j *Job) execute() {
 		color.Unset()
 	}
 	return
+
+}
+
+func (j *Job) executeTask() {
+	name := j.Config.Name
+	log.Printf(color.HiRedString("[%v] Starting run...", name))
+
+	task, ok := tasks.GetTask(name)
+	if !ok {
+		log.Printf(color.HiRedString("[%v]Error: No task found for %v", name, name))
+		return
+	}
+
+	task.Info("Running task %s", name)
+
+	err := task.Run(4)
+	if err != nil {
+		task.Error("error: %v", err)
+	}
 }
 
 func (o *Orchestrator) Start() {
@@ -130,8 +168,11 @@ func (o *Orchestrator) Start() {
 		return
 	}
 
+	jobs := 0
 	for _, c := range o.Config {
 		if c.Enabled {
+			jobs++
+
 			log.Printf("Starting to job for %v", c.Name)
 			stopChan := make(chan string, 1)
 			j := Job{StopChan: stopChan}
@@ -140,4 +181,6 @@ func (o *Orchestrator) Start() {
 			o.Jobs = append(o.Jobs, j)
 		}
 	}
+
+	log.Printf(color.HiYellowString("Started %v job(s)."), jobs)
 }

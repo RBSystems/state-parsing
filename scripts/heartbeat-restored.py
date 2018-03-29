@@ -50,6 +50,7 @@ headers = {
     'content-type': "application/json",
     'cache-control': "no-cache"
     }
+
 print username
 print password
 response = requests.request("POST", url, data=payload, headers=headers, auth=(username, password))
@@ -99,7 +100,7 @@ alertingHeader = 'alerting'
 
 errorString = "Too much time elapsed since last heartbeat. Last heartbeat was at : "
 
-timestring = "%Y-%m-%dT%H:%M:%S.%f%Z"
+timestring = "%Y-%m-%dT%H:%M:%S.%f"
 
 print(searchresults)
 
@@ -129,7 +130,7 @@ for hit in searchresults["hits"]["hits"]:
 
     elkurl = elkAddr + "/" + index + "/" + devType + "/" + device
 
-    heartbeat = datetime.strptime(heartbeatPreParse, '%Y-%m-%dT%H:%M:%S.%fZ')
+    heartbeat = datetime.strptime(heartbeatPreParse, '%Y-%m-%dT%H:%M:%S.%f')
     lastHeartbeat = datetime_from_utc_to_local(
         heartbeat).strftime("%Y-%m-%d %H:%M:%S")
 

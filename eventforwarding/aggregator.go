@@ -6,9 +6,9 @@ import (
 	"github.com/fatih/color"
 )
 
-func startAggregator(incomingChannel <-chan stateDistribution, tickerChan <-chan int, hostname string) {
+func startAggregator(incomingChannel <-chan StateDistribution, tickerChan <-chan int, hostname string) {
 
-	state := make(map[string]string)
+	state := make(map[string]interface{})
 
 	//start our timer
 	for {
@@ -35,11 +35,11 @@ func startAggregator(incomingChannel <-chan stateDistribution, tickerChan <-chan
 			sendDownstream(state)
 
 			//clear the map
-			state = make(map[string]string)
+			state = make(map[string]interface{})
 		}
 	}
 }
 
-func sendDownstream(state map[string]string) {
+func sendDownstream(state map[string]interface{}) {
 
 }

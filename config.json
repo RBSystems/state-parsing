@@ -3,36 +3,42 @@
     "name": "heartbeat",
     "repeat-interval": 10,
     "wait-for-complete": false,
+    "type": "script",
     "enabled": false
   },
   {
     "name": "state-updating",
     "repeat-interval": 10,
     "wait-for-complete": false,
+    "type": "script",
     "enabled": false
   },
   {
-    "name": "heartbeat-lost",
-    "repeat-interval": 30,
+    "name": "lost-heartbeat",
+    "repeat-interval": 5,
     "wait-for-complete": false,
-    "enabled": false
+    "enabled": true,
+    "type": "alert-factory"
   },
   {
     "name": "heartbeat-restored",
     "repeat-interval": 20,
     "wait-for-complete": false,
-    "enabled": false
+    "type": "alert-factory",
+    "enabled": true
  },
  {
     "name": "detailstate-updating",
     "repeat-interval": 180,
     "wait-for-complete": false,
+    "type": "script",
     "enabled": false
  },
  {
     "name": "room-update",
     "repeat-interval": 5,
     "wait-for-complete": true,
+    "type": "updater",
     "enabled": true
  }
 ]
