@@ -14,11 +14,18 @@
     "enabled": false
   },
   {
+    "name": "detailstate-updating",
+    "repeat-interval": 180,
+    "wait-for-complete": false,
+    "type": "script",
+    "enabled": false
+  },
+  {
     "name": "lost-heartbeat",
     "repeat-interval": 5,
     "wait-for-complete": false,
-    "enabled": true,
-    "type": "alert-factory"
+    "type": "alert-factory",
+    "enabled": true
   },
   {
     "name": "heartbeat-restored",
@@ -26,13 +33,6 @@
     "wait-for-complete": false,
     "type": "alert-factory",
     "enabled": true
- },
- {
-    "name": "detailstate-updating",
-    "repeat-interval": 180,
-    "wait-for-complete": false,
-    "type": "script",
-    "enabled": false
  },
  {
     "name": "room-update",
