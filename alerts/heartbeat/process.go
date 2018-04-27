@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/alerts/room"
 	"github.com/byuoitav/state-parsing/common"
+	"github.com/byuoitav/state-parsing/logger"
 	"github.com/fatih/color"
 )
 
@@ -205,16 +207,25 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 	for i := range resp.Hits.Hits {
 		device := resp.Hits.Hits[i].Source
 
+		// get building/room off of hostname
+		split := strings.Split(device.Hostname, "-")
+		if len(split) != 3 {
+			logger.Error("%s is an improper hostname. skipping it...", device.Hostname)
+			continue
+		}
+		building := split[0]
+		room := split[1]
+		roomKey := building + "-" + room
+
 		// make sure to check this room later
-		roomsToCheck[device.Room] = true
+		roomsToCheck[roomKey] = true
 
 		// if it's alerting, we need to set alerting to false
-		if device.Alerting {
-			deviceIDsToUpdate = append(deviceIDsToUpdate, resp.Hits.Hits[i].ID)
-		}
+		deviceIDsToUpdate = append(deviceIDsToUpdate, resp.Hits.Hits[i].ID)
 
 		// if a device's alerts aren't suppressed, create the alert
 		if !device.Suppress {
+			logger.Info("Creating hearbeat restored alert for %s", device.Hostname)
 			content, err := json.Marshal(base.SlackAlert{
 				Markdown: false,
 				Attachments: []base.SlackAttachment{base.SlackAttachment{
@@ -244,11 +255,13 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 				Device:    device.Hostname,
 			}
 
-			if _, ok := alertsByRoom[device.Room]; ok {
-				alertsByRoom[device.Room] = append(alertsByRoom[device.Room], alert)
+			if _, ok := alertsByRoom[roomKey]; ok {
+				alertsByRoom[roomKey] = append(alertsByRoom[roomKey], alert)
 			} else {
-				alertsByRoom[device.Room] = []base.Alert{alert}
+				alertsByRoom[roomKey] = []base.Alert{alert}
 			}
+		} else {
+			logger.Warn("Not creating alert for %s, because they are suppressed", device.Hostname)
 		}
 	}
 
@@ -265,7 +278,7 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 		return ret
 	}(roomsToCheck))
 	if err != nil {
-		log.Printf(color.HiRedString("Error: %v", err.Error()))
+		logger.Error("error getting rooms: %v", err.Error())
 		return toReturn, err
 	}
 
@@ -286,7 +299,7 @@ func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse
 	}
 
 	for k, v := range toReturn {
-		log.Printf(color.HiBlueString("%v %v alerts to be sent", len(v), k))
+		logger.Info("%v %v alerts to be sent", len(v), k)
 	}
 
 	return toReturn, nil

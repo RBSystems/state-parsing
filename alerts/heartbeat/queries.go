@@ -41,7 +41,9 @@ const HeartbeatLostQuery = `{
 
 const HeartbeatRestoredQuery = `{  "_source": [
     "hostname",
-    "last-heartbeat" ], "query": {
+    "last-heartbeat",
+	"notifications-suppressed"], 
+	"query": {
     "bool": {
       "must": [
         {
@@ -69,5 +71,5 @@ const HeartbeatRestoredQuery = `{  "_source": [
       }
     }
   },
-  "size": -1
+  "size": 1000
   }`

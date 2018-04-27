@@ -11,7 +11,7 @@ import (
 func MakeELKRequest(address string, method string, body []byte, ll int) (int, []byte, error) {
 
 	if ll > 0 {
-		log.Printf("[Heartbeat-lost] Making request against %v", address)
+		log.Printf("\tMaking request against %v", address)
 	}
 
 	//assume that we have the normal auth
@@ -27,20 +27,19 @@ func MakeELKRequest(address string, method string, body []byte, ll int) (int, []
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Printf("[Heartbeat-lost] There was a problem making the request: %v", err.Error())
+		log.Printf("\tThere was a problem making the request: %v", err.Error())
 		return 0, []byte{}, err
 	}
 
 	//get the body
-
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Printf("[Heartbeat-lost] Could not read the response body: %v", err.Error())
+		log.Printf("\tCould not read the response body: %v", err.Error())
 		return 0, []byte{}, err
 	}
 
 	if resp.StatusCode/100 != 2 {
-		log.Printf("[Heartbeat-lost] non 200 response code sent. Code: %v, body: %s ", resp.StatusCode, b)
+		log.Printf("\tnon 200 response code sent. Code: %v, body: %s ", resp.StatusCode, b)
 	}
 	return resp.StatusCode, b, nil
 }

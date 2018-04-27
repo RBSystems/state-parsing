@@ -44,8 +44,6 @@ func StartDistributor() {
 
 	//our loop for ingestion and distribution
 	for {
-		log.Printf(color.HiCyanString("top of select"))
-
 		select {
 		case e := <-eventIngestionChannel:
 			log.Printf(color.HiCyanString("Event Forward"))
@@ -151,7 +149,6 @@ func SendToStateBuffer(state StateDistribution, hostname string, mapType string)
 }
 
 func localStateBuffering(state StateDistribution, hostname string, mapType string) {
-
 	//check how long this takes
 	starttime := time.Now()
 

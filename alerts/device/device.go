@@ -9,7 +9,7 @@ type StaticDevice struct {
 	Alerts                map[string]Alert `json:"alerts,omitempty"`
 	SuppressNotifications string           `json:"suppress-notifications,omitempty"`
 	Alerting              bool             `json:"alerting,omitempty"`
-	Suppress              bool             `json:"suppress"`
+	Suppress              bool             `json:"notifications-suppressed"`
 	LastStateRecieved     string           `json:"last-state-recieved,omitempty"`
 	ViewDashboard         string           `json:"view-dashboard,omitempty"`
 	EnableNotifications   string           `json:"enable-notifications,omitempty"`

@@ -73,7 +73,7 @@ func (h *RestoredHeartbeatAlertFactory) Run() error {
 	}
 
 	if respCode/100 != 2 {
-		msg := fmt.Sprintf("[restored-heartbeat] Non 200 response received from the initial query: %v, %s", respCode, body)
+		msg := fmt.Sprintf("non 200 response received from the initial query: %v, %s", respCode, body)
 		h.Error(msg)
 		return errors.New(msg)
 	}

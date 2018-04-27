@@ -5,6 +5,7 @@ import (
 
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/eventforwarding"
+	"github.com/byuoitav/state-parsing/logger"
 	"github.com/fatih/color"
 )
 
@@ -74,7 +75,7 @@ func MarkDevicesAsNotAlerting(deviceIDs []string) {
 	}
 
 	for _, id := range deviceIDs {
-		log.Printf(color.HiYellowString("Marking as not alerting %v", id))
+		logger.Info("Marking %s as not alerting", id)
 		eventforwarding.SendToStateBuffer(secondaryStatus, id, "device")
 	}
 }

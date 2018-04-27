@@ -59,8 +59,6 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 
 		// make sure both indicies are there
 		if len(room.Index.Buckets) > 2 || len(room.Index.Buckets) == 0 {
-			// there are no indicies/>2 incicies
-
 			indicies := []string{}
 			for _, index := range room.Index.Buckets {
 				indicies = append(indicies, index.Key)
@@ -96,11 +94,11 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 			roomIndex = room.Index.Buckets[0]
 		}
 
-		r.Verbose("processing device index: %v", deviceIndex.Key)
+		r.Verbose("\tProcessing device index: %v", deviceIndex.Key)
 
 		// check if any devices are powered on
 		for _, p := range deviceIndex.Power.Buckets {
-			r.Verbose("power: %v", p.Key)
+			r.Verbose("\t\tPower: %v", p.Key)
 
 			if p.Key == ON {
 				poweredOn = true
@@ -109,17 +107,17 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 
 		// check if any devices are alerting
 		for _, a := range deviceIndex.Alerting.Buckets {
-			r.Verbose("alerting: %v", a.Key)
+			r.Verbose("\t\tAlerting: %v", a.Key)
 
 			if a.Key == ALERTING {
 				alerting = true
 			}
 		}
 
-		r.Verbose("processing room index: %v", roomIndex.Key)
+		r.Verbose("\tProcessing room index: %v", roomIndex.Key)
 
 		if len(roomIndex.Power.Buckets) == 1 {
-			r.Verbose("room power set to: %v", roomIndex.Power.Buckets[0].Key)
+			r.Verbose("\t\troom power set to: %v", roomIndex.Power.Buckets[0].Key)
 
 			if roomIndex.Power.Buckets[0].Key == STANDBY && poweredOn {
 				// the room is in standby, but there is at least one device powered on
@@ -145,7 +143,7 @@ func (r *RoomUpdater) processData(data RoomQueryResponse) {
 		}
 
 		if len(roomIndex.Alerting.Buckets) == 1 {
-			r.Verbose("room alerting set to: %v", roomIndex.Alerting.Buckets[0].Key)
+			r.Verbose("\t\troom alerting set to: %v", roomIndex.Alerting.Buckets[0].Key)
 
 			if roomIndex.Alerting.Buckets[0].Key == NOT_ALERTING && alerting {
 				// the room is in not alerting, but there is at least one device alerting
