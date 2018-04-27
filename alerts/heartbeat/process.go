@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	RESTORED = "restored-heartbeat"
+	RESTORED = "heartbeat-restored"
 )
 
 func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[string][]base.Alert, error) {

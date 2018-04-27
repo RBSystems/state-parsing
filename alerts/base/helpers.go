@@ -9,11 +9,6 @@ import (
 )
 
 func MakeELKRequest(address string, method string, body []byte, ll int) (int, []byte, error) {
-
-	if ll > 0 {
-		log.Printf("\tMaking request against %v", address)
-	}
-
 	//assume that we have the normal auth
 
 	req, err := http.NewRequest(method, address, bytes.NewReader(body))
