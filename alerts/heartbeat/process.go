@@ -46,9 +46,6 @@ func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[s
 		//make sure that it's marked as alerting
 		if curHit.Alerting == false || curHit.Alerts[base.LOST_HEARTBEAT].Alerting == false {
 
-			//debug
-			//		log.Printf(color.HiYellowString("Need to mark %v as alerting", curHit.Hostname))
-
 			//we need to mark it to be updated as alerting
 			devicesToUpdate[resp.Hits.Hits[i].ID] = common.DeviceUpdateInfo{
 				Name: resp.Hits.Hits[i].ID,
@@ -125,7 +122,6 @@ func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[s
 		if alerting[k] {
 			//add it to the list to mark as alerting
 			roomsToMark = append(roomsToMark, k)
-			log.Printf(color.HiBlueString("Need to mark room %v as alerting", k))
 		}
 	}
 
