@@ -47,6 +47,7 @@ func Init() {
 
 				select {
 				case e := <-apiForwardingChannel:
+					log.Printf("Forwarding to: %v", apiurl)
 					forwardEvent(e, apiurl)
 				case e := <-heartbeatForwardingChannel:
 					forwardEvent(e, heartbeaturl)
@@ -61,12 +62,13 @@ func Init() {
 func forwardEvent(e interface{}, url string) {
 	start := time.Now()
 
-	//	log.Printf("[forwarder] Forwarding event to %v", url)
+	log.Printf("[forwarder] Forwarding event to %v", url)
 	b, err := json.Marshal(e)
 	if err != nil {
 		log.Printf("[forwarder] There was a problem marshalling the event: %v", err.Error())
 		return
 	}
+
 	//ship it on
 	resp, err := http.Post(url, "appliciation/json", bytes.NewBuffer(b))
 	if err != nil {
