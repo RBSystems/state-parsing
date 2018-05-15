@@ -32,13 +32,13 @@
     "repeat-interval": 10,
     "wait-for-complete": false,
     "type": "alert-factory",
-    "enabled": true
+    "enabled": false
  },
  {
     "name": "room-update",
     "repeat-interval": 5,
     "wait-for-complete": true,
     "type": "updater",
-    "enabled": true
+    "enabled": false
  }
 ]

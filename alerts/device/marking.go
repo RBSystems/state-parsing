@@ -75,8 +75,15 @@ func MarkDevicesAsNotAlerting(deviceIDs []string) {
 		Value: secondaryData,
 	}
 
+	alertingStatus := eventforwarding.StateDistribution{
+		Key:   "alerting",
+		Value: false,
+	}
+
 	for _, id := range deviceIDs {
 		logger.Info("Marking %s as not alerting", id)
 		eventforwarding.SendToStateBuffer(secondaryStatus, id, "device")
+		eventforwarding.SendToStateBuffer(alertingStatus, id, "device")
 	}
+
 }
