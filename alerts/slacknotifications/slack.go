@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 
 	"github.com/byuoitav/state-parsing/alerts/base"
@@ -13,7 +15,7 @@ import (
 )
 
 //var url = "https://hooks.slack.com/services/"
-var url = "https://hooks.slack.com/services/"
+var slackurl = "https://hooks.slack.com/services/"
 
 //note don't forget to set the HTTP_PROXY or HTTPS_PROXY env variables if proxies are needed
 type SlackNotificationEngine struct {
@@ -29,7 +31,23 @@ func (sn *SlackNotificationEngine) SendNotifications(alerts []base.Alert) ([]bas
 	for i := range alerts {
 		log.Printf(color.HiGreenString("Sending for %v", alerts[i].Device))
 
-		resp, err := http.Post(url+sn.ChannelIdentifier, "application/json", bytes.NewReader(alerts[i].Content))
+		proxyUrl, err := url.Parse(os.Getenv("PROXY_ADDR"))
+		client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+
+		req, err := http.NewRequest("POST", slackurl+sn.ChannelIdentifier, bytes.NewReader(alerts[i].Content))
+		if err != nil {
+			msg := fmt.Sprintf("Couldn't build request: %v", err.Error())
+			log.Printf(color.HiRedString(msg))
+			report = append(report, base.AlertReport{
+				Alert:   alerts[i],
+				Success: false,
+				Message: msg,
+			})
+			continue
+		}
+		req.Header.Add("content-type", "application/json")
+
+		resp, err := client.Do(req)
 		if err != nil {
 			msg := fmt.Sprintf("Could not send request: %v", err.Error())
 			log.Printf(color.HiRedString(msg))
