@@ -29,7 +29,7 @@
   },
   {
     "name": "heartbeat-restored",
-    "repeat-interval": 10,
+    "repeat-interval": 5,
     "wait-for-complete": false,
     "type": "alert-factory",
     "enabled": false
