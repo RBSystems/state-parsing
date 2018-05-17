@@ -2,7 +2,6 @@ package device
 
 import (
 	"log"
-	"time"
 
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/eventforwarding"
@@ -66,7 +65,7 @@ func MarkDevicesAsNotAlerting(deviceIDs []string) {
 	secondaryData := make(map[string]map[string]interface{})
 	secondaryData[base.LOST_HEARTBEAT] = make(map[string]interface{})
 
-	secondaryData[base.LOST_HEARTBEAT]["alert-sent"] = time.Now()
+	secondaryData[base.LOST_HEARTBEAT]["alert-sent"] = " "
 	secondaryData[base.LOST_HEARTBEAT]["alerting"] = false
 	secondaryData[base.LOST_HEARTBEAT]["message"] = " "
 

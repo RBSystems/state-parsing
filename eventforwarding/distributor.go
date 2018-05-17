@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
+	"github.com/byuoitav/state-parsing/logger"
 	"github.com/fatih/color"
 
 	heartbeat "github.com/byuoitav/salt-translator-service/elk"
@@ -172,7 +173,7 @@ func localStateBuffering(state StateDistribution, hostname string, mapType strin
 		bufferLocally(state, hostname, localStateMap)
 	}
 
-	log.Printf(color.HiYellowString("Time to buffer: %v", time.Since(starttime).Nanoseconds()))
+	logger.Verbose("Time to buffer: %v", time.Since(starttime).Nanoseconds())
 }
 
 func bufferLocally(state StateDistribution, hostname string, mapToUse map[string]map[string]interface{}) {
