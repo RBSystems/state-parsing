@@ -188,6 +188,7 @@ func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[st
 
 func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse) (map[string][]base.Alert, error) {
 	roomsToCheck := make(map[string]bool)
+	// devicesToUpdate :=
 	deviceIDsToUpdate := []string{}
 	alertsByRoom := make(map[string][]base.Alert)
 	toReturn := map[string][]base.Alert{}
