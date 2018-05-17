@@ -6,7 +6,9 @@ const HeartbeatLostQuery = `{
       "must": [
         {
           "match": {
-            "_type": "control-processor" } }
+            "_type": "control-processor"
+          }
+        }
       ],
       "should": [
         {
@@ -14,6 +16,11 @@ const HeartbeatLostQuery = `{
             "alerts.lost-heartbeat.alert-sent": {
               "lte": "now-20m"
             }
+          }
+        },
+        {
+          "match": {
+            "alerts.lost-heartbeat.alerting": false
           }
         },
         {
@@ -35,7 +42,8 @@ const HeartbeatLostQuery = `{
         }
       }
     }
-  }
+  },
+  "size": 100
 }
 `
 
