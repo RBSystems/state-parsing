@@ -25,14 +25,14 @@
     "repeat-interval": 5,
     "wait-for-complete": false,
     "type": "alert-factory",
-    "enabled": true
+    "enabled": false
   },
   {
     "name": "heartbeat-restored",
     "repeat-interval": 10,
     "wait-for-complete": false,
     "type": "alert-factory",
-    "enabled": false
+    "enabled": true
  },
  {
     "name": "room-update",
