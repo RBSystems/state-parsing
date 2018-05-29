@@ -33,7 +33,7 @@ const HeartbeatLostQuery = `{
           }
         }
       ],
-      "minimum_should_match": 1,
+      "minimum_should_match": 2,
       "filter": {
         "range": {
           "last-heartbeat": {

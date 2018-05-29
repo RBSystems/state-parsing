@@ -25,7 +25,7 @@
     "repeat-interval": 5,
     "wait-for-complete": false,
     "type": "alert-factory",
-    "enabled": false
+    "enabled": true
   },
   {
     "name": "heartbeat-restored",
