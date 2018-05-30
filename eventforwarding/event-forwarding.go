@@ -47,6 +47,7 @@ func Init() {
 
 				select {
 				case e := <-apiForwardingChannel:
+					//print out the event
 					forwardEvent(e, apiurl)
 				case e := <-heartbeatForwardingChannel:
 					forwardEvent(e, heartbeaturl)

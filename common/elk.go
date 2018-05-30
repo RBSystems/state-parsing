@@ -22,7 +22,7 @@ type ElkQuery struct {
 }
 
 func init() {
-	apiAddr = os.Getenv("ELASTIC_API_EVENTS")
+	apiAddr = os.Getenv("ELK_DIRECT_ADDRESS")
 	username = os.Getenv("ELK_SA_USERNAME")
 	password = os.Getenv("ELK_SA_PASSWORD")
 
