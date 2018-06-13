@@ -4,6 +4,7 @@ import (
 	"github.com/byuoitav/state-parsing/alerts/heartbeat"
 	"github.com/byuoitav/state-parsing/tasks/names"
 	"github.com/byuoitav/state-parsing/tasks/task"
+	"github.com/byuoitav/state-parsing/update/generalalert"
 	"github.com/byuoitav/state-parsing/update/roomupdate"
 )
 
@@ -16,6 +17,7 @@ func init() {
 	tasks[names.ROOM_UPDATE] = task.NewTask(&roomupdate.RoomUpdater{})
 	tasks[names.LOST_HEARTBEAT] = task.NewTask(&heartbeat.LostHeartbeatAlertFactory{})
 	tasks[names.HEARTBEAT_RESTORED] = task.NewTask(&heartbeat.RestoredHeartbeatAlertFactory{})
+	tasks[names.GENERAL_ALERT_UPDATE] = task.NewTask(&generalalert.GeneralAlertUpdater{})
 }
 
 func GetTask(name string) (task.Task, bool) {
