@@ -63,11 +63,6 @@ const HeartbeatRestoredQuery = `{  "_source": [
           "match": {
             "alerts.lost-heartbeat.alerting": true
           }
-        },
-        {
-          "match": {
-            "alerting": true
-          }
         }
       ],
       "filter": {
