@@ -3,6 +3,7 @@ package generalalert
 import (
 	"encoding/json"
 
+	"github.com/byuoitav/state-parsing/eventforwarding"
 	"github.com/byuoitav/state-parsing/logger"
 	"github.com/byuoitav/state-parsing/tasks/names"
 	"github.com/byuoitav/state-parsing/update"
@@ -13,10 +14,10 @@ type GeneralAlertUpdater struct {
 }
 
 func (r *GeneralAlertUpdater) Init() {
-	r.Logger = logger.New(names.GENERAL_ALERT_UPDATE, logger.INFO)
+	r.Logger = logger.New(names.GENERAL_ALERT_UPDATE, logger.VERBOSE)
 }
 
-func (r *RoomUpdater) Run() error {
+func (r *GeneralAlertUpdater) Run() error {
 	r.Logger.Verbose("Starting run of general alert clearing")
 
 	//the query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
@@ -36,7 +37,7 @@ func (r *RoomUpdater) Run() error {
 
 	r.Logger.Verbose("Query is back. Starting processing")
 
-	alertcleared := StateDistribution{
+	alertcleared := eventforwarding.StateDistribution{
 		Key:   "alerting",
 		Value: false,
 	}
@@ -44,6 +45,8 @@ func (r *RoomUpdater) Run() error {
 	//go through and mark each of these rooms as not alerting, in the general
 	for _, hit := range resp.Hits.Hits {
 		r.Logger.Verbose("running for %v", hit.ID)
-		SendToStateBuffer(alertcleared, hit.ID, "device")
+		eventforwarding.SendToStateBuffer(alertcleared, hit.ID, "device")
 	}
+
+	return nil
 }
