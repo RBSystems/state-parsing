@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/byuoitav/state-parsing/alerts/base"
+	"github.com/byuoitav/state-parsing/alerts/mom"
 	"github.com/byuoitav/state-parsing/alerts/slacknotifications"
 )
 
@@ -15,6 +16,7 @@ func GetNotificationEngines() map[string]NotificationEngine {
 	toReturn := make(map[string]NotificationEngine)
 
 	toReturn[base.SLACK] = &slacknotifications.SlackNotificationEngine{ChannelIdentifier: os.Getenv("SLACK_HEARTBEAT_CHANNEL")}
+	toReturn[base.MOM] = &mom.MomNotificationEngine{}
 
 	return toReturn
 }
