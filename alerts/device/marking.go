@@ -2,20 +2,17 @@ package device
 
 import (
 	"fmt"
-	"log"
 	"time"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/eventforwarding"
-	"github.com/byuoitav/state-parsing/logger"
-	"github.com/fatih/color"
 )
 
 //toMark is the list of rooms, There may be one or more of them
 //secondaryAlertType is the type of alert marking as (e.g. heartbeat)
 //secondaryAlertData is the data to be filled there (e.g. last-heartbeat-received, etc)
 func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertData map[string]interface{}) {
-
 	//build our general alerting
 	alerting := eventforwarding.StateDistribution{
 		Key:   "alerting",
@@ -33,7 +30,7 @@ func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertDa
 
 	//ship it off to go with the rest
 	for i := range toMark {
-		log.Printf(color.HiYellowString("Marking as alerting %v", toMark[i]))
+		log.L.Infof("Marking %s as alerting", toMark[i])
 		eventforwarding.SendToStateBuffer(alerting, toMark[i], "device")
 		eventforwarding.SendToStateBuffer(secondaryAlert, toMark[i], "device")
 	}
@@ -81,7 +78,7 @@ func MarkDevicesAsNotAlerting(deviceIDs []string) {
 	}
 
 	for _, id := range deviceIDs {
-		logger.Info("Marking %s as not alerting", id)
+		log.L.Info("Marking %s as not alerting", id)
 		eventforwarding.SendToStateBuffer(secondaryStatus, id, "device")
 		eventforwarding.SendToStateBuffer(alertingStatus, id, "device")
 	}

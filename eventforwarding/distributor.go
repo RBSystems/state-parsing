@@ -1,14 +1,12 @@
 package eventforwarding
 
 import (
-	"log"
 	"reflect"
 	"strings"
 	"time"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
-	"github.com/byuoitav/state-parsing/logger"
-	"github.com/fatih/color"
 
 	heartbeat "github.com/byuoitav/salt-translator-service/elk"
 )
@@ -32,8 +30,7 @@ var localStateMap map[string]map[string]interface{}
 var localRoomStateMap map[string]map[string]interface{}
 
 func StartDistributor() {
-
-	log.Printf("[Distributor] Starting")
+	log.L.Infof("[Distributor] Starting")
 
 	//initialize our ingestion channels
 	eventIngestionChannel = make(chan elkreporting.ElkEvent, 1000)
@@ -47,17 +44,17 @@ func StartDistributor() {
 	for {
 		select {
 		case e := <-eventIngestionChannel:
-			log.Printf(color.HiCyanString("Event Forward"))
+			log.L.Debugf("Event Forward")
 			apiForwardingChannel <- e
-			log.Printf(color.HiCyanString("Event Ingest"))
+			log.L.Debugf("Event Ingest")
 			distributeEvent(e)
 		case e := <-heartbeatIngestionChannel:
-			log.Printf(color.HiCyanString("Heartbeat Forward"))
+			log.L.Debugf("Heartbeat Forward")
 			heartbeatForwardingChannel <- e
-			log.Printf(color.HiCyanString("Heartbeat Ingest"))
+			log.L.Debugf("Heartbeat Ingest")
 			distributeHeartbeat(e)
 		case <-localTickerChan:
-			log.Printf(color.HiGreenString("Ticker Hit"))
+			log.L.Debugf("Ticker Hit")
 			//ship it out
 			go dispatchLocalState(localStateMap, "device")
 			go dispatchLocalState(localRoomStateMap, "room")
@@ -65,7 +62,7 @@ func StartDistributor() {
 			//refresh the maps
 			localStateMap = make(map[string]map[string]interface{})
 			localRoomStateMap = make(map[string]map[string]interface{})
-			log.Printf(color.HiGreenString("Maps reset"))
+			log.L.Debugf("Maps reset")
 		}
 
 		//we need to send it on to the ELK stack as-is
@@ -78,7 +75,6 @@ func distributeEvent(event elkreporting.ElkEvent) {
 		return
 	}
 
-	//log.Printf("buildilng event and sending")
 	//we need to pull out the values for StateDistributionm
 	toSend := StateDistribution{Key: event.Event.Event.EventInfoKey, Value: event.Event.Event.EventInfoValue}
 
@@ -115,8 +111,6 @@ func distributeEvent(event elkreporting.ElkEvent) {
 			}, event.Building+"-"+event.Room)
 		}
 	}
-
-	//log.Printf("sent")
 
 	//we need to mark the room to be cheked and updated at the next roomTick
 	//roomUpdateChan <- event.Building + "-" + event.Room
@@ -173,11 +167,10 @@ func localStateBuffering(state StateDistribution, hostname string, mapType strin
 		bufferLocally(state, hostname, localStateMap)
 	}
 
-	logger.Verbose("Time to buffer: %v", time.Since(starttime).Nanoseconds())
+	log.L.Debugf("Time to buffer: %v", time.Since(starttime).Nanoseconds())
 }
 
 func bufferLocally(state StateDistribution, hostname string, mapToUse map[string]map[string]interface{}) {
-	//log.Printf(color.HiYellowString("ready to buffer: %v", hostname))
 	if _, ok := mapToUse[hostname]; ok {
 
 		//pardon the switch statements - you can't use the .(type) assertion in an if statement
@@ -212,32 +205,18 @@ func bufferLocally(state StateDistribution, hostname string, mapToUse map[string
 		var b map[string]interface{}
 		b = mapToUse[hostname][state.Key].(map[string]interface{})
 
-		//log.Printf(color.HiYellowString("merging maps: %v, %v", a, b))
-
 		//now we get to compare the child values
 		replaceMapValues(&a, &b)
-
-		//log.Printf(color.HiYellowString("Got map back: %v", a))
-		//log.Printf(color.HiYellowString("Got map back: %v", mapToUse[hostname][state.Key]))
 
 		return
 	}
 
-	color.Set(color.FgGreen)
-	//log.Printf("Adding state map for %v", hostname)
-	color.Unset()
-
 	mapToUse[hostname] = make(map[string]interface{})
 	mapToUse[hostname][state.Key] = state.Value
-
-	//log.Printf(color.GreenString("Entry created."))
 }
 
 //here's where we decide if we want to distribute to the child processes or if we want to just put it in a map here
 func sendToStateBuffering(state StateDistribution, hostname string) {
-	color.Set(color.FgGreen)
-	log.Printf("[distributor] Sending to buffer.")
-	color.Unset()
 	//check if it's in the map
 	if val, ok := stateCacheMap[hostname]; ok {
 		val <- state

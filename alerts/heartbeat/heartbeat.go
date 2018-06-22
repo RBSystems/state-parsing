@@ -6,11 +6,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parsing/alerts"
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
-	"github.com/byuoitav/state-parsing/logger"
-	"github.com/byuoitav/state-parsing/tasks/names"
 )
 
 const DeviceIndex = "oit-static-av-devices"
@@ -20,12 +19,10 @@ type LostHeartbeatAlertFactory struct {
 }
 
 func (h *LostHeartbeatAlertFactory) Init() {
-	h.Name = names.LOST_HEARTBEAT
-	h.LogLevel = logger.VERBOSE
 }
 
 func (h *LostHeartbeatAlertFactory) Run() error {
-	h.Info("Starting run")
+	log.L.Infof("Starting run")
 
 	addr := fmt.Sprintf("%s/%s/_search", os.Getenv("ELK_ADDR"), DeviceIndex)
 
@@ -36,14 +33,14 @@ func (h *LostHeartbeatAlertFactory) Run() error {
 	}
 	if respCode/100 != 2 {
 		msg := fmt.Sprintf("[lost-heartbeat] Non 200 response received from the initial query: %v, %s", respCode, body)
-		h.Error(msg)
+		log.L.Error(msg)
 		return errors.New(msg)
 	}
 	hrresp := device.HeartbeatLostQueryResponse{}
 
 	err = json.Unmarshal(body, &hrresp)
 	if err != nil {
-		h.Error("couldn't unmarshal response: %s", err)
+		log.L.Error("couldn't unmarshal response: %s", err)
 		return err
 	}
 

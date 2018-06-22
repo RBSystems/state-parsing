@@ -1,16 +1,8 @@
 package base
 
-import (
-	"bytes"
-	"io/ioutil"
-	"log"
-	"net/http"
-	"os"
-)
-
+/*
 func MakeELKRequest(address string, method string, body []byte, ll int) (int, []byte, error) {
 	//assume that we have the normal auth
-
 	req, err := http.NewRequest(method, address, bytes.NewReader(body))
 	if err != nil {
 		log.Printf("[Heartbeat-lost] There was a problem forming the request: %v", address)
@@ -38,3 +30,4 @@ func MakeELKRequest(address string, method string, body []byte, ll int) (int, []
 	}
 	return resp.StatusCode, b, nil
 }
+*/

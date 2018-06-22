@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	o := jobs.Orchestrator{}
-	o.Start()
+	go jobs.StartJobScheduler()
+	go jobs.StartActionManager()
 
 	go eventforwarding.StartDistributor()
 	go eventforwarding.StartTicker(3000)

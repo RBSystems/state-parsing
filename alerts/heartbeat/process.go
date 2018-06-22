@@ -11,7 +11,6 @@ import (
 	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/alerts/room"
 	"github.com/byuoitav/state-parsing/common"
-	"github.com/byuoitav/state-parsing/logger"
 	"github.com/fatih/color"
 )
 
