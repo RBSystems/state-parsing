@@ -8,16 +8,14 @@ var localTickerChan chan bool
 func StartTicker(interval int) {
 
 	localTickerChan = make(chan bool, 1)
+	ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
 
-	//run it local
+	// run it local
 	if runLocal == true {
-
-		ticker := time.NewTicker(time.Duration(interval) * time.Millisecond)
-
 		for _ = range ticker.C {
 			localTickerChan <- true
 		}
-
 	}
-	//other wise we need to let people register to get ticks, and then we send them out
+
+	// other wise we need to let people register to get ticks, and then we send them out to each of them
 }

@@ -6,15 +6,14 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 	"unicode"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parsing/common"
-	"github.com/fatih/color"
 )
 
 var dispatchChan chan string
@@ -25,7 +24,7 @@ var sizeChan chan int
 var count int
 
 func startDispatcher() {
-	log.Printf("[Dispatcher] Starting dispatcher")
+	log.L.Infof("Starting dispatcher...")
 
 	dispatchChan = make(chan string, 1000)
 	sizeChan = make(chan int)
@@ -39,9 +38,7 @@ func startDispatcher() {
 
 			case newNum, ok := <-sizeChan:
 				if !ok {
-					color.Set(color.FgRed)
-					log.Printf("[dispatch] number channel closed, exiting")
-					color.Unset()
+					log.L.Infof("Dispatcher number channel closed, exiting...")
 				}
 				expected = newNum
 			}
@@ -53,16 +50,13 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 	if len(stateMap) < 1 {
 		count++
 		if count%10 == 0 {
-			color.Set(color.FgYellow)
-			log.Printf("[Dispatcher] no state to send.")
-			color.Unset()
+			log.L.Infof("[dispatcher] No state to send.")
 		}
 		return
 	}
 	count = 0
-	color.Set(color.FgGreen)
-	log.Printf("[Dispatcher] Sending a state update...")
-	color.Unset()
+
+	log.L.Infof("[dispatcher] Sending a state update...")
 
 	//build our payload and send it off
 	payload := []byte{}
@@ -74,11 +68,10 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 	headerWrapper := make(map[string]common.UpdateHeader)
 
 	for k, v := range stateMap {
-
 		recordType, err := getRecordType(k, mapType)
 		if err != nil {
 			//get our dev type split := strings.Split(k, "-") if len(split) < 3 {
-			log.Printf("[dispatcher] Invalid hostname: %v", err.Error())
+			log.L.Warnf("[dispatcher] invalid hostname: %v", err)
 			continue
 		}
 
@@ -91,16 +84,12 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 
 		b, err := json.Marshal(headerWrapper)
 		if err != nil {
-			color.Set(color.FgRed)
-			log.Printf("[Dispatcher] There was a problem marshalling a line: %v", headerWrapper)
-			color.Unset()
+			log.L.Warnf("[dispatcher] there was a problem marshalling a line: %v", headerWrapper)
 			continue
 		}
 		bb, err := json.Marshal(ub)
 		if err != nil {
-			color.Set(color.FgRed)
-			log.Printf("[Dispatcher] There was a problem marshalling a line: %v", ub)
-			color.Unset()
+			log.L.Warnf("[dispatcher] there was a problem marshalling a line: %v", ub)
 			continue
 		}
 
@@ -109,25 +98,15 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 		payload = append(payload, '\n')
 		payload = append(payload, bb...)
 		payload = append(payload, '\n')
-
-		//color.Set(color.FgYellow)
-		//log.Printf("[Dispatcher] Added line for device %v: %+v.", k, ub)
-		//color.Unset()
 	}
 
-	color.Set(color.FgGreen)
-	log.Printf("[Dispatcher] Done adding lines.")
-	log.Printf("[Dispatcher] %v devices getting updates....", len(stateMap))
-	color.Unset()
-
-	//log.Printf("\n%s", payload)
+	log.L.Infof("[dispatcher] Done adding lines.")
+	log.L.Infof("[dispatcher] %v devices getting updates....", len(stateMap))
 
 	//send the request
 	req, err := http.NewRequest("POST", elkaddr+"/_bulk", bytes.NewReader(payload))
 	if err != nil {
-		color.Set(color.FgRed)
-		log.Printf("[Dispatcher] There was a problem building the request: %v", err.Error())
-		color.Unset()
+		log.L.Warnf("[dispatcher] there was a problem building the request: %v", err)
 	}
 
 	req.SetBasicAuth(os.Getenv("ELK_SA_USERNAME"), os.Getenv("ELK_SA_PASSWORD"))
@@ -135,26 +114,21 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		color.Set(color.FgRed)
-		log.Printf("[Dispatcher] There was a problem sending the request: %v", err.Error())
-		color.Unset()
+		log.L.Warnf("[dispatcher] there was a problem sending the request: %v", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		color.Set(color.FgRed)
-		log.Printf("[Dispatcher] There was a non-200 respose: %v", resp.StatusCode)
+		log.L.Warnf("[dispatcher] there was a non-200 respose: %v", resp.StatusCode)
 		respBody, _ := ioutil.ReadAll(resp.Body)
-		log.Printf("[Dispatcher] Error: %s", respBody)
-		color.Unset()
+		log.L.Warnf("[dispatcher] error: %s", respBody)
 
 		resp.Body.Close()
 		return
 	}
-	color.Set(color.FgGreen)
-	log.Printf("[Dispatcher] Done dispatching state.")
-	color.Unset()
+
+	log.L.Infof("[dispatcher] Done dispatching state.")
 }
 
 func getRecordType(hostname, mapType string) (string, error) {
@@ -164,6 +138,7 @@ func getRecordType(hostname, mapType string) (string, error) {
 	case "device":
 		return getDeviceRecordType(hostname)
 	}
+
 	return "", errors.New("Invalid mapType")
 }
 
@@ -182,7 +157,7 @@ func fillDeviceMeta(name string, toFill map[string]interface{}) {
 	split := strings.Split(name, "-")
 
 	if len(split) != 3 {
-		log.Printf(color.HiRedString("[dispatcher] Invalid hostname for device: %v", name))
+		log.L.Warnf("[dispatcher] invalid hostname for device: %v", name)
 		return
 	}
 
@@ -194,11 +169,12 @@ func fillDeviceMeta(name string, toFill map[string]interface{}) {
 	toFill["enable-notifications"] = name
 	toFill["last-state-recieved"] = time.Now().Format(time.RFC3339)
 }
+
 func fillRoomMeta(name string, toFill map[string]interface{}) {
 	split := strings.Split(name, "-")
 
 	if len(split) != 2 {
-		log.Printf(color.HiRedString("[dispatcher] Invalid name for room: %v", name))
+		log.L.Warnf("[dispatcher] Invalid name for room: %v", name)
 		return
 	}
 
@@ -211,15 +187,16 @@ func fillRoomMeta(name string, toFill map[string]interface{}) {
 	toFill["last-state-recieved"] = time.Now().Format(time.RFC3339)
 }
 
-//room record type is just 'room'
+// room record type is just 'room'
 func getRoomRecordType(name string) (string, error) {
 	split := strings.Split(name, "-")
 
 	if len(split) != 2 {
 		msg := fmt.Sprintf("[dispatcher] Invalid name for room: %v", name)
-		log.Printf(color.HiRedString(msg))
+		log.L.Warn(msg)
 		return "", errors.New(msg)
 	}
+
 	return "room", nil
 }
 
@@ -239,27 +216,29 @@ var translationMap = map[string]string{
 	"HDMI":  "hdmi-input",
 }
 
-//device record type is determined usin the translation map
+// device record type is determined usin the translation map
 func getDeviceRecordType(name string) (string, error) {
 	split := strings.Split(name, "-")
 	if len(split) != 3 {
 		msg := fmt.Sprintf("[dispatcher] Invalid hostname for device: %v", name)
-		log.Printf(color.HiRedString(msg))
+		log.L.Warn(msg)
 		return "", errors.New(msg)
 	}
+
 	for pos, char := range split[2] {
 		if unicode.IsDigit(char) {
 			val, ok := translationMap[split[2][:pos]]
 			if !ok {
 				msg := fmt.Sprintf("Invalid device type: %v", split[2][:pos])
-				log.Printf(color.HiRedString(msg))
+				log.L.Warn(msg)
 				return "", errors.New(msg)
 			}
 			return val, nil
 		}
 	}
+
 	msg := fmt.Sprintf("no valid translation for :%v", split[2])
-	log.Printf(color.HiRedString(msg))
+	log.L.Warn(msg)
 	return "", errors.New(msg)
 }
 
@@ -270,5 +249,6 @@ func getIndexName(mapType string) string {
 	case "device":
 		return os.Getenv("ELK_STATIC_DEVICE_INDEX")
 	}
+
 	return ""
 }

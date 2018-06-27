@@ -7,7 +7,6 @@ import (
 )
 
 func startAggregator(incomingChannel <-chan StateDistribution, tickerChan <-chan int, hostname string) {
-
 	state := make(map[string]interface{})
 
 	//start our timer

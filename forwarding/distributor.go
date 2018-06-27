@@ -23,10 +23,8 @@ const runLocal bool = true
 //this is distribution to the outside areas
 var stateCacheMap map[string]chan StateDistribution
 
-//this is for local
+// these are for local
 var localStateMap map[string]map[string]interface{}
-
-//this is for local
 var localRoomStateMap map[string]map[string]interface{}
 
 func StartDistributor() {
@@ -137,7 +135,7 @@ func localStateBuffering(state StateDistribution, hostname string, mapType strin
 	//check for a blank string
 	switch state.Value.(type) {
 	case string:
-		if len(state.Value.(string)) <= 0 {
+		if len(state.Value.(string)) == 0 {
 			return
 		}
 	}

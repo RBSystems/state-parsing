@@ -7,6 +7,7 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/salt-translator-service/elk"
+	"github.com/byuoitav/state-parsing/forwarding"
 	"github.com/byuoitav/state-parsing/jobs"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
@@ -16,8 +17,8 @@ func main() {
 	log.SetLevel("debug")
 	go jobs.StartJobScheduler()
 
-	//	go eventforwarding.StartDistributor()
-	//	go eventforwarding.StartTicker(3000)
+	go forwarding.StartDistributor()
+	go forwarding.StartTicker(3000)
 
 	port := ":10010"
 	router := echo.New()
