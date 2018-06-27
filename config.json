@@ -8,12 +8,16 @@
             },
             {
                 "kind": "interval",
-                "every": "10s"
+                "every": "5m"
             },
             {
-                "kind": "event",
+                "kind": "match",
                 "match": {
-                    "eventInfoKey": "buttonpress"
+                    "hostname": "teton",
+                    "event": {
+                        "eventInfoKey": "button.*",
+                        "type": "CORE"
+                    }
                 }
             }
         ],

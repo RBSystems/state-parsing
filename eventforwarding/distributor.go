@@ -7,6 +7,7 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
+	"github.com/byuoitav/state-parsing/jobs"
 
 	heartbeat "github.com/byuoitav/salt-translator-service/elk"
 )
@@ -45,9 +46,10 @@ func StartDistributor() {
 		select {
 		case e := <-eventIngestionChannel:
 			log.L.Debugf("Event Forward")
-			apiForwardingChannel <- e
+			//			apiForwardingChannel <- e
+			jobs.EventMatchStream <- e
 			log.L.Debugf("Event Ingest")
-			distributeEvent(e)
+			//			distributeEvent(e)
 		case e := <-heartbeatIngestionChannel:
 			log.L.Debugf("Heartbeat Forward")
 			heartbeatForwardingChannel <- e

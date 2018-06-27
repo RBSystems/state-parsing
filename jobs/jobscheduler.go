@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
-	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
 )
 
@@ -19,13 +19,13 @@ type JobConfig struct {
 }
 
 type Trigger struct {
-	Kind  string       `json:"kind"`  // required for all
-	At    string       `json:"at"`    // required for 'time'
-	Every string       `json:"every"` // required for 'interval'
-	Match events.Event `json:"match"` // required for 'event'
+	Kind  string      `json:"kind"`  // required for all
+	At    string      `json:"at"`    // required for 'time'
+	Every string      `json:"every"` // required for 'interval'
+	Match MatchConfig `json:"match"` // required for 'event'
 }
 
-type runnable struct {
+type runner struct {
 	Job          Job
 	Config       JobConfig
 	Trigger      Trigger
@@ -106,9 +106,11 @@ func init() {
 }
 
 func StartJobScheduler() {
+	go startEventMatcher()
+
 	for _, job := range jobConfigs {
 		for i, trigger := range job.Triggers {
-			runnable := &runnable{
+			runnable := &runner{
 				Job:          Jobs[job.Name],
 				Config:       job,
 				Trigger:      trigger,
@@ -119,14 +121,20 @@ func StartJobScheduler() {
 				go runnable.runDaily()
 			} else if strings.EqualFold(trigger.Kind, "interval") {
 				go runnable.runInterval()
-			} else if strings.EqualFold(trigger.Kind, "event") {
-				// TODO how do i do this one lol
+			} else if strings.EqualFold(trigger.Kind, "match") {
+				runnable.addMatch()
 			}
 		}
 	}
 }
 
-func (r *runnable) runDaily() {
+func (r *runner) runJob() {
+	actions := r.Job.Run()
+	// do something with the actions
+	log.L.Debugf("actions: %v", actions)
+}
+
+func (r *runner) runDaily() {
 	tmpDate := fmt.Sprintf("2006-01-02T%s", r.Trigger.At)
 	runTime, err := time.Parse(time.RFC3339, tmpDate)
 	runTime = runTime.UTC()
@@ -149,14 +157,14 @@ func (r *runnable) runDaily() {
 
 	for {
 		<-timer.C
-		log.L.Infof("[%s|%v] Running Job...", r.Config.Name, r.TriggerIndex)
-		r.Job.Run()
+		log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
+		r.runJob()
 
 		timer.Reset(24 * time.Hour)
 	}
 }
 
-func (r *runnable) runInterval() {
+func (r *runner) runInterval() {
 	interval, err := time.ParseDuration(r.Trigger.Every)
 	if err != nil {
 		log.L.Warnf("unable to parse duration '%s' to execute job %s on an interval. error: %s", r.Trigger.Every, r.Config.Name, err)
@@ -167,7 +175,57 @@ func (r *runnable) runInterval() {
 
 	ticker := time.NewTicker(interval)
 	for range ticker.C {
-		log.L.Infof("[%s|%v] Running Job...", r.Config.Name, r.TriggerIndex)
-		r.Job.Run()
+		log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
+		r.runJob()
 	}
+}
+
+func (r *runner) addMatch() {
+	// initialize the match
+	// TODO validate at least one regex is created
+	if len(r.Trigger.Match.Hostname) > 0 {
+		r.Trigger.Match.Regex.Hostname = regexp.MustCompile(r.Trigger.Match.Hostname)
+	}
+
+	if len(r.Trigger.Match.Timestamp) > 0 {
+		r.Trigger.Match.Regex.Timestamp = regexp.MustCompile(r.Trigger.Match.Timestamp)
+	}
+
+	if len(r.Trigger.Match.LocalEnvironment) > 0 {
+		r.Trigger.Match.Regex.LocalEnvironment = regexp.MustCompile(r.Trigger.Match.LocalEnvironment)
+	}
+
+	if len(r.Trigger.Match.Building) > 0 {
+		r.Trigger.Match.Regex.Building = regexp.MustCompile(r.Trigger.Match.Building)
+	}
+
+	if len(r.Trigger.Match.Room) > 0 {
+		r.Trigger.Match.Regex.Room = regexp.MustCompile(r.Trigger.Match.Room)
+	}
+
+	if len(r.Trigger.Match.Event.Type) > 0 {
+		r.Trigger.Match.Regex.Event.Type = regexp.MustCompile(r.Trigger.Match.Event.Type)
+	}
+
+	if len(r.Trigger.Match.Event.Requestor) > 0 {
+		r.Trigger.Match.Regex.Event.Requestor = regexp.MustCompile(r.Trigger.Match.Event.Requestor)
+	}
+
+	if len(r.Trigger.Match.Event.EventCause) > 0 {
+		r.Trigger.Match.Regex.Event.EventCause = regexp.MustCompile(r.Trigger.Match.Event.EventCause)
+	}
+
+	if len(r.Trigger.Match.Event.Device) > 0 {
+		r.Trigger.Match.Regex.Event.Device = regexp.MustCompile(r.Trigger.Match.Event.Device)
+	}
+
+	if len(r.Trigger.Match.Event.EventInfoKey) > 0 {
+		r.Trigger.Match.Regex.Event.EventInfoKey = regexp.MustCompile(r.Trigger.Match.Event.EventInfoKey)
+	}
+
+	if len(r.Trigger.Match.Event.EventInfoValue) > 0 {
+		r.Trigger.Match.Regex.Event.EventInfoValue = regexp.MustCompile(r.Trigger.Match.Event.EventInfoValue)
+	}
+
+	addMatchJob(r)
 }

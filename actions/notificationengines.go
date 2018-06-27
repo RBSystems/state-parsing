@@ -3,14 +3,9 @@ package actions
 import (
 	"os"
 
+	"github.com/byuoitav/state-parsing/actions/mom"
+	"github.com/byuoitav/state-parsing/actions/slack"
 	"github.com/byuoitav/state-parsing/alerts/base"
-	"github.com/byuoitav/state-parsing/notifications/mom"
-	"github.com/byuoitav/state-parsing/notifications/slack"
-)
-
-const (
-	MOM   = "mom"
-	SLACK = "slack"
 )
 
 type NotificationEngine interface {

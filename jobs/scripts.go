@@ -5,16 +5,17 @@ import (
 	"os/exec"
 
 	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/state-parsing/actions"
 )
 
 type ScriptJob struct {
 	Path string
 }
 
-func (j *ScriptJob) Run() []Action {
+func (j *ScriptJob) Run() []actions.Action {
 	if len(j.Path) == 0 {
 		log.L.Errorf("path for a script job wasn't set. can't run this job.")
-		return []Action{}
+		return []actions.Action{}
 	}
 
 	// build the cmd
@@ -30,5 +31,5 @@ func (j *ScriptJob) Run() []Action {
 	}
 
 	log.L.Infof("Script %s ran successfuly.")
-	return []Action{}
+	return []actions.Action{}
 }

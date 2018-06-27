@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parsing/eventforwarding"
 	"github.com/byuoitav/state-parsing/jobs"
 	"github.com/labstack/echo"
@@ -10,8 +11,8 @@ import (
 )
 
 func main() {
+	log.SetLevel("debug")
 	go jobs.StartJobScheduler()
-	go jobs.StartActionManager()
 
 	go eventforwarding.StartDistributor()
 	go eventforwarding.StartTicker(3000)
