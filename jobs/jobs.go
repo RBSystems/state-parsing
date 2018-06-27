@@ -3,7 +3,7 @@ package jobs
 import "github.com/byuoitav/state-parsing/actions"
 
 type Job interface {
-	Run() []actions.ActionPayload
+	Run(context interface{}) []actions.ActionPayload
 }
 
 var Jobs = map[string]Job{

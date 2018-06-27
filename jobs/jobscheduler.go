@@ -5,15 +5,35 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
+	"github.com/byuoitav/salt-translator-service/elk"
 	"github.com/byuoitav/state-parsing/actions"
+	"github.com/byuoitav/state-parsing/forwarding"
 )
 
-var EventStream chan elkreporting.ElkEvent
+var (
+	// buffered channel to send events through
+	EventChan     chan elkreporting.ElkEvent
+	HeartbeatChan chan elk.Event
+
+	// maximum number of workers
+	MAX_WORKERS = os.Getenv("MAX_WORKERS")
+
+	// maximum size to queue events, before making the request hang
+	MAX_QUEUE = os.Getenv("MAX_QUEUE")
+
+	// forwarding urls
+	API_FORWARD       = os.Getenv("ELASTIC_API_EVENTS")
+	HEARTBEAT_FORWARD = os.Getenv("ELASTIC_HEARTBEAT_EVENTS")
+
+	// private stuff
+	runners []*runner
+)
 
 type runner struct {
 	Job          Job
@@ -22,10 +42,27 @@ type runner struct {
 	TriggerIndex int
 }
 
-var runners []*runner
-
 func init() {
-	var jobConfigs []JobConfig
+	// make sure max queue and max workers size is set
+	if len(MAX_WORKERS) == 0 || len(MAX_QUEUE) == 0 {
+		log.L.Fatalf("must set $MAX_WORKERS and $MAX_QUEUE before running.")
+	}
+
+	// validate max workers/queue are valid numbers
+	_, err := strconv.Atoi(MAX_WORKERS)
+	if err != nil {
+		log.L.Fatalf("$MAX_WORKERS must be a number")
+	}
+	_, err = strconv.Atoi(MAX_QUEUE)
+	if err != nil {
+		log.L.Fatalf("$MAX_Queue must be a number")
+	}
+
+	// validate forwarding urls exist
+	if len(API_FORWARD) == 0 || len(HEARTBEAT_FORWARD) == 0 {
+		log.L.Fatalf("$ELASTIC_API_EVENTS and $ELASTIC_HEARTBEAT_EVENTS must be set.")
+	}
+	log.L.Infof("\n\nForwarding URLs:\n\tAPI_FORWARD:\t\t%v\n\tHEARTBEAT_FORWARD:\t%v\n", API_FORWARD, HEARTBEAT_FORWARD)
 
 	// parse configuration
 	path := os.Getenv("JOB_CONFIG_LOCATION")
@@ -47,6 +84,7 @@ func init() {
 	}
 
 	// unmarshal job config
+	var jobConfigs []JobConfig
 	err = json.Unmarshal(b, &jobConfigs)
 	if err != nil {
 		log.L.Fatalf("failed to parse job configuration: %s", err)
@@ -100,14 +138,13 @@ func init() {
 }
 
 func StartJobScheduler() {
-	// create event stream
-	EventStream = make(chan elkreporting.ElkEvent, 1000)
+	maxWorkers, _ := strconv.Atoi(MAX_WORKERS)
+	maxQueue, _ := strconv.Atoi(MAX_QUEUE)
 
-	if len(runners) == 0 {
-		log.L.Warnf("no active jobs. quitting job scheduler, and just forwarding events.")
-		return
-	}
-	log.L.Infof("Starting job scheduler, running %v jobs.", len(runners))
+	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.", len(runners), maxWorkers, maxQueue)
+
+	EventChan = make(chan elkreporting.ElkEvent, maxQueue)
+	HeartbeatChan = make(chan elk.Event, maxQueue)
 
 	// start runners
 	var matchRunners []*runner
@@ -124,21 +161,42 @@ func StartJobScheduler() {
 		}
 	}
 
-	// match events as they come in
-	for event := range EventStream {
-		log.L.Debugf("received event: %+v", event)
+	// start event workers
+	for i := 0; i < maxWorkers; i++ {
+		log.L.Infof("Starting event worker %v", i)
 
-		for _, runner := range matchRunners {
-			if runner.doesEventMatch(event) {
-				log.L.Infof("[%s|%v] Running job from event...", runner.Config.Name, runner.TriggerIndex)
-				go runner.run()
+		go func() {
+			for {
+				select {
+				case event := <-EventChan:
+					log.L.Debugf("Received event: %+v", event)
+
+					// forward to elk
+					go forwarding.Forward(&event, API_FORWARD)
+					go forwarding.DistributeEvent(&event)
+
+					// see if we need to execute any jobs from this event
+					for _, runner := range matchRunners {
+						if runner.doesEventMatch(&event) {
+							log.L.Infof("[%s|%v] Running job from event...", runner.Config.Name, runner.TriggerIndex)
+							go runner.run(&event)
+						}
+					}
+
+				case heartbeat := <-HeartbeatChan:
+					log.L.Debugf("Received heartbeat: %+v", heartbeat)
+
+					// forward to elk
+					go forwarding.Forward(&heartbeat, HEARTBEAT_FORWARD)
+					go forwarding.DistributeHeartbeat(&heartbeat)
+				}
 			}
-		}
+		}()
 	}
 }
 
-func (r *runner) run() {
-	actions.Execute(r.Job.Run())
+func (r *runner) run(context interface{}) {
+	actions.Execute(r.Job.Run(context))
 }
 
 func (r *runner) runDaily() {
@@ -165,7 +223,7 @@ func (r *runner) runDaily() {
 	for {
 		<-timer.C
 		log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
-		r.run()
+		r.run(nil)
 
 		timer.Reset(24 * time.Hour)
 	}
@@ -183,6 +241,6 @@ func (r *runner) runInterval() {
 	ticker := time.NewTicker(interval)
 	for range ticker.C {
 		log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
-		r.run()
+		r.run(nil)
 	}
 }

@@ -89,7 +89,7 @@ func (r *runner) buildMatchRegex() {
 	}
 }
 
-func (r *runner) doesEventMatch(event elkreporting.ElkEvent) bool {
+func (r *runner) doesEventMatch(event *elkreporting.ElkEvent) bool {
 	if r.Trigger.Match.Regex.Hostname != nil {
 		passed := r.Trigger.Match.Regex.Hostname.MatchString(event.Hostname)
 		if !passed {

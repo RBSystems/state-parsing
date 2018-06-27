@@ -12,7 +12,7 @@ type ScriptJob struct {
 	Path string
 }
 
-func (j *ScriptJob) Run() []actions.ActionPayload {
+func (j *ScriptJob) Run(context interface{}) []actions.ActionPayload {
 	if len(j.Path) == 0 {
 		log.L.Errorf("path for a script job wasn't set. can't run this job.")
 		return []actions.ActionPayload{}
