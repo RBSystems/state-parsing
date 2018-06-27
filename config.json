@@ -3,15 +3,15 @@
         "name": "room-update.py",
         "triggers": [
             {
-                "kind": "daily",
+                "type": "daily",
                 "at": "14:45:00-06:00"
             },
             {
-                "kind": "interval",
+                "type": "interval",
                 "every": "5m"
             },
             {
-                "kind": "match",
+                "type": "match",
                 "match": {
                     "hostname": "teton",
                     "event": {

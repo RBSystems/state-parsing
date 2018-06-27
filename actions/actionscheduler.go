@@ -9,8 +9,9 @@ type actionManager struct {
 }
 
 func StartActionScheduler() {
+	// build each of the individual action managers
 	for name, action := range Actions {
-		ingestionMap[name] = make(chan ActionPayload)
+		ingestionMap[name] = make(chan ActionPayload, 1000)
 
 		manager := &actionManager{
 			Name:        name,

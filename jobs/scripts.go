@@ -12,10 +12,10 @@ type ScriptJob struct {
 	Path string
 }
 
-func (j *ScriptJob) Run() []actions.Action {
+func (j *ScriptJob) Run() []actions.ActionPayload {
 	if len(j.Path) == 0 {
 		log.L.Errorf("path for a script job wasn't set. can't run this job.")
-		return []actions.Action{}
+		return []actions.ActionPayload{}
 	}
 
 	// build the cmd
@@ -31,5 +31,5 @@ func (j *ScriptJob) Run() []actions.Action {
 	}
 
 	log.L.Infof("Script %s ran successfuly.")
-	return []actions.Action{}
+	return []actions.ActionPayload{}
 }

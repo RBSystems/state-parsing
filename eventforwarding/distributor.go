@@ -47,7 +47,7 @@ func StartDistributor() {
 		case e := <-eventIngestionChannel:
 			log.L.Debugf("Event Forward")
 			//			apiForwardingChannel <- e
-			jobs.EventMatchStream <- e
+			jobs.EventStream <- e
 			log.L.Debugf("Event Ingest")
 			//			distributeEvent(e)
 		case e := <-heartbeatIngestionChannel:
