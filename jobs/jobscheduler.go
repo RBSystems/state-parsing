@@ -178,7 +178,6 @@ func StartJobScheduler() {
 					// see if we need to execute any jobs from this event
 					for _, runner := range matchRunners {
 						if runner.doesEventMatch(&event) {
-							log.L.Infof("[%s|%v] Running job from event...", runner.Config.Name, runner.TriggerIndex)
 							go runner.run(&event)
 						}
 					}
@@ -196,6 +195,7 @@ func StartJobScheduler() {
 }
 
 func (r *runner) run(context interface{}) {
+	log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 	actions.Execute(r.Job.Run(context))
 }
 
@@ -222,7 +222,6 @@ func (r *runner) runDaily() {
 
 	for {
 		<-timer.C
-		log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 		r.run(nil)
 
 		timer.Reset(24 * time.Hour)
@@ -240,7 +239,6 @@ func (r *runner) runInterval() {
 
 	ticker := time.NewTicker(interval)
 	for range ticker.C {
-		log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 		r.run(nil)
 	}
 }

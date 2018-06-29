@@ -5,15 +5,14 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/alerts/room"
-	"github.com/byuoitav/state-parsing/common"
 	"github.com/fatih/color"
 )
 
+/*
 const (
 	RESTORED = "heartbeat-restored"
 )
@@ -30,12 +29,14 @@ func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[s
 		return toReturn, nil
 	}
 
-	/*
-		We've got some heartbeats that are lost - we need to verify that they're not suppressing alerts, for themselves or for the room in general.
+*/
+/*
+	We've got some heartbeats that are lost - we need to verify that they're not suppressing alerts, for themselves or for the room in general.
 
-		Regardless we need to validate that they (and their associated rooms) are marked as alerting.
-	*/
+	Regardless we need to validate that they (and their associated rooms) are marked as alerting.
+*/
 
+/*
 	for i := range resp.Hits.Hits {
 		curHit := resp.Hits.Hits[i].Source
 
@@ -94,11 +95,13 @@ func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[s
 			alertsByRoom[curHit.Room] = []base.Alert{toSend}
 		}
 	}
-	/*
-		Now we need to:
-		1) check to see if the rooms in question are suppressing alerts/alerting
-		2) update the device/rooms that weren't alerting already to be alerting
-	*/
+*/
+/*
+	Now we need to:
+	1) check to see if the rooms in question are suppressing alerts/alerting
+	2) update the device/rooms that weren't alerting already to be alerting
+*/
+/*
 	rms, err := room.GetRoomsBulk(func(vals map[string]bool) []string {
 		toReturn := []string{}
 		for k, _ := range vals {
@@ -170,20 +173,7 @@ func processHeartbeatLostResponse(resp device.HeartbeatLostQueryResponse) (map[s
 
 	return toReturn, nil
 }
-
-func AlertingSuppressedRooms(toCheck []room.StaticRoom) (map[string]bool, map[string]bool) {
-
-	alerting := make(map[string]bool)
-	suppressed := make(map[string]bool)
-	//go through each room in the array and check if it's already alerting
-
-	for i := range toCheck {
-		alerting[toCheck[i].Room] = toCheck[i].Alerting
-		suppressed[toCheck[i].Room] = toCheck[i].Suppressed
-	}
-
-	return alerting, suppressed
-}
+*/
 
 func processHeartbeatRestoredResponse(resp device.HeartbeatRestoredQueryResponse) (map[string][]base.Alert, error) {
 	roomsToCheck := make(map[string]bool)

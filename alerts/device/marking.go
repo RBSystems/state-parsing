@@ -1,12 +1,8 @@
 package device
 
 import (
-	"fmt"
-	"time"
-
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/alerts/base"
-	"github.com/byuoitav/state-parsing/eventforwarding"
+	"github.com/byuoitav/state-parsing/forwarding"
 )
 
 //toMark is the list of rooms, There may be one or more of them
@@ -14,7 +10,7 @@ import (
 //secondaryAlertData is the data to be filled there (e.g. last-heartbeat-received, etc)
 func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertData map[string]interface{}) {
 	//build our general alerting
-	alerting := eventforwarding.StateDistribution{
+	alerting := forwarding.StateDistribution{
 		Key:   "alerting",
 		Value: true,
 	}
@@ -23,7 +19,7 @@ func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertDa
 	secondaryAlertValue[secondaryAlertType] = secondaryAlertData
 
 	//bulid our specifc alert
-	secondaryAlert := eventforwarding.StateDistribution{
+	secondaryAlert := forwarding.StateDistribution{
 		Key:   "alerts",
 		Value: secondaryAlertValue,
 	}
@@ -31,13 +27,13 @@ func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertDa
 	//ship it off to go with the rest
 	for i := range toMark {
 		log.L.Infof("Marking %s as alerting", toMark[i])
-		eventforwarding.SendToStateBuffer(alerting, toMark[i], "device")
-		eventforwarding.SendToStateBuffer(secondaryAlert, toMark[i], "device")
+		forwarding.SendToStateBuffer(alerting, toMark[i], "device")
+		forwarding.SendToStateBuffer(secondaryAlert, toMark[i], "device")
 	}
 }
 
-func MarkLastAlertSent(reps []base.AlertReport) error {
-
+/*
+func MarkLastAlertSent(reps []base.AlertReport, secondaryAlertType string) error {
 	//for now we assume that we only send device-based alerts
 	for r := range reps {
 		if !reps[r].Success {
@@ -49,9 +45,9 @@ func MarkLastAlertSent(reps []base.AlertReport) error {
 		tertiary["alert-sent"] = reps[r].Message
 
 		secondary := make(map[string]interface{})
-		secondary[base.LOST_HEARTBEAT] = tertiary
+		secondary[heartbeat.LOST_HEARTBEAT] = tertiary
 
-		eventforwarding.SendToStateBuffer(eventforwarding.StateDistribution{
+		forwarding.SendToStateBuffer(forwarding.StateDistribution{
 			Key:   "alerts",
 			Value: secondary,
 		},
@@ -62,25 +58,25 @@ func MarkLastAlertSent(reps []base.AlertReport) error {
 
 func MarkDevicesAsNotAlerting(deviceIDs []string) {
 	secondaryData := make(map[string]map[string]interface{})
-	secondaryData[base.LOST_HEARTBEAT] = make(map[string]interface{})
+	secondaryData[heartbeat.LOST_HEARTBEAT] = make(map[string]interface{})
 
-	secondaryData[base.LOST_HEARTBEAT]["alerting"] = false
-	secondaryData[base.LOST_HEARTBEAT]["message"] = fmt.Sprintf("Alert cleared at %s", time.Now().Format(time.RFC3339))
+	secondaryData[heartbeat.LOST_HEARTBEAT]["alerting"] = false
+	secondaryData[heartbeat.LOST_HEARTBEAT]["message"] = fmt.Sprintf("Alert cleared at %s", time.Now().Format(time.RFC3339))
 
-	secondaryStatus := eventforwarding.StateDistribution{
+	secondaryStatus := forwarding.StateDistribution{
 		Key:   "alerts",
 		Value: secondaryData,
 	}
 
-	alertingStatus := eventforwarding.StateDistribution{
+	alertingStatus := forwarding.StateDistribution{
 		Key:   "alerting",
 		Value: false,
 	}
 
 	for _, id := range deviceIDs {
 		log.L.Info("Marking %s as not alerting", id)
-		eventforwarding.SendToStateBuffer(secondaryStatus, id, "device")
-		eventforwarding.SendToStateBuffer(alertingStatus, id, "device")
+		forwarding.SendToStateBuffer(secondaryStatus, id, "device")
+		forwarding.SendToStateBuffer(alertingStatus, id, "device")
 	}
-
 }
+*/

@@ -14,18 +14,18 @@ type ScriptJob struct {
 	Path string
 }
 
-func (j *ScriptJob) Run(data interface{}) []actions.ActionPayload {
+func (j *ScriptJob) Run(ctx interface{}) []actions.ActionPayload {
 	if len(j.Path) == 0 {
 		log.L.Errorf("path for a script job wasn't set. can't run this job.")
 		return []actions.ActionPayload{}
 	}
 
 	// add context for timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	contxt, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	// build the cmd
-	cmd := exec.CommandContext(ctx, j.Path)
+	cmd := exec.CommandContext(contxt, j.Path)
 	cmd.Stdout = os.Stdout // TODO these should match wherever the logger is going
 	cmd.Stderr = os.Stderr
 

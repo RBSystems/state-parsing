@@ -13,7 +13,7 @@ import (
 	"unicode"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/common"
+	"github.com/byuoitav/state-parsing/elk"
 )
 
 var dispatchChan chan string
@@ -65,7 +65,7 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 
 	index := getIndexName(mapType)
 
-	headerWrapper := make(map[string]common.UpdateHeader)
+	headerWrapper := make(map[string]elk.UpdateHeader)
 
 	for k, v := range stateMap {
 		recordType, err := getRecordType(k, mapType)
@@ -79,8 +79,8 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 		fillMeta(k, mapType, v)
 
 		//build our first line
-		headerWrapper["update"] = common.UpdateHeader{ID: k, Type: recordType, Index: index}
-		ub := common.UpdateBody{Doc: v, Upsert: true}
+		headerWrapper["update"] = elk.UpdateHeader{ID: k, Type: recordType, Index: index}
+		ub := elk.UpdateBody{Doc: v, Upsert: true}
 
 		b, err := json.Marshal(headerWrapper)
 		if err != nil {

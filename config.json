@@ -1,5 +1,15 @@
 [
     {
+        "name": "lost-heartbeat",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "10s"
+            }
+        ],
+        "enabled": true
+    },
+    {
         "name": "room-update.py",
         "triggers": [
             {
@@ -21,6 +31,6 @@
                 }
             }
         ],
-        "enabled": true
+        "enabled": false
     }
 ]

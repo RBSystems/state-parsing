@@ -6,19 +6,16 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parsing/alerts"
 	"github.com/byuoitav/state-parsing/alerts/base"
 	"github.com/byuoitav/state-parsing/alerts/device"
 )
 
+/*
 const DeviceIndex = "oit-static-av-devices"
 
 type LostHeartbeatAlertFactory struct {
 	alerts.AlertFactory
-}
-
-func (h *LostHeartbeatAlertFactory) Init() {
 }
 
 func (h *LostHeartbeatAlertFactory) Run() error {
@@ -48,6 +45,7 @@ func (h *LostHeartbeatAlertFactory) Run() error {
 	h.AlertsToSend, err = processHeartbeatLostResponse(hrresp)
 	return err
 }
+*/
 
 type RestoredHeartbeatAlertFactory struct {
 	alerts.AlertFactory

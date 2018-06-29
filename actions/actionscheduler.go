@@ -28,8 +28,8 @@ func Execute(payloads []ActionPayload) {
 	}
 
 	for _, payload := range payloads {
-		if _, ok := ingestionMap[payload.ActionName]; ok {
-			ingestionMap[payload.ActionName] <- payload
+		if _, ok := ingestionMap[payload.Type]; ok {
+			ingestionMap[payload.Type] <- payload
 		}
 	}
 }
