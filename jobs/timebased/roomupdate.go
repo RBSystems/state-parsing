@@ -142,7 +142,7 @@ func (r *RoomUpdateJob) Run(context interface{}) []action.Action {
 		return acts
 	}
 
-	log.L.Debugf("Finished heartbeat restored job.")
+	log.L.Debugf("Finished room update job.")
 	return acts
 }
 

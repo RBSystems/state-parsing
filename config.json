@@ -27,6 +27,16 @@
                 "every": "10s"
             }
         ],
+        "enabled": false
+    },
+    {
+        "name": "general-alert-clearing",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "10s"
+            }
+        ],
         "enabled": true
     },
     {
