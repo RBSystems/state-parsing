@@ -1,42 +1,44 @@
 package actions
 
-var ingestionMap map[string]chan ActionPayload
+import "github.com/byuoitav/state-parsing/actions/action"
+
+var ingestionMap map[string]chan action.Action
 
 type actionManager struct {
-	Name        string
-	Action      Action
-	PayloadChan chan ActionPayload
+	Name       string
+	Action     Action
+	ActionChan chan action.Action
 }
 
 func StartActionScheduler() {
 	// build each of the individual action managers
-	for name, action := range Actions {
-		ingestionMap[name] = make(chan ActionPayload, 1000)
+	for name, act := range Actions {
+		ingestionMap[name] = make(chan action.Action, 1000)
 
 		manager := &actionManager{
-			Name:        name,
-			Action:      action,
-			PayloadChan: ingestionMap[name],
+			Name:       name,
+			Action:     act,
+			ActionChan: ingestionMap[name],
 		}
 		go manager.start()
 	}
 }
 
-func Execute(payloads []ActionPayload) {
-	if len(payloads) == 0 {
+func Execute(actions []action.Action) {
+	if len(actions) == 0 {
 		return
 	}
 
-	for _, payload := range payloads {
-		if _, ok := ingestionMap[payload.Type]; ok {
-			ingestionMap[payload.Type] <- payload
+	for _, action := range actions {
+		if _, ok := ingestionMap[action.Type]; ok {
+			ingestionMap[action.Type] <- action
 		}
 	}
 }
 
 func (a *actionManager) start() {
 	// TODO scale number of action managers as size of payload chan increases
-	for action := range a.PayloadChan {
+	for action := range a.ActionChan {
 		a.Action.Execute(action)
 	}
 }

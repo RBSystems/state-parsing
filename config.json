@@ -1,10 +1,20 @@
 [
     {
-        "name": "lost-heartbeat",
+        "name": "heartbeat-lost",
         "triggers": [
             {
                 "type": "interval",
-                "every": "10s"
+                "every": "30s"
+            }
+        ],
+        "enabled": true
+    },
+    {
+        "name": "heartbeat-restored",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "30s"
             }
         ],
         "enabled": true

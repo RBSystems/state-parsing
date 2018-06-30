@@ -1,6 +1,9 @@
 package device
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parsing/forwarding"
 )
@@ -32,36 +35,12 @@ func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertDa
 	}
 }
 
-/*
-func MarkLastAlertSent(reps []base.AlertReport, secondaryAlertType string) error {
-	//for now we assume that we only send device-based alerts
-	for r := range reps {
-		if !reps[r].Success {
-			//we didn't actually get the notification sent
-			continue
-		}
-
-		tertiary := make(map[string]interface{})
-		tertiary["alert-sent"] = reps[r].Message
-
-		secondary := make(map[string]interface{})
-		secondary[heartbeat.LOST_HEARTBEAT] = tertiary
-
-		forwarding.SendToStateBuffer(forwarding.StateDistribution{
-			Key:   "alerts",
-			Value: secondary,
-		},
-			reps[r].Device, "device")
-	}
-	return nil
-}
-
 func MarkDevicesAsNotAlerting(deviceIDs []string) {
 	secondaryData := make(map[string]map[string]interface{})
-	secondaryData[heartbeat.LOST_HEARTBEAT] = make(map[string]interface{})
+	secondaryData["lost-heartbeat"] = make(map[string]interface{})
 
-	secondaryData[heartbeat.LOST_HEARTBEAT]["alerting"] = false
-	secondaryData[heartbeat.LOST_HEARTBEAT]["message"] = fmt.Sprintf("Alert cleared at %s", time.Now().Format(time.RFC3339))
+	secondaryData["lost-heartbeat"]["alerting"] = false
+	secondaryData["lost-heartbeat"]["message"] = fmt.Sprintf("Alert cleared at %s", time.Now().Format(time.RFC3339))
 
 	secondaryStatus := forwarding.StateDistribution{
 		Key:   "alerts",
@@ -79,4 +58,3 @@ func MarkDevicesAsNotAlerting(deviceIDs []string) {
 		forwarding.SendToStateBuffer(alertingStatus, id, "device")
 	}
 }
-*/

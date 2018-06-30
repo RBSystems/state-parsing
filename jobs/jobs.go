@@ -1,16 +1,17 @@
 package jobs
 
 import (
-	"github.com/byuoitav/state-parsing/actions"
+	"github.com/byuoitav/state-parsing/actions/action"
 	"github.com/byuoitav/state-parsing/jobs/timebased/heartbeat"
 )
 
 type Job interface {
-	Run(context interface{}) []actions.ActionPayload
+	Run(context interface{}) []action.Action
 }
 
 var Jobs = map[string]Job{
-	"lost-heartbeat": &heartbeat.LostHeartbeatJob{},
+	heartbeat.HEARTBEAT_LOST:     &heartbeat.HeartbeatLostJob{},
+	heartbeat.HEARTBEAT_RESTORED: &heartbeat.HeartbeatRestoredJob{},
 }
 
 type JobConfig struct {

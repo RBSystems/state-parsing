@@ -2,93 +2,80 @@ package slack
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"time"
+	"reflect"
 
-	"github.com/byuoitav/state-parsing/alerts/base"
-	"github.com/fatih/color"
+	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/common/nerr"
+	"github.com/byuoitav/state-parsing/actions/action"
 )
 
 var slackurl = "https://hooks.slack.com/services/"
 
-//note don't forget to set the HTTP_PROXY or HTTPS_PROXY env variables if proxies are needed
-type SlackNotificationEngine struct {
+type SlackAction struct {
 	ChannelIdentifier string
 }
 
-func (sn *SlackNotificationEngine) SendNotifications(alerts []base.Alert) ([]base.AlertReport, error) {
-	log.Printf(color.HiGreenString("Sending slack notifications..."))
+func (s *SlackAction) Execute(a action.Action) action.Result {
+	log.L.Infof("Executing slack action for %v", a.Device)
 
-	//pretty simple, just a post, the only thing that could be an issue is the proxies
-	report := []base.AlertReport{}
-
-	for i := range alerts {
-		log.Printf(color.HiGreenString("Sending for %v", alerts[i].Device))
-
-		proxyUrl, err := url.Parse(os.Getenv("PROXY_ADDR"))
-		client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
-
-		req, err := http.NewRequest("POST", slackurl+sn.ChannelIdentifier, bytes.NewReader(alerts[i].Content))
-		if err != nil {
-			msg := fmt.Sprintf("Couldn't build request: %v", err.Error())
-			log.Printf(color.HiRedString(msg))
-			report = append(report, base.AlertReport{
-				Alert:   alerts[i],
-				Success: false,
-				Message: msg,
-			})
-			continue
-		}
-		req.Header.Add("content-type", "application/json")
-
-		resp, err := client.Do(req)
-		if err != nil {
-			msg := fmt.Sprintf("Could not send request: %v", err.Error())
-			log.Printf(color.HiRedString(msg))
-			report = append(report, base.AlertReport{
-				Alert:   alerts[i],
-				Success: false,
-				Message: msg,
-			})
-			continue
-		}
-
-		b, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			msg := fmt.Sprintf("Could not read response body: %v", err.Error())
-			log.Printf(color.HiRedString(msg))
-			report = append(report, base.AlertReport{
-				Alert:   alerts[i],
-				Success: false,
-				Message: msg,
-			})
-			continue
-		}
-
-		if resp.StatusCode/100 != 2 {
-			msg := fmt.Sprintf("Non-200 received: %v. Body: %s", resp.StatusCode, b)
-			log.Printf(color.HiRedString(msg))
-			report = append(report, base.AlertReport{
-				Alert:   alerts[i],
-				Success: false,
-				Message: msg,
-			})
-			continue
-		}
-
-		//it worked
-		log.Printf(color.HiGreenString("Success."))
-		report = append(report, base.AlertReport{
-			Alert:   alerts[i],
-			Success: true,
-			Message: time.Now().Format(time.RFC3339),
-		})
+	result := action.Result{
+		Action: a,
 	}
 
-	return report, nil
+	var reqBody []byte
+	var err error
+
+	switch v := a.Content.(type) {
+	case []byte:
+		reqBody = v
+	case SlackAlert:
+		// marshal the request
+		reqBody, err = json.Marshal(v)
+		if err != nil {
+			result.Error = nerr.Translate(err).Addf("failed to unmarshal slack alert")
+			return result
+		}
+	default:
+		result.Error = nerr.Create("action content was not a slack alert.", reflect.TypeOf("").String())
+		return result
+	}
+
+	// pretty simple, just a post, the only thing that could be an issue is the proxies
+	proxyUrl, err := url.Parse(os.Getenv("PROXY_ADDR"))
+	client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyUrl)}}
+
+	req, err := http.NewRequest(http.MethodPost, slackurl+s.ChannelIdentifier, bytes.NewReader(reqBody))
+	if err != nil {
+		result.Error = nerr.Translate(err).Addf("failed to build slack alert request")
+		return result
+	}
+	req.Header.Add("content-type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		result.Error = nerr.Translate(err).Addf("failed to send slack alert")
+		return result
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		result.Error = nerr.Translate(err).Addf("could not read response body after sending slack alert")
+		return result
+	}
+
+	if resp.StatusCode/100 != 2 {
+		result.Error = nerr.Create(fmt.Sprintf("non-200 response recieved (code: %v). body: %s", resp.StatusCode, b), reflect.TypeOf(resp).String())
+		return result
+	}
+
+	//it worked
+	log.L.Infof("Successfully sent slack alert for %s.", a.Device)
+	return result
 }

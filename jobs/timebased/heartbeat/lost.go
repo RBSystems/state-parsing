@@ -9,16 +9,17 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/state-parsing/actions"
+	"github.com/byuoitav/state-parsing/actions/action"
 	"github.com/byuoitav/state-parsing/actions/slack"
 	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/elk"
 )
 
-type LostHeartbeatJob struct {
+type HeartbeatLostJob struct {
 }
 
 const (
-	LOST_HEARTBEAT = "lost-heartbeat"
+	HEARTBEAT_LOST = "heartbeat-lost"
 
 	heartbeatLostQuery = `{
   "query": {
@@ -89,40 +90,40 @@ type heartbeatLostQueryResponse struct {
 	} `json:"hits,omitempty"`
 }
 
-func (h *LostHeartbeatJob) Run(context interface{}) []actions.ActionPayload {
-	log.L.Debugf("Starting lost heartbeat job...")
+func (h *HeartbeatLostJob) Run(context interface{}) []action.Action {
+	log.L.Debugf("Starting heartbeat lost job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DeviceIndex), []byte(heartbeatLostQuery))
 	if err != nil {
-		log.L.Warn("failed to make elk request to run lost heartbeat job: %s", err.String())
-		return []actions.ActionPayload{}
+		log.L.Warn("failed to make elk request to run heartbeat lost job: %s", err.String())
+		return []action.Action{}
 	}
 
 	var hrresp heartbeatLostQueryResponse
 	gerr := json.Unmarshal(body, &hrresp)
 	if gerr != nil {
-		log.L.Warn("failed to unmarshal elk response to run lost heartbeat job: %s", gerr)
-		return []actions.ActionPayload{}
+		log.L.Warn("failed to unmarshal elk response to run heartbeat lost job: %s", gerr)
+		return []action.Action{}
 	}
 
 	acts, err := processHeartbeatLostResponse(hrresp)
 	if err != nil {
 		log.L.Warn("failed to process heartbeat lost response: %s", err.String())
-		return []actions.ActionPayload{}
+		return []action.Action{}
 	}
 
-	log.L.Debugf("Finished lost heartbeat job.")
+	log.L.Debugf("Finished heartbeat lost job.")
 	return acts
 }
 
-func processHeartbeatLostResponse(resp heartbeatLostQueryResponse) ([]actions.ActionPayload, *nerr.E) {
+func processHeartbeatLostResponse(resp heartbeatLostQueryResponse) ([]action.Action, *nerr.E) {
 	roomsToCheck := make(map[string]bool)
 	devicesToUpdate := make(map[string]elk.DeviceUpdateInfo)
-	actionsByRoom := make(map[string][]actions.ActionPayload)
-	toReturn := []actions.ActionPayload{}
+	actionsByRoom := make(map[string][]action.Action)
+	toReturn := []action.Action{}
 
 	if len(resp.Hits.Hits) <= 0 {
-		log.L.Infof("[lost-heartbeat] No heartbeats lost")
+		log.L.Infof("[%s] No heartbeats lost", HEARTBEAT_LOST)
 		return toReturn, nil
 	}
 
@@ -138,7 +139,7 @@ func processHeartbeatLostResponse(resp heartbeatLostQueryResponse) ([]actions.Ac
 		roomsToCheck[curHit.Room] = true
 
 		//make sure that it's marked as alerting
-		if curHit.Alerting == false || curHit.Alerts[LOST_HEARTBEAT].Alerting == false {
+		if curHit.Alerting == false || curHit.Alerts[HEARTBEAT_LOST].Alerting == false {
 			//we need to mark it to be updated as alerting
 			devicesToUpdate[resp.Hits.Hits[i].ID] = elk.DeviceUpdateInfo{
 				Name: resp.Hits.Hits[i].ID,
@@ -176,7 +177,7 @@ func processHeartbeatLostResponse(resp heartbeatLostQueryResponse) ([]actions.Ac
 		}
 
 		//we need to validate before this that the room in question isn't alerting
-		action := actions.ActionPayload{
+		a := action.Action{
 			Type:    actions.SLACK,
 			Device:  curHit.Hostname,
 			Content: slackAlert,
@@ -184,9 +185,9 @@ func processHeartbeatLostResponse(resp heartbeatLostQueryResponse) ([]actions.Ac
 
 		_, ok := actionsByRoom[curHit.Room]
 		if ok {
-			actionsByRoom[curHit.Room] = append(actionsByRoom[curHit.Room], action)
+			actionsByRoom[curHit.Room] = append(actionsByRoom[curHit.Room], a)
 		} else {
-			actionsByRoom[curHit.Room] = []actions.ActionPayload{action}
+			actionsByRoom[curHit.Room] = []action.Action{a}
 		}
 	}
 
@@ -231,7 +232,7 @@ func processHeartbeatLostResponse(resp heartbeatLostQueryResponse) ([]actions.Ac
 		secondaryAlertStructure["message"] = fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info)
 
 		log.L.Debugf("Marking device %v as alerting.", devicesToUpdate[i])
-		device.MarkAsAlerting([]string{devicesToUpdate[i].Name}, LOST_HEARTBEAT, secondaryAlertStructure)
+		device.MarkAsAlerting([]string{devicesToUpdate[i].Name}, HEARTBEAT_LOST, secondaryAlertStructure)
 	}
 
 	//now we check to make sure that the alerts we're going to send aren't in rooms that are suppressed - build
