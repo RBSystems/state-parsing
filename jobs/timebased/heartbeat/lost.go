@@ -93,7 +93,7 @@ type heartbeatLostQueryResponse struct {
 func (h *HeartbeatLostJob) Run(context interface{}) []action.Action {
 	log.L.Debugf("Starting heartbeat lost job...")
 
-	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DeviceIndex), []byte(heartbeatLostQuery))
+	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatLostQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run heartbeat lost job: %s", err.String())
 		return []action.Action{}
@@ -106,17 +106,17 @@ func (h *HeartbeatLostJob) Run(context interface{}) []action.Action {
 		return []action.Action{}
 	}
 
-	acts, err := processHeartbeatLostResponse(hrresp)
+	acts, err := h.processResponse(hrresp)
 	if err != nil {
 		log.L.Warn("failed to process heartbeat lost response: %s", err.String())
-		return []action.Action{}
+		return acts
 	}
 
 	log.L.Debugf("Finished heartbeat lost job.")
 	return acts
 }
 
-func processHeartbeatLostResponse(resp heartbeatLostQueryResponse) ([]action.Action, *nerr.E) {
+func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]action.Action, *nerr.E) {
 	roomsToCheck := make(map[string]bool)
 	devicesToUpdate := make(map[string]elk.DeviceUpdateInfo)
 	actionsByRoom := make(map[string][]action.Action)

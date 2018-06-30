@@ -197,6 +197,7 @@ func StartJobScheduler() {
 func (r *runner) run(context interface{}) {
 	log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 	actions.Execute(r.Job.Run(context))
+	log.L.Infof("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 
 func (r *runner) runDaily() {

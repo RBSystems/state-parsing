@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"github.com/byuoitav/state-parsing/actions/action"
+	"github.com/byuoitav/state-parsing/jobs/timebased"
 	"github.com/byuoitav/state-parsing/jobs/timebased/heartbeat"
 )
 
@@ -12,6 +13,7 @@ type Job interface {
 var Jobs = map[string]Job{
 	heartbeat.HEARTBEAT_LOST:     &heartbeat.HeartbeatLostJob{},
 	heartbeat.HEARTBEAT_RESTORED: &heartbeat.HeartbeatRestoredJob{},
+	timebased.ROOM_UPDATE:        &timebased.RoomUpdateJob{},
 }
 
 type JobConfig struct {

@@ -14,7 +14,13 @@ import (
 )
 
 const (
-	DeviceIndex = "oit-static-av-devices"
+	DEVICE_INDEX = "oit-static-av-devices"
+	ROOM_INDEX   = "oit-static-av-rooms"
+
+	ALERTING_TRUE  = 1
+	ALERTING_FALSE = 0
+	POWER_STANDBY  = "standby"
+	POWER_ON       = "on"
 )
 
 var apiAddr, username, password string

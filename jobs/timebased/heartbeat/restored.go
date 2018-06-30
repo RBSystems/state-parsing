@@ -78,7 +78,7 @@ type heartbeatRestoredQueryResponse struct {
 func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Action {
 	log.L.Debugf("Starting heartbeat restored job...")
 
-	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DeviceIndex), []byte(heartbeatRestoredQuery))
+	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatRestoredQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run heartbeat restored job: %s", err.String())
 		return []action.Action{}
@@ -91,17 +91,17 @@ func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Action {
 		return []action.Action{}
 	}
 
-	acts, err := processHeartbeatRestoredResponse(hrresp)
+	acts, err := h.processResponse(hrresp)
 	if err != nil {
 		log.L.Warn("failed to process heartbeat restored response: %s", err.String())
-		return []action.Action{}
+		return acts
 	}
 
 	log.L.Debugf("Finished heartbeat restored job.")
 	return acts
 }
 
-func processHeartbeatRestoredResponse(resp heartbeatRestoredQueryResponse) ([]action.Action, *nerr.E) {
+func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryResponse) ([]action.Action, *nerr.E) {
 	roomsToCheck := make(map[string]bool)
 	// devicesToUpdate :=
 	deviceIDsToUpdate := []string{}

@@ -7,7 +7,7 @@
                 "every": "30s"
             }
         ],
-        "enabled": true
+        "enabled": false
     },
     {
         "name": "heartbeat-restored",
@@ -15,6 +15,16 @@
             {
                 "type": "interval",
                 "every": "30s"
+            }
+        ],
+        "enabled": false
+    },
+    {
+        "name": "room-update",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "10s"
             }
         ],
         "enabled": true

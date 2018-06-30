@@ -1,6 +1,9 @@
 package actions
 
-import "github.com/byuoitav/state-parsing/actions/action"
+import (
+	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/state-parsing/actions/action"
+)
 
 var ingestionMap map[string]chan action.Action
 
@@ -10,10 +13,21 @@ type actionManager struct {
 	ActionChan chan action.Action
 }
 
+func init() {
+	ingestionMap = make(map[string]chan action.Action)
+}
+
 func StartActionScheduler() {
+	var actionList []string
+	for name, _ := range Actions {
+		actionList = append(actionList, name)
+	}
+
+	log.L.Infof("Starting action scheduler. Executing action types: %v", actionList)
+
 	// build each of the individual action managers
 	for name, act := range Actions {
-		ingestionMap[name] = make(chan action.Action, 1000)
+		ingestionMap[name] = make(chan action.Action, 2000) // TODO make this size configurable?
 
 		manager := &actionManager{
 			Name:       name,
