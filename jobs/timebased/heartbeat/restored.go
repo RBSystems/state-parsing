@@ -11,8 +11,8 @@ import (
 	"github.com/byuoitav/state-parsing/actions"
 	"github.com/byuoitav/state-parsing/actions/action"
 	"github.com/byuoitav/state-parsing/actions/slack"
-	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/elk"
+	"github.com/byuoitav/state-parsing/forwarding/device"
 )
 
 type HeartbeatRestoredJob struct {

@@ -43,7 +43,7 @@ type MatchConfig struct {
 
 func (r *runner) buildMatchRegex() {
 	// build the regex for each field
-	// TODO validate at least one regex is created
+	// TODO validate at least one regex is created?
 	if len(r.Trigger.Match.Hostname) > 0 {
 		r.Trigger.Match.Regex.Hostname = regexp.MustCompile(r.Trigger.Match.Hostname)
 	}

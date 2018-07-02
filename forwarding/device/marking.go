@@ -11,7 +11,7 @@ import (
 //toMark is the list of rooms, There may be one or more of them
 //secondaryAlertType is the type of alert marking as (e.g. heartbeat)
 //secondaryAlertData is the data to be filled there (e.g. last-heartbeat-received, etc)
-func MarkAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertData map[string]interface{}) {
+func MarkDevicesAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertData map[string]interface{}) {
 	//build our general alerting
 	alerting := forwarding.StateDistribution{
 		Key:   "alerting",

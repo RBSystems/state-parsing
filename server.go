@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-	//	log.SetLevel("debug")
 	jobs.StartJobScheduler()
 
 	go forwarding.StartDistributor()

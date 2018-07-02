@@ -11,8 +11,8 @@ import (
 	"github.com/byuoitav/state-parsing/actions"
 	"github.com/byuoitav/state-parsing/actions/action"
 	"github.com/byuoitav/state-parsing/actions/slack"
-	"github.com/byuoitav/state-parsing/alerts/device"
 	"github.com/byuoitav/state-parsing/elk"
+	"github.com/byuoitav/state-parsing/forwarding/device"
 )
 
 type HeartbeatLostJob struct {
@@ -232,7 +232,7 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 		secondaryAlertStructure["message"] = fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info)
 
 		log.L.Debugf("Marking device %v as alerting.", devicesToUpdate[i])
-		device.MarkAsAlerting([]string{devicesToUpdate[i].Name}, HEARTBEAT_LOST, secondaryAlertStructure)
+		device.MarkDevicesAsAlerting([]string{devicesToUpdate[i].Name}, HEARTBEAT_LOST, secondaryAlertStructure)
 	}
 
 	//now we check to make sure that the alerts we're going to send aren't in rooms that are suppressed - build
