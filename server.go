@@ -6,7 +6,6 @@ import (
 
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/salt-translator-service/elk"
-	"github.com/byuoitav/state-parsing/actions"
 	"github.com/byuoitav/state-parsing/forwarding"
 	"github.com/byuoitav/state-parsing/jobs"
 	"github.com/labstack/echo"
@@ -16,7 +15,6 @@ import (
 func main() {
 	//	log.SetLevel("debug")
 	jobs.StartJobScheduler()
-	actions.StartActionScheduler()
 
 	go forwarding.StartDistributor()
 	go forwarding.StartTicker(3000)

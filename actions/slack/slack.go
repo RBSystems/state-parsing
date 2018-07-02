@@ -66,7 +66,7 @@ func (s *SlackAction) Execute(a action.Action) action.Result {
 
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		result.Error = nerr.Translate(err).Addf("could not read response body after sending slack alert")
+		result.Error = nerr.Translate(err).Addf("could not read response body after sending slack alert: %s", err)
 		return result
 	}
 

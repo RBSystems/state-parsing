@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/byuoitav/state-parsing/actions/action"
+	"github.com/byuoitav/state-parsing/actions/mom"
 	"github.com/byuoitav/state-parsing/actions/slack"
 )
 
@@ -20,5 +21,5 @@ type Action interface {
 var Actions = map[string]Action{
 	// fill actions in here
 	SLACK: &slack.SlackAction{ChannelIdentifier: os.Getenv("SLACK_HEARTBEAT_CHANNEL")},
-	//	MOM: mom.MomNotificationEngine{},
+	MOM:   &mom.MomAction{},
 }

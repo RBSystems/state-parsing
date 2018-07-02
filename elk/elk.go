@@ -38,7 +38,7 @@ func init() {
 func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
 	// format whole address
 	addr := fmt.Sprintf("%s%s", apiAddr, endpoint)
-	log.L.Infof("Making ELK request against: %s", addr)
+	log.L.Debugf("Making ELK request against: %s", addr)
 
 	var reqBody []byte
 	var err error

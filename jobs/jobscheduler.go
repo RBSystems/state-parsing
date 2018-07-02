@@ -146,6 +146,9 @@ func StartJobScheduler() {
 	EventChan = make(chan elkreporting.ElkEvent, maxQueue)
 	HeartbeatChan = make(chan elk.Event, maxQueue)
 
+	// start action managers
+	actions.StartActionManagers()
+
 	// start runners
 	var matchRunners []*runner
 	for _, runner := range runners {

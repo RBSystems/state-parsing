@@ -2,14 +2,16 @@ package mom
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"time"
+	"reflect"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/alerts/base"
+	"github.com/byuoitav/common/nerr"
+	"github.com/byuoitav/state-parsing/actions/action"
 )
 
 var momAlertURL string
@@ -22,72 +24,62 @@ func init() {
 	}
 }
 
-type MomNotificationEngine struct {
+type MomAction struct {
 }
 
-func (m *MomNotificationEngine) SendNotifications(alerts []base.Alert) ([]base.AlertReport, error) {
-	if len(alerts) == 0 {
-		return []base.AlertReport{}, nil
+func (m *MomAction) Execute(a action.Action) action.Result {
+	log.L.Infof("Executing mom action for %v", a.Device)
+
+	result := action.Result{
+		Action: a,
 	}
 
-	log.L.Infof("Sending mom alerts...")
-	reportChan := make(chan base.AlertReport)
+	var reqBody []byte
+	var err error
 
-	// send all the alerts
-	for _, alert := range alerts {
-		go sendMomAlert(alert, reportChan)
+	switch v := a.Content.(type) {
+	case []byte:
+		reqBody = v
+	case MomAlert:
+		reqBody, err = json.Marshal(v)
+		if err != nil {
+			result.Error = nerr.Translate(err).Addf("failed to unmarshal mom alert")
+			return result
+		}
+	default:
+		result.Error = nerr.Create("action content was not a mom alert.", reflect.TypeOf("").String())
+		return result
 	}
-
-	// collect all the reports
-	var reports []base.AlertReport
-	for range alerts {
-		reports = append(reports, <-reportChan)
-	}
-
-	return reports, nil
-}
-
-func sendMomAlert(alert base.Alert, reportChan chan base.AlertReport) {
-	log.L.Debugf("Sending mom alert for %s", alert.Device)
-
-	// init the report to send to the channel
-	report := base.AlertReport{
-		Alert:   alert,
-		Success: false,
-	}
-	defer func() {
-		reportChan <- report
-	}()
 
 	// build the request
-	req, err := http.NewRequest(http.MethodPost, momAlertURL, bytes.NewReader(alert.Content))
+	req, err := http.NewRequest(http.MethodPost, momAlertURL, bytes.NewReader(reqBody))
 	if err != nil {
-		report.Message = fmt.Sprintf("failed to build request: %s", err)
-		return
+		result.Error = nerr.Translate(err).Addf("failed to build mom action request")
+		return result
 	}
 	req.Header.Add("content-type", "application/json")
 
 	// execute the request
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		report.Message = fmt.Sprintf("failed to send request: %s", err)
-		return
+		result.Error = nerr.Translate(err).Addf("failed to send mom action")
+		return result
 	}
+	defer resp.Body.Close()
 
 	// read response body
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		report.Message = fmt.Sprintf("unable to read response body: %s", err)
-		return
+		result.Error = nerr.Translate(err).Addf("unable to read response body after sending mom alert: %s", err)
+		return result
 	}
 
 	// check response status code
 	if resp.StatusCode/100 != 2 {
-		report.Message = fmt.Sprintf("non-200 response received: %v. body: %s", resp.StatusCode, body)
-		return
+		result.Error = nerr.Create(fmt.Sprintf("non-200 response recieved (code: %v). body: %s", resp.StatusCode, body), reflect.TypeOf(resp).String())
+		return result
 	}
 
-	// success
-	report.Success = true
-	report.Message = time.Now().Format(time.RFC3339)
+	log.L.Infof("Successfully send mom alert for %s", a.Device)
+	return result
 }

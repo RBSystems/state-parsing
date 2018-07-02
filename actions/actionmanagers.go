@@ -17,7 +17,7 @@ func init() {
 	ingestionMap = make(map[string]chan action.Action)
 }
 
-func StartActionScheduler() {
+func StartActionManagers() {
 	var actionList []string
 	for name, _ := range Actions {
 		actionList = append(actionList, name)
@@ -51,8 +51,13 @@ func Execute(actions []action.Action) {
 }
 
 func (a *actionManager) start() {
-	// TODO scale number of action managers as size of payload chan increases
-	for action := range a.ActionChan {
-		a.Action.Execute(action)
+	// TODO scale number of action managers as size of payload chan increases?
+	for act := range a.ActionChan {
+		go func(action action.Action) {
+			result := a.Action.Execute(action)
+			if result.Error != nil {
+				log.L.Warnf("failed to execute %s action: %s", result.Action.Type, result.Error.String())
+			}
+		}(act)
 	}
 }

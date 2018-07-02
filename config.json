@@ -4,10 +4,10 @@
         "triggers": [
             {
                 "type": "interval",
-                "every": "30s"
+                "every": "5s"
             }
         ],
-        "enabled": false
+        "enabled": true
     },
     {
         "name": "heartbeat-restored",
@@ -17,7 +17,7 @@
                 "every": "30s"
             }
         ],
-        "enabled": false
+        "enabled": true
     },
     {
         "name": "room-update",
@@ -27,7 +27,7 @@
                 "every": "10s"
             }
         ],
-        "enabled": false
+        "enabled": true
     },
     {
         "name": "general-alert-clearing",
