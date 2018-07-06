@@ -1,51 +1,66 @@
 [
-  {
-    "name": "heartbeat",
-    "repeat-interval": 10,
-    "wait-for-complete": false,
-    "type": "script",
-    "enabled": false
-  },
-  {
-    "name": "state-updating",
-    "repeat-interval": 10,
-    "wait-for-complete": false,
-    "type": "script",
-    "enabled": false
-  },
-  {
-    "name": "detailstate-updating",
-    "repeat-interval": 180,
-    "wait-for-complete": false,
-    "type": "script",
-    "enabled": false
-  },
-  {
-    "name": "lost-heartbeat",
-    "repeat-interval": 5,
-    "wait-for-complete": false,
-    "type": "alert-factory",
-    "enabled": false
-  },
-  {
-    "name": "heartbeat-restored",
-    "repeat-interval": 30,
-    "wait-for-complete": false,
-    "type": "alert-factory",
-    "enabled": false
- },
- {
-    "name": "room-update",
-    "repeat-interval": 5,
-    "wait-for-complete": true,
-    "type": "updater",
-    "enabled": false
- },
- {
-    "name": "general-alert-update",
-    "repeat-interval": 30,
-    "wait-for-complete": true,
-    "type": "updater",
-    "enabled": true
- }
+    {
+        "name": "heartbeat-lost",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "5s"
+            }
+        ],
+        "enabled": true
+    },
+    {
+        "name": "heartbeat-restored",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "30s"
+            }
+        ],
+        "enabled": true
+    },
+    {
+        "name": "room-update",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "10s"
+            }
+        ],
+        "enabled": true
+    },
+    {
+        "name": "general-alert-clearing",
+        "triggers": [
+            {
+                "type": "interval",
+                "every": "10s"
+            }
+        ],
+        "enabled": true
+    },
+    {
+        "name": "room-update.py",
+        "triggers": [
+            {
+                "type": "daily",
+                "at": "14:45:00-06:00"
+            },
+            {
+                "type": "interval",
+                "every": "5m"
+            },
+            {
+                "type": "match",
+                "match": {
+                    "hostname": "teton",
+                    "event": {
+                        "eventInfoKey": "button.*",
+                        "type": "CORE"
+                    }
+                }
+            }
+        ],
+        "enabled": false
+    }
 ]

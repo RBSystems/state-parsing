@@ -1,34 +1,35 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 
-	"github.com/byuoitav/state-parsing/eventforwarding"
+	"github.com/byuoitav/event-translator-microservice/elkreporting"
+	"github.com/byuoitav/salt-translator-service/elk"
+	"github.com/byuoitav/state-parsing/forwarding"
 	"github.com/byuoitav/state-parsing/jobs"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
 
 func main() {
-	o := jobs.Orchestrator{}
-	o.Start()
+	jobs.StartJobScheduler()
 
-	go eventforwarding.StartDistributor()
-	go eventforwarding.StartTicker(3000)
-	go eventforwarding.Init()
+	go forwarding.StartDistributor()
+	go forwarding.StartTicker(3000)
 
 	port := ":10010"
 	router := echo.New()
 	router.Pre(middleware.RemoveTrailingSlash())
 	router.Use(middleware.CORS())
 
-	router.GET("/test", eventforwarding.Test)
+	router.GET("/test", Status)
 
-	router.PUT("/heartbeat", eventforwarding.AddHeartbeat)
-	router.PUT("/event", eventforwarding.AddEvent)
+	router.PUT("/heartbeat", AddHeartbeat)
+	router.PUT("/event", AddEvent)
 
-	router.POST("/heartbeat", eventforwarding.AddHeartbeat)
-	router.POST("/event", eventforwarding.AddEvent)
+	router.POST("/heartbeat", AddHeartbeat)
+	router.POST("/event", AddEvent)
 
 	server := http.Server{
 		Addr:           port,
@@ -36,4 +37,30 @@ func main() {
 	}
 
 	router.StartServer(&server)
+}
+
+func Status(context echo.Context) error {
+	return context.JSON(http.StatusOK, "Did you ever hear the tragedy of Darth Plagueis The Wise?")
+}
+
+func AddHeartbeat(context echo.Context) error {
+	var heartbeat elk.Event
+	err := context.Bind(&heartbeat)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid event: %v", err))
+	}
+
+	jobs.HeartbeatChan <- heartbeat
+	return context.JSON(http.StatusOK, "Success.")
+}
+
+func AddEvent(context echo.Context) error {
+	var event elkreporting.ElkEvent
+	err := context.Bind(&event)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid event: %v", err))
+	}
+
+	jobs.EventChan <- event
+	return context.JSON(http.StatusOK, "Success.")
 }
