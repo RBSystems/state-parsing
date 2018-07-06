@@ -102,6 +102,7 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 
 	log.L.Infof("[dispatcher] Done adding lines.")
 	log.L.Infof("[dispatcher] %v devices getting updates....", len(stateMap))
+	log.L.Debugf("%s", payload)
 
 	//send the request
 	req, err := http.NewRequest("POST", elkaddr+"/_bulk", bytes.NewReader(payload))

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/salt-translator-service/elk"
 	"github.com/byuoitav/state-parsing/forwarding"
@@ -30,6 +31,9 @@ func main() {
 
 	router.POST("/heartbeat", AddHeartbeat)
 	router.POST("/event", AddEvent)
+
+	router.PUT("/log-level/:level", log.SetLogLevel)
+	router.GET("/log-level", log.GetLogLevel)
 
 	server := http.Server{
 		Addr:           port,

@@ -3,6 +3,7 @@ package forwarding
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -31,7 +32,7 @@ func Forward(e interface{}, url string) *nerr.E {
 		if err != nil {
 			return nerr.Translate(err).Addf("failed to forward event. response status code: %v", resp.StatusCode)
 		}
-		return nerr.Translate(err).Addf("failed to forward event. response status code: %v. response body: %v", resp.StatusCode, b)
+		return nerr.Create(fmt.Sprintf("failed to forward event. response status code: %v. response body: %s", resp.StatusCode, b), http.StatusText(resp.StatusCode))
 	}
 
 	log.L.Debugf("Successfully forwarded event. Took: %v", time.Since(start).Nanoseconds())
