@@ -18,6 +18,9 @@ const (
 	GENERAL_ALERT_CLEARING = "general-alert-clearing"
 
 	generalAlertClearingQuery = `{
+	"_source": [
+		"hostname"
+	],
   "query": {
     "bool": {
       "must": [
@@ -48,27 +51,9 @@ type generalAlertClearingQueryResponse struct {
 	Hits struct {
 		Total int `json:"total"`
 		Hits  []struct {
-			Index  string  `json:"_index"`
-			Type   string  `json:"_type"`
-			ID     string  `json:"_id"`
-			Score  float64 `json:"_score"`
+			ID     string `json:"_id"`
 			Source struct {
-				Alerting              bool   `json:"alerting"`
-				Hostname              string `json:"hostname"`
-				LastHeartbeat         string `json:"last-heartbeat"`
-				EnableNotifications   string `json:"enable-notifications"`
-				LastStateRecieved     string `json:"last-state-recieved"`
-				SuppressNotifications string `json:"suppress-notifications"`
-				Control               string `json:"control"`
-				ViewDashboard         string `json:"view-dashboard"`
-				Room                  string `json:"room"`
-				Alerts                struct {
-					LostHeartbeat struct {
-						AlertSent string `json:"alert-sent"`
-						Message   string `json:"message"`
-						Alerting  bool   `json:"alerting"`
-					} `json:"lost-heartbeat"`
-				} `json:"alerts"`
+				Hostname string `json:"hostname"`
 			} `json:"_source"`
 		} `json:"hits"`
 	} `json:"hits"`
@@ -78,7 +63,7 @@ func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Action {
 	log.L.Debugf("Starting general-alert clearing job")
 
 	//the query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
-	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(roomUpdateQuery))
+	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(generalAlertClearingQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run general alert clearing job: %s", err.String())
 		return []action.Action{}
