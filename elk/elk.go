@@ -14,21 +14,29 @@ import (
 )
 
 const (
-	DEVICE_INDEX = "oit-static-av-devices"
-	ROOM_INDEX   = "oit-static-av-rooms"
-
 	ALERTING_TRUE  = 1
 	ALERTING_FALSE = 0
 	POWER_STANDBY  = "standby"
 	POWER_ON       = "on"
 )
 
-var apiAddr, username, password string
+var (
+	DEVICE_INDEX = os.Getenv("ELK_STATIC_DEVICE_INDEX")
+	ROOM_INDEX   = os.Getenv("ELK_STATIC_ROOM_INDEX")
 
-func init() {
-	apiAddr = os.Getenv("ELK_DIRECT_ADDRESS") // or should this be ELK_ADDR?
+	apiAddr  = os.Getenv("ELK_DIRECT_ADDRESS") // or should this be ELK_ADDR?
 	username = os.Getenv("ELK_SA_USERNAME")
 	password = os.Getenv("ELK_SA_PASSWORD")
+)
+
+func init() {
+	if len(DEVICE_INDEX) == 0 {
+		log.L.Fatalf("ELK_STATIC_DEVICE_INDEX is not set")
+	}
+
+	if len(ROOM_INDEX) == 0 {
+		log.L.Fatalf("ELK_STATIC_ROOM_INDEX is not set")
+	}
 
 	if len(apiAddr) == 0 || len(username) == 0 || len(password) == 0 {
 		log.L.Fatalf("ELASTIC_API_EVENTS, ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")

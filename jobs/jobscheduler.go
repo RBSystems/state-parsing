@@ -43,9 +43,12 @@ type runner struct {
 }
 
 func init() {
-	// make sure max queue and max workers size is set
-	if len(MAX_WORKERS) == 0 || len(MAX_QUEUE) == 0 {
-		log.L.Fatalf("must set $MAX_WORKERS and $MAX_QUEUE before running.")
+	// set defaults for max workers/queue
+	if len(MAX_WORKERS) == 0 {
+		MAX_WORKERS = "10"
+	}
+	if len(MAX_QUEUE) == 0 {
+		MAX_QUEUE = "1000"
 	}
 
 	// validate max workers/queue are valid numbers
@@ -55,7 +58,7 @@ func init() {
 	}
 	_, err = strconv.Atoi(MAX_QUEUE)
 	if err != nil {
-		log.L.Fatalf("$MAX_Queue must be a number")
+		log.L.Fatalf("$MAX_QUEUE must be a number")
 	}
 
 	// validate forwarding urls exist
@@ -166,7 +169,7 @@ func StartJobScheduler() {
 
 	// start event workers
 	for i := 0; i < maxWorkers; i++ {
-		log.L.Infof("Starting event worker %v", i)
+		log.L.Debugf("Starting event worker %v", i)
 
 		go func() {
 			for {

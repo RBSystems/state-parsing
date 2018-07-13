@@ -15,7 +15,7 @@ import (
 	"github.com/byuoitav/state-parsing/actions/action"
 )
 
-var slackurl = "https://hooks.slack.com/services/"
+const slackurl = "https://hooks.slack.com/services/"
 
 type SlackAction struct {
 	ChannelIdentifier string
@@ -34,7 +34,7 @@ func (s *SlackAction) Execute(a action.Action) action.Result {
 	switch v := a.Content.(type) {
 	case []byte:
 		reqBody = v
-	case SlackAlert:
+	case Alert:
 		// marshal the request
 		reqBody, err = json.Marshal(v)
 		if err != nil {

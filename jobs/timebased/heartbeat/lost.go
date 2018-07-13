@@ -12,7 +12,7 @@ import (
 	"github.com/byuoitav/state-parsing/actions/action"
 	"github.com/byuoitav/state-parsing/actions/slack"
 	"github.com/byuoitav/state-parsing/elk"
-	"github.com/byuoitav/state-parsing/forwarding/device"
+	"github.com/byuoitav/state-parsing/forwarding/marking"
 )
 
 type HeartbeatLostJob struct {
@@ -153,19 +153,19 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 		}
 
 		//otherwise we create an alert to be returned, for now we just return a slack alert
-		slackAlert := slack.SlackAlert{
+		slackAlert := slack.Alert{
 			Markdown: false,
-			Attachments: []slack.SlackAttachment{
-				slack.SlackAttachment{
+			Attachments: []slack.Attachment{
+				slack.Attachment{
 					Fallback: fmt.Sprintf("Lost Heartbeat. Device %v stopped sending heartbeats at %v ", curHit.Hostname, curHit.LastHeartbeat),
 					Title:    "Lost Heartbeat",
-					Fields: []slack.SlackAlertField{
-						slack.SlackAlertField{
+					Fields: []slack.AlertField{
+						slack.AlertField{
 							Title: "Device",
 							Value: curHit.Hostname,
 							Short: true,
 						},
-						slack.SlackAlertField{
+						slack.AlertField{
 							Title: "Last Heartbeat",
 							Value: curHit.LastHeartbeat,
 							Short: true,
@@ -220,7 +220,7 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 
 	// mark rooms as alerting
 	log.L.Infof("Marking %v rooms as alerting", len(roomsToMark))
-	elk.MarkRoomGeneralAlerting(roomsToMark)
+	marking.MarkRoomGeneralAlerting(roomsToMark, true)
 
 	// mark devices as alerting
 	log.L.Infof("Marking devices as alerting...")
@@ -232,7 +232,7 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 		secondaryAlertStructure["message"] = fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info)
 
 		log.L.Debugf("Marking device %v as alerting.", devicesToUpdate[i])
-		device.MarkDevicesAsAlerting([]string{devicesToUpdate[i].Name}, HEARTBEAT_LOST, secondaryAlertStructure)
+		marking.MarkDevicesAsAlerting([]string{devicesToUpdate[i].Name}, HEARTBEAT_LOST, secondaryAlertStructure)
 	}
 
 	//now we check to make sure that the alerts we're going to send aren't in rooms that are suppressed - build

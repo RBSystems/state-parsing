@@ -12,7 +12,7 @@ import (
 	"github.com/byuoitav/state-parsing/actions/action"
 	"github.com/byuoitav/state-parsing/actions/slack"
 	"github.com/byuoitav/state-parsing/elk"
-	"github.com/byuoitav/state-parsing/forwarding/device"
+	"github.com/byuoitav/state-parsing/forwarding/marking"
 )
 
 type HeartbeatRestoredJob struct {
@@ -140,19 +140,19 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 			continue
 		}
 
-		slackAlert := slack.SlackAlert{
+		slackAlert := slack.Alert{
 			Markdown: false,
-			Attachments: []slack.SlackAttachment{
-				slack.SlackAttachment{
+			Attachments: []slack.Attachment{
+				slack.Attachment{
 					Fallback: fmt.Sprintf("Restored Heartbeat. Device %v sent heartbeat at %v.", device.Hostname, device.LastHeartbeat),
 					Title:    "Restored Heartbeat",
-					Fields: []slack.SlackAlertField{
-						slack.SlackAlertField{
+					Fields: []slack.AlertField{
+						slack.AlertField{
 							Title: "Device",
 							Value: device.Hostname,
 							Short: true,
 						},
-						slack.SlackAlertField{
+						slack.AlertField{
 							Title: "Received at",
 							Value: device.LastHeartbeat,
 							Short: true,
@@ -178,7 +178,7 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 
 	// mark devices as not alerting
 	log.L.Infof("Marking %v devices as not alerting", len(deviceIDsToUpdate))
-	device.MarkDevicesAsNotAlerting(deviceIDsToUpdate)
+	marking.MarkDevicesAsNotAlerting(deviceIDsToUpdate)
 
 	/* send alerts */
 	// get the rooms
