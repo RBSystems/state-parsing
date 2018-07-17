@@ -22,16 +22,15 @@ var (
 	HeartbeatChan chan elk.Event
 
 	// maximum number of workers
-	MAX_WORKERS = os.Getenv("MAX_WORKERS")
+	MaxWorkers = os.Getenv("MAX_WORKERS")
 
 	// maximum size to queue events, before making the request hang
-	MAX_QUEUE = os.Getenv("MAX_QUEUE")
+	MaxQueue = os.Getenv("MAX_QUEUE")
 
 	// forwarding urls
-	API_FORWARD       = os.Getenv("ELASTIC_API_EVENTS")
-	HEARTBEAT_FORWARD = os.Getenv("ELASTIC_HEARTBEAT_EVENTS")
+	APIForward       = os.Getenv("ELASTIC_API_EVENTS")
+	HeartbeatForward = os.Getenv("ELASTIC_HEARTBEAT_EVENTS")
 
-	// private stuff
 	runners []*runner
 )
 
@@ -44,28 +43,28 @@ type runner struct {
 
 func init() {
 	// set defaults for max workers/queue
-	if len(MAX_WORKERS) == 0 {
-		MAX_WORKERS = "10"
+	if len(MaxWorkers) == 0 {
+		MaxWorkers = "10"
 	}
-	if len(MAX_QUEUE) == 0 {
-		MAX_QUEUE = "1000"
+	if len(MaxQueue) == 0 {
+		MaxQueue = "1000"
 	}
 
 	// validate max workers/queue are valid numbers
-	_, err := strconv.Atoi(MAX_WORKERS)
+	_, err := strconv.Atoi(MaxWorkers)
 	if err != nil {
 		log.L.Fatalf("$MAX_WORKERS must be a number")
 	}
-	_, err = strconv.Atoi(MAX_QUEUE)
+	_, err = strconv.Atoi(MaxQueue)
 	if err != nil {
 		log.L.Fatalf("$MAX_QUEUE must be a number")
 	}
 
 	// validate forwarding urls exist
-	if len(API_FORWARD) == 0 || len(HEARTBEAT_FORWARD) == 0 {
+	if len(APIForward) == 0 || len(HeartbeatForward) == 0 {
 		log.L.Fatalf("$ELASTIC_API_EVENTS and $ELASTIC_HEARTBEAT_EVENTS must be set.")
 	}
-	log.L.Infof("\n\nForwarding URLs:\n\tAPI_FORWARD:\t\t%v\n\tHEARTBEAT_FORWARD:\t%v\n", API_FORWARD, HEARTBEAT_FORWARD)
+	log.L.Infof("\n\nForwarding URLs:\n\tAPI_FORWARD:\t\t%v\n\tHEARTBEAT_FORWARD:\t%v\n", APIForward, HeartbeatForward)
 
 	// parse configuration
 	path := os.Getenv("JOB_CONFIG_LOCATION")
@@ -114,8 +113,6 @@ func init() {
 				log.L.Fatalf("job '%s' doesn't exist, and doesn't have a script that matches its name.", config.Name)
 			}
 
-			// TODO check if the job already exists, and just reuse that script job
-
 			// add the job for this script to the jobs map
 			Jobs[config.Name] = &ScriptJob{Path: scriptPath + config.Name}
 		}
@@ -141,8 +138,8 @@ func init() {
 }
 
 func StartJobScheduler() {
-	maxWorkers, _ := strconv.Atoi(MAX_WORKERS)
-	maxQueue, _ := strconv.Atoi(MAX_QUEUE)
+	maxWorkers, _ := strconv.Atoi(MaxWorkers)
+	maxQueue, _ := strconv.Atoi(MaxQueue)
 
 	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.", len(runners), maxWorkers, maxQueue)
 
@@ -178,7 +175,7 @@ func StartJobScheduler() {
 					log.L.Debugf("Received event: %+v", event)
 
 					// forward to elk
-					go forwarding.Forward(&event, API_FORWARD)
+					go forwarding.Forward(&event, APIForward)
 					go forwarding.DistributeEvent(&event)
 
 					// see if we need to execute any jobs from this event
@@ -192,7 +189,7 @@ func StartJobScheduler() {
 					log.L.Debugf("Received heartbeat: %+v", heartbeat)
 
 					// forward to elk
-					go forwarding.Forward(&heartbeat, HEARTBEAT_FORWARD)
+					go forwarding.Forward(&heartbeat, HeartbeatForward)
 					go forwarding.DistributeHeartbeat(&heartbeat)
 				}
 			}
