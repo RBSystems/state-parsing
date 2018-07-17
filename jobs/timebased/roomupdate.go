@@ -120,20 +120,20 @@ type Bucket struct {
 	DocCount int    `json:"doc_count"`
 }
 
-func (r *RoomUpdateJob) Run(context interface{}) []action.Action {
+func (r *RoomUpdateJob) Run(context interface{}) []action.Payload {
 	log.L.Debugf("Starting room update job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s,%s/_search", elk.DEVICE_INDEX, elk.ROOM_INDEX), []byte(roomUpdateQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run room update job: %s", err.String())
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	var data roomQueryResponse
 	gerr := json.Unmarshal(body, &data)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run room update job: %s", gerr)
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	acts, err := r.processData(data)
@@ -146,7 +146,7 @@ func (r *RoomUpdateJob) Run(context interface{}) []action.Action {
 	return acts
 }
 
-func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Action, *nerr.E) {
+func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *nerr.E) {
 	log.L.Debugf("[%s] Processing room update data.", ROOM_UPDATE)
 	updatePower := make(map[string]string)
 	updateAlerting := make(map[string]int)
@@ -290,5 +290,5 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Action, *n
 
 	log.L.Debugf("Successfully updated room state.")
 
-	return []action.Action{}, nil
+	return []action.Payload{}, nil
 }

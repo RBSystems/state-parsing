@@ -75,20 +75,20 @@ type heartbeatRestoredQueryResponse struct {
 	} `json:"hits,omitempty"`
 }
 
-func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Action {
+func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Payload {
 	log.L.Debugf("Starting heartbeat restored job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatRestoredQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run heartbeat restored job: %s", err.String())
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	var hrresp heartbeatRestoredQueryResponse
 	gerr := json.Unmarshal(body, &hrresp)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run heartbeat restored job: %s", gerr)
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	acts, err := h.processResponse(hrresp)
@@ -101,12 +101,12 @@ func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Action {
 	return acts
 }
 
-func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryResponse) ([]action.Action, *nerr.E) {
+func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryResponse) ([]action.Payload, *nerr.E) {
 	roomsToCheck := make(map[string]bool)
 	// devicesToUpdate :=
 	deviceIDsToUpdate := []string{}
-	actionsByRoom := make(map[string][]action.Action)
-	toReturn := []action.Action{}
+	actionsByRoom := make(map[string][]action.Payload)
+	toReturn := []action.Payload{}
 
 	// there are no devices that have heartbeats restored
 	if len(resp.Hits.Hits) <= 0 {
@@ -140,45 +140,40 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 			continue
 		}
 
-		slackAlert := slack.Alert{
-			Markdown: false,
-			Attachments: []slack.Attachment{
-				slack.Attachment{
-					Fallback: fmt.Sprintf("Restored Heartbeat. Device %v sent heartbeat at %v.", device.Hostname, device.LastHeartbeat),
-					Title:    "Restored Heartbeat",
-					Fields: []slack.AlertField{
-						slack.AlertField{
-							Title: "Device",
-							Value: device.Hostname,
-							Short: true,
-						},
-						slack.AlertField{
-							Title: "Received at",
-							Value: device.LastHeartbeat,
-							Short: true,
-						},
-					},
-					Color: "good",
+		slackAttachment := slack.Attachment{
+			Fallback: fmt.Sprintf("Restored Heartbeat. Device %v sent heartbeat at %v.", device.Hostname, device.LastHeartbeat),
+			Title:    "Restored Heartbeat",
+			Fields: []slack.AlertField{
+				slack.AlertField{
+					Title: "Device",
+					Value: device.Hostname,
+					Short: true,
+				},
+				slack.AlertField{
+					Title: "Received at",
+					Value: device.LastHeartbeat,
+					Short: true,
 				},
 			},
+			Color: "good",
 		}
 
-		a := action.Action{
-			Type:    actions.SLACK,
+		a := action.Payload{
+			Type:    actions.Slack,
 			Device:  device.Hostname,
-			Content: slackAlert,
+			Content: slackAttachment,
 		}
 
 		if _, ok := actionsByRoom[roomKey]; ok {
 			actionsByRoom[roomKey] = append(actionsByRoom[roomKey], a)
 		} else {
-			actionsByRoom[roomKey] = []action.Action{a}
+			actionsByRoom[roomKey] = []action.Payload{a}
 		}
 	}
 
 	// mark devices as not alerting
 	log.L.Infof("Marking %v devices as not alerting", len(deviceIDsToUpdate))
-	marking.MarkDevicesAsNotAlerting(deviceIDsToUpdate)
+	marking.MarkDevicesAsNotHeartbeatAlerting(deviceIDsToUpdate)
 
 	/* send alerts */
 	// get the rooms

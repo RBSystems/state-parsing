@@ -14,10 +14,10 @@ type ScriptJob struct {
 	Path string
 }
 
-func (j *ScriptJob) Run(ctx interface{}) []action.Action {
+func (j *ScriptJob) Run(ctx interface{}) []action.Payload {
 	if len(j.Path) == 0 {
 		log.L.Errorf("path for a script job wasn't set. can't run this job.")
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	// add context for timeout
@@ -34,9 +34,9 @@ func (j *ScriptJob) Run(ctx interface{}) []action.Action {
 	err := cmd.Run()
 	if err != nil {
 		log.L.Warnf("error executing script %s: %s", j.Path, err)
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	log.L.Infof("Script %s ran successfuly.")
-	return []action.Action{}
+	return []action.Payload{}
 }

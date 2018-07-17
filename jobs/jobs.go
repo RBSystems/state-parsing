@@ -7,7 +7,7 @@ import (
 )
 
 type Job interface {
-	Run(context interface{}) []action.Action
+	Run(ctx interface{}) []action.Payload
 }
 
 var Jobs = map[string]Job{

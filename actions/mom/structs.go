@@ -1,6 +1,6 @@
 package mom
 
-type MomAlert struct {
+type Alert struct {
 	Host        string `json:"host"`
 	Address     string `json:"address"`
 	Element     string `json:"elem"`

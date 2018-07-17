@@ -35,7 +35,7 @@ func MarkDevicesAsAlerting(toMark []string, secondaryAlertType string, secondary
 	}
 }
 
-func MarkDevicesAsNotAlerting(deviceIDs []string) {
+func MarkDevicesAsNotHeartbeatAlerting(deviceIDs []string) {
 	secondaryData := make(map[string]map[string]interface{})
 	secondaryData["lost-heartbeat"] = make(map[string]interface{})
 

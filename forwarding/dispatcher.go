@@ -100,8 +100,8 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 		payload = append(payload, '\n')
 	}
 
-	log.L.Infof("[dispatcher] Done adding lines.")
-	log.L.Infof("[dispatcher] %v devices getting updates....", len(stateMap))
+	log.L.Debugf("[dispatcher] Done adding lines.")
+	log.L.Debugf("[dispatcher] %v devices getting updates....", len(stateMap))
 	log.L.Debugf("%s", payload)
 
 	//send the request

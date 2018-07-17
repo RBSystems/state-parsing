@@ -24,14 +24,14 @@ func init() {
 	}
 }
 
-type MomAction struct {
+type Action struct {
 }
 
-func (m *MomAction) Execute(a action.Action) action.Result {
+func (m *Action) Execute(a action.Payload) action.Result {
 	log.L.Infof("Executing mom action for %v", a.Device)
 
 	result := action.Result{
-		Action: a,
+		Payload: a,
 	}
 
 	var reqBody []byte
@@ -40,7 +40,7 @@ func (m *MomAction) Execute(a action.Action) action.Result {
 	switch v := a.Content.(type) {
 	case []byte:
 		reqBody = v
-	case MomAlert:
+	case Alert:
 		reqBody, err = json.Marshal(v)
 		if err != nil {
 			result.Error = nerr.Translate(err).Addf("failed to unmarshal mom alert")

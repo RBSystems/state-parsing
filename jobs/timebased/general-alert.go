@@ -59,21 +59,21 @@ type generalAlertClearingQueryResponse struct {
 	} `json:"hits"`
 }
 
-func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Action {
+func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
 	log.L.Debugf("Starting general-alert clearing job")
 
 	//the query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(generalAlertClearingQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run general alert clearing job: %s", err.String())
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	var resp generalAlertClearingQueryResponse
 	gerr := json.Unmarshal(body, &resp)
 	if err != nil {
 		log.L.Warn("couldn't unmarshal elk response to run general alert clearing job: %s", gerr)
-		return []action.Action{}
+		return []action.Payload{}
 	}
 
 	log.L.Debugf("[%s] Processing response data", GENERAL_ALERT_CLEARING)
@@ -90,5 +90,5 @@ func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Action {
 	}
 
 	log.L.Debugf("[%s] Finished general alert clearing job.", GENERAL_ALERT_CLEARING)
-	return []action.Action{}
+	return []action.Payload{}
 }
