@@ -40,7 +40,10 @@ func main() {
 		MaxHeaderBytes: 1024 * 10,
 	}
 
-	router.StartServer(&server)
+	err := router.StartServer(&server)
+	if err != nil {
+		log.L.Fatalf("error running server: %s", err)
+	}
 }
 
 func Status(context echo.Context) error {

@@ -11,9 +11,6 @@ import (
 	"github.com/byuoitav/salt-translator-service/elk"
 )
 
-const StaticDevice struct {
-}
-
 //all we really need to distribute is the event info key/value - where the key is the value to update in the index.
 type StateDistribution struct {
 	Key   string
