@@ -11,7 +11,7 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/state-parsing/actions/action"
+	"github.com/byuoitav/state-parser/actions/action"
 )
 
 var momAlertURL string

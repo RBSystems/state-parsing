@@ -4,9 +4,9 @@ import (
 	"os"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/actions/action"
-	"github.com/byuoitav/state-parsing/actions/mom"
-	"github.com/byuoitav/state-parsing/actions/slack"
+	"github.com/byuoitav/state-parser/actions/mom"
+	"github.com/byuoitav/state-parser/actions/slack"
+	"github.com/byuoitav/state-parser/actions/action"
 )
 
 const (

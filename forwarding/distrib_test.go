@@ -6,7 +6,6 @@ import (
 )
 
 func TestMapCopy(t *testing.T) {
-
 	//a
 	a := make(map[string]interface{})
 	a["a"] = "a"
@@ -54,5 +53,4 @@ func TestMapCopy(t *testing.T) {
 
 	log.Printf("A: %v\n\n", a)
 	log.Printf("B: %v", b)
-
 }

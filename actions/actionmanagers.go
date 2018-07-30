@@ -2,7 +2,7 @@ package actions
 
 import (
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/actions/action"
+	"github.com/byuoitav/state-parser/actions/action"
 )
 
 var ingestionMap map[string]chan action.Payload

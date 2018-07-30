@@ -12,23 +12,27 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/salt-translator-service/elk"
-	"github.com/byuoitav/state-parsing/actions"
-	"github.com/byuoitav/state-parsing/forwarding"
+	"github.com/byuoitav/state-parser/actions"
+	"github.com/byuoitav/state-parser/forwarding"
 )
 
 var (
-	// buffered channel to send events through
-	EventChan     chan elkreporting.ElkEvent
+	// EventChan is where all events to have jobs run on should go.
+	EventChan chan elkreporting.ElkEvent
+
+	// HeartbeatChan is where all heartbeats should go to have jobs run on them.
 	HeartbeatChan chan elk.Event
 
-	// maximum number of workers
+	// MaxWorkers is the max number of go routines that should be running jobs.
 	MaxWorkers = os.Getenv("MAX_WORKERS")
 
-	// maximum size to queue events, before making the request hang
+	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
 
-	// forwarding urls
-	APIForward       = os.Getenv("ELASTIC_API_EVENTS")
+	// APIForward the url to forward events to
+	APIForward = os.Getenv("ELASTIC_API_EVENTS")
+
+	// HeartbeatForward the url to forward heartbeats to
 	HeartbeatForward = os.Getenv("ELASTIC_HEARTBEAT_EVENTS")
 
 	runners []*runner
@@ -100,7 +104,7 @@ func init() {
 
 		// check if job exists
 		isValid := false
-		for name, _ := range Jobs {
+		for name := range Jobs {
 			if strings.EqualFold(config.Name, name) {
 				isValid = true
 				break
@@ -137,6 +141,7 @@ func init() {
 	}
 }
 
+// StartJobScheduler starts workers to run jobs, defined in the config.json file.
 func StartJobScheduler() {
 	maxWorkers, _ := strconv.Atoi(MaxWorkers)
 	maxQueue, _ := strconv.Atoi(MaxQueue)
@@ -172,11 +177,7 @@ func StartJobScheduler() {
 			for {
 				select {
 				case event := <-EventChan:
-					log.L.Debugf("Received event: %+v", event)
-
-					// forward to elk
-					go forwarding.Forward(&event, APIForward)
-					go forwarding.DistributeEvent(&event)
+					go forwarding.DistributeEvent(event) // TODO worth it to use pointers?
 
 					// see if we need to execute any jobs from this event
 					for _, runner := range matchRunners {
@@ -186,11 +187,7 @@ func StartJobScheduler() {
 					}
 
 				case heartbeat := <-HeartbeatChan:
-					log.L.Debugf("Received heartbeat: %+v", heartbeat)
-
-					// forward to elk
-					go forwarding.Forward(&heartbeat, HeartbeatForward)
-					go forwarding.DistributeHeartbeat(&heartbeat)
+					go forwarding.DistributeHeartbeat(heartbeat)
 				}
 			}
 		}()

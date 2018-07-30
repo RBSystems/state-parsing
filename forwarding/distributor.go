@@ -1,8 +1,10 @@
 package forwarding
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/byuoitav/common/log"
@@ -11,122 +13,133 @@ import (
 	"github.com/byuoitav/salt-translator-service/elk"
 )
 
-//all we really need to distribute is the event info key/value - where the key is the value to update in the index.
-type StateDistribution struct {
-	Key   string
-	Value interface{}
+// State is a representation of an update for an entry in an elk static index
+type State struct {
+	ID    string      // id of the document to update in elk
+	Key   string      // key to update in a entry in the static index
+	Value interface{} // value of key to set in static index
 }
 
-//determine if we run distributed or not
-const runLocal bool = true
+var roomStateChan chan State
+var deviceStateChan chan State
 
-//this is distribution to the outside areas
-var stateCacheMap map[string]chan StateDistribution
-
-// these are for local
-var localStateMap map[string]map[string]interface{}
-var localRoomStateMap map[string]map[string]interface{}
-
-func StartDistributor() {
+// StartDistributor sends collected state updates every <interval> to elk static indicies.
+func StartDistributor(interval time.Duration) {
 	log.L.Infof("[Distributor] Starting")
 
-	stateCacheMap = make(map[string]chan StateDistribution)
-	localStateMap = make(map[string]map[string]interface{})
-	localRoomStateMap = make(map[string]map[string]interface{})
+	roomStateChan = make(chan State, 2500)
+	deviceStateChan = make(chan State, 2500)
 
-	for <-localTickerChan {
-		log.L.Debugf("Tick; Dispatching state")
+	roomStateMap := make(map[string]map[string]interface{})
+	deviceStateMap := make(map[string]map[string]interface{})
 
-		// dispatch state
-		go dispatchLocalState(localStateMap, "device")
-		go dispatchLocalState(localRoomStateMap, "room")
+	roomTicker := time.NewTicker(interval)
+	deviceTicker := time.NewTicker(interval)
 
-		// refresh maps
-		localStateMap = make(map[string]map[string]interface{})
-		localRoomStateMap = make(map[string]map[string]interface{})
+	wg := sync.WaitGroup{}
+	wg.Add(2)
 
-		log.L.Debugf("Finished dispatching state, successfully reset state maps.")
-	}
+	go func() {
+		for {
+			select {
+			case state := <-roomStateChan:
+				bufferState(state, roomStateMap)
+			case <-roomTicker.C:
+				log.L.Debugf("Tick; Dispatching room state")
+
+				go dispatchState(roomStateMap, "room")
+				roomStateMap = make(map[string]map[string]interface{})
+
+				log.L.Debugf("Finished dispatching room state; successfully reset map.")
+			}
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case state := <-deviceStateChan:
+				bufferState(state, deviceStateMap)
+			case <-deviceTicker.C:
+				log.L.Debugf("Tick; Dispatching device state")
+
+				go dispatchState(deviceStateMap, "device")
+				deviceStateMap = make(map[string]map[string]interface{})
+
+				log.L.Debugf("Finished dispatching device state; successfully reset map.")
+			}
+		}
+	}()
+
+	wg.Wait()
 }
 
-func DistributeEvent(event *elkreporting.ElkEvent) {
-	if event.EventTypeString != "CORESTATE" && event.EventTypeString != "DETAILSTATE" {
-		//we don't care about it for now
+// DistributeEvent buffers state for an event.
+func DistributeEvent(event elkreporting.ElkEvent) {
+	if !strings.EqualFold(event.EventTypeString, "CORESTATE") && !strings.EqualFold(event.EventTypeString, "DETAILSTATE") {
+		// only distribute corestate/detailstate events (at least for now!)
 		return
 	}
 
-	//we need to pull out the values for StateDistributionm
-	toSend := StateDistribution{Key: event.Event.Event.EventInfoKey, Value: event.Event.Event.EventInfoValue}
+	// TODO should this just use event.Hostname?
+	deviceID := fmt.Sprintf("%s-%s-%s", event.Building, event.Room, event.Event.Event.Device)
+	roomID := fmt.Sprintf("%s-%s", event.Building, event.Room)
 
-	if runLocal {
-		//we need to check if it's a userinput event, if so we need to update the last-user-input field
-		localStateBuffering(toSend, event.Building+"-"+event.Room+"-"+event.Event.Event.Device, "device")
+	BufferState(State{
+		ID:    deviceID,
+		Key:   event.Event.Event.EventInfoKey,
+		Value: event.Event.Event.EventInfoValue,
+	}, "device")
 
-		if event.EventCauseString == "USERINPUT" {
-			localStateBuffering(StateDistribution{
-				Key:   "last-user-input",
-				Value: event.Timestamp,
-			}, event.Building+"-"+event.Room+"-"+event.Event.Event.Device, "device")
-
-			//we need to update the room as well.
-			localStateBuffering(StateDistribution{
-				Key:   "last-user-input",
-				Value: event.Timestamp,
-			}, event.Building+"-"+event.Room, "room")
-
-		}
-		localStateBuffering(StateDistribution{
-			Key:   "last-state-received",
+	// check if it's a userinput event. if so, update the last-user-input field
+	if event.EventCauseString == "USERINPUT" {
+		BufferState(State{
+			ID:    deviceID,
+			Key:   "last-user-input",
 			Value: event.Timestamp,
-		}, event.Building+"-"+event.Room, "room")
+		}, "device")
 
-		//we need to update the room state
-
-	} else {
-		sendToStateBuffering(toSend, event.Building+"-"+event.Room+"-"+event.Event.Event.Device)
-		if event.EventCauseString == "USERINPUT" {
-			sendToStateBuffering(StateDistribution{
-				Key:   "last-user-input",
-				Value: event.Timestamp,
-			}, event.Building+"-"+event.Room)
-		}
+		// update the room last-user-input field as well
+		BufferState(State{
+			ID:    roomID,
+			Key:   "last-user-input",
+			Value: event.Timestamp,
+		}, "room")
 	}
 
-	//we need to mark the room to be cheked and updated at the next roomTick
-	//roomUpdateChan <- event.Building + "-" + event.Room
+	BufferState(State{
+		ID:    roomID,
+		Key:   "last-state-received",
+		Value: event.Timestamp,
+	}, "room")
+
+	// TODO we need to update the room state
+	// we need to mark the room to be cheked and updated at the next roomTick
+	// roomUpdateChan <- event.Building + "-" + event.Room
 }
 
-func DistributeHeartbeat(event *elk.Event) {
-	if event.Category != "Heartbeat" {
-		//we don't care
+// DistributeHeartbeat buffers state related to a heartbeat event
+func DistributeHeartbeat(event elk.Event) {
+	if !strings.EqualFold(event.Category, "Heartbeat") {
+		// we don't care
 		return
 	}
 
-	toSend := StateDistribution{Key: "last-heartbeat", Value: event.Timestamp}
+	BufferState(State{
+		ID:    event.Hostname,
+		Key:   "last-heartbeat",
+		Value: event.Timestamp,
+	}, "device")
 
-	if runLocal {
-		localStateBuffering(toSend, event.Hostname, "device")
-		localStateBuffering(StateDistribution{
-			Key:   "last-heartbeat-received",
-			Value: event.Timestamp,
-		}, event.Building+"-"+event.Room, "room")
-	} else {
-		sendToStateBuffering(toSend, event.Hostname)
-	}
+	BufferState(State{
+		ID:    event.Building + "-" + event.Room,
+		Key:   "last-heartbeat-received",
+		Value: event.Timestamp,
+	}, "room")
 }
 
-func SendToStateBuffer(state StateDistribution, hostname string, mapType string) {
-	if runLocal {
-		localStateBuffering(state, hostname, mapType)
-	} else {
-		sendToStateBuffering(state, hostname)
-	}
-}
-
-func localStateBuffering(state StateDistribution, hostname string, mapType string) {
-	//check how long this takes
-	starttime := time.Now()
-
+// BufferState adds/updates a piece of data in the local state map
+func BufferState(state State, mapType string) {
 	//check for a nil interface
 	if state.Value == nil {
 		return
@@ -142,81 +155,50 @@ func localStateBuffering(state StateDistribution, hostname string, mapType strin
 
 	switch mapType {
 	case "room":
-		bufferLocally(state, hostname, localRoomStateMap)
+		roomStateChan <- state
 	case "device":
-		bufferLocally(state, hostname, localStateMap)
+		deviceStateChan <- state
 	}
-
-	log.L.Debugf("Time to buffer: %v", time.Since(starttime).Nanoseconds())
 }
 
-func bufferLocally(state StateDistribution, hostname string, mapToUse map[string]map[string]interface{}) {
-	if _, ok := mapToUse[hostname]; ok {
-
-		//pardon the switch statements - you can't use the .(type) assertion in an if statement
-
-		//check to make sure that Value is a Map
-		switch state.Value.(type) {
-		case map[string]interface{}:
-			break
-		default:
-			mapToUse[hostname][state.Key] = state.Value
+func bufferState(state State, mapToUse map[string]map[string]interface{}) {
+	if _, ok := mapToUse[state.ID]; ok {
+		// check to make sure that Value is a Map
+		if _, ok := state.Value.(map[string]interface{}); !ok {
+			mapToUse[state.ID][state.Key] = state.Value
 			return
 		}
 
-		//make sure it even exsists
-		if _, ok := mapToUse[hostname][state.Key]; !ok {
-			mapToUse[hostname][state.Key] = state.Value
+		// make sure it even exists
+		if _, ok := mapToUse[state.ID][state.Key]; !ok {
+			mapToUse[state.ID][state.Key] = state.Value
 			return
 		}
 
-		//make sure we need to do a replace, if there's a type mismatch, we just overwrite
-		switch mapToUse[hostname][state.Key].(type) {
-		case map[string]interface{}:
-			//if val is also a map
-			break
-		default:
-			mapToUse[hostname][state.Key] = state.Value
+		if _, ok := mapToUse[state.ID][state.Key].(map[string]interface{}); !ok {
+			mapToUse[state.ID][state.Key] = state.Value
 			return
 		}
 
+		// state.Value is also a map
 		var a map[string]interface{}
 		a = state.Value.(map[string]interface{})
 		var b map[string]interface{}
-		b = mapToUse[hostname][state.Key].(map[string]interface{})
+		b = mapToUse[state.ID][state.Key].(map[string]interface{})
 
-		//now we get to compare the child values
+		// now we get to compare the child values
 		replaceMapValues(&a, &b)
-
 		return
 	}
 
-	mapToUse[hostname] = make(map[string]interface{})
-	mapToUse[hostname][state.Key] = state.Value
+	mapToUse[state.ID] = make(map[string]interface{})
+	mapToUse[state.ID][state.Key] = state.Value
 }
 
-//here's where we decide if we want to distribute to the child processes or if we want to just put it in a map here
-func sendToStateBuffering(state StateDistribution, hostname string) {
-	//check if it's in the map
-	if val, ok := stateCacheMap[hostname]; ok {
-		val <- state
-		return
-	}
-	//we need to add it to the map
-
-	cacheChan := make(chan StateDistribution, 100)
-	stateCacheMap[hostname] = cacheChan
-	cacheChan <- state
-
-	//now we need to start a aggregator to handle the caching
-	//go startAggregator(cacheChan, hostname)
-}
-
-//will copy map a to b, adding values and overwriting values as found
+// will copy map a to b, adding values and overwriting values as found
 func replaceMapValues(a, b *map[string]interface{}) {
 	for k, v := range *a {
 		if strings.Contains(reflect.TypeOf(v).String(), "map[string]interface") {
-
 			bval, ok := (*b)[k]
 
 			//it doesn't exist, just copy it

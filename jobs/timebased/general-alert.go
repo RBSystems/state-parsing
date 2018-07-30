@@ -6,9 +6,9 @@ import (
 	"net/http"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/actions/action"
-	"github.com/byuoitav/state-parsing/elk"
-	"github.com/byuoitav/state-parsing/forwarding"
+	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/elk"
+	"github.com/byuoitav/state-parser/forwarding"
 )
 
 type GeneralAlertClearingJob struct {
@@ -62,7 +62,7 @@ type generalAlertClearingQueryResponse struct {
 func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
 	log.L.Debugf("Starting general-alert clearing job")
 
-	//the query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
+	// The query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(generalAlertClearingQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run general alert clearing job: %s", err.String())
@@ -78,15 +78,16 @@ func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
 
 	log.L.Debugf("[%s] Processing response data", GENERAL_ALERT_CLEARING)
 
-	alertcleared := forwarding.StateDistribution{
+	alertcleared := forwarding.State{
 		Key:   "alerting",
 		Value: false,
 	}
 
-	//go through and mark each of these rooms as not alerting, in the general
+	// go through and mark each of these rooms as not alerting, in the general
 	for _, hit := range resp.Hits.Hits {
-		log.L.Debugf("Marking %s as not general not alerting.", hit.ID)
-		forwarding.SendToStateBuffer(alertcleared, hit.ID, "device")
+		log.L.Debugf("Marking general alerting on %s as false.", hit.ID)
+		alertcleared.ID = hit.ID
+		forwarding.BufferState(alertcleared, "device")
 	}
 
 	log.L.Debugf("[%s] Finished general alert clearing job.", GENERAL_ALERT_CLEARING)

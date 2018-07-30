@@ -13,40 +13,12 @@ import (
 	"unicode"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/elk"
+	"github.com/byuoitav/state-parser/elk"
 )
-
-var dispatchChan chan string
-
-//we use the sizeChannel to maintain the number of responses we expect for a given state update
-var sizeChan chan int
 
 var count int
 
-func startDispatcher() {
-	log.L.Infof("Starting dispatcher...")
-
-	dispatchChan = make(chan string, 1000)
-	sizeChan = make(chan int)
-
-	expected := 0
-	go func() {
-		for {
-			select {
-			case _, _ = <-dispatchChan:
-				//there needs to be some sort of "I don't have anything" marker - so we at least know to mark that routine as having sent something
-
-			case newNum, ok := <-sizeChan:
-				if !ok {
-					log.L.Infof("Dispatcher number channel closed, exiting...")
-				}
-				expected = newNum
-			}
-		}
-	}()
-}
-
-func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType string) {
+func dispatchState(stateMap map[string]map[string]interface{}, mapType string) {
 	if len(stateMap) < 1 {
 		count++
 		if count%10 == 0 {
@@ -58,10 +30,8 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 
 	log.L.Infof("[dispatcher] Sending a state update...")
 
-	//build our payload and send it off
+	// build our payload and send it off
 	payload := []byte{}
-
-	elkaddr := os.Getenv("ELK_DIRECT_ADDRESS")
 
 	index := getIndexName(mapType)
 
@@ -75,10 +45,10 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 			continue
 		}
 
-		//fill our meta data
+		// fill our meta data
 		fillMeta(k, mapType, v)
 
-		//build our first line
+		// build our first line
 		headerWrapper["update"] = elk.UpdateHeader{ID: k, Type: recordType, Index: index}
 		ub := elk.UpdateBody{Doc: v, Upsert: true}
 
@@ -105,7 +75,7 @@ func dispatchLocalState(stateMap map[string]map[string]interface{}, mapType stri
 	log.L.Debugf("%s", payload)
 
 	//send the request
-	req, err := http.NewRequest("POST", elkaddr+"/_bulk", bytes.NewReader(payload))
+	req, err := http.NewRequest("POST", elk.APIAddr+"/_bulk", bytes.NewReader(payload))
 	if err != nil {
 		log.L.Warnf("[dispatcher] there was a problem building the request: %v", err)
 	}

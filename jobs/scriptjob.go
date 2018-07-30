@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/actions/action"
+	"github.com/byuoitav/state-parser/actions/action"
 )
 
 type ScriptJob struct {

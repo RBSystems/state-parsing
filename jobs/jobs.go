@@ -1,9 +1,9 @@
 package jobs
 
 import (
-	"github.com/byuoitav/state-parsing/actions/action"
-	"github.com/byuoitav/state-parsing/jobs/timebased"
-	"github.com/byuoitav/state-parsing/jobs/timebased/heartbeat"
+	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/jobs/timebased"
+	"github.com/byuoitav/state-parser/jobs/timebased/heartbeat"
 )
 
 type Job interface {
