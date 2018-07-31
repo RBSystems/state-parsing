@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/byuoitav/common/log"
@@ -14,6 +15,7 @@ import (
 	"github.com/byuoitav/salt-translator-service/elk"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
 var (
@@ -28,12 +30,6 @@ var (
 
 	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
-
-	// APIForward the url to forward events to
-	APIForward = os.Getenv("ELASTIC_API_EVENTS")
-
-	// HeartbeatForward the url to forward heartbeats to
-	HeartbeatForward = os.Getenv("ELASTIC_HEARTBEAT_EVENTS")
 
 	runners []*runner
 )
@@ -63,12 +59,6 @@ func init() {
 	if err != nil {
 		log.L.Fatalf("$MAX_QUEUE must be a number")
 	}
-
-	// validate forwarding urls exist
-	if len(APIForward) == 0 || len(HeartbeatForward) == 0 {
-		log.L.Fatalf("$ELASTIC_API_EVENTS and $ELASTIC_HEARTBEAT_EVENTS must be set.")
-	}
-	log.L.Infof("\n\nForwarding URLs:\n\tAPI_FORWARD:\t\t%v\n\tHEARTBEAT_FORWARD:\t%v\n", APIForward, HeartbeatForward)
 
 	// parse configuration
 	path := os.Getenv("JOB_CONFIG_LOCATION")
@@ -147,12 +137,13 @@ func StartJobScheduler() {
 	maxQueue, _ := strconv.Atoi(MaxQueue)
 
 	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.", len(runners), maxWorkers, maxQueue)
+	wg := sync.WaitGroup{}
 
 	EventChan = make(chan elkreporting.ElkEvent, maxQueue)
 	HeartbeatChan = make(chan elk.Event, maxQueue)
 
 	// start action managers
-	actions.StartActionManagers()
+	go actions.StartActionManagers()
 
 	// start runners
 	var matchRunners []*runner
@@ -172,32 +163,35 @@ func StartJobScheduler() {
 	// start event workers
 	for i := 0; i < maxWorkers; i++ {
 		log.L.Debugf("Starting event worker %v", i)
+		wg.Add(1)
 
 		go func() {
 			for {
 				select {
 				case event := <-EventChan:
-					go forwarding.DistributeEvent(event) // TODO worth it to use pointers?
-
 					// see if we need to execute any jobs from this event
-					for _, runner := range matchRunners {
-						if runner.doesEventMatch(&event) {
-							go runner.run(&event)
+					for i := range matchRunners {
+						if matchRunners[i].doesEventMatch(&event) {
+							go matchRunners[i].run(&event)
 						}
 					}
 
 				case heartbeat := <-HeartbeatChan:
+					// forward heartbeat
+					go forwarding.Forward(heartbeat, eventbased.HeartbeatForward)
 					go forwarding.DistributeHeartbeat(heartbeat)
 				}
 			}
 		}()
 	}
+
+	wg.Wait()
 }
 
 func (r *runner) run(context interface{}) {
-	log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
+	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 	actions.Execute(r.Job.Run(context))
-	log.L.Infof("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
+	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 
 func (r *runner) runDaily() {

@@ -15,11 +15,8 @@ import (
 )
 
 func main() {
-	jobs.StartJobScheduler()
+	go jobs.StartJobScheduler()
 	go forwarding.StartDistributor(3 * time.Second)
-
-	//	go forwarding.StartDistributor()
-	//	go forwarding.StartTicker(3 * time.Second)
 
 	port := ":10010"
 	router := echo.New()
@@ -60,9 +57,6 @@ func addHeartbeat(context echo.Context) error {
 	}
 	log.L.Debugf("Received heartbeat: %+v", heartbeat)
 
-	// forward event
-	forwarding.Forward(heartbeat, jobs.HeartbeatForward)
-
 	jobs.HeartbeatChan <- heartbeat
 	return context.JSON(http.StatusOK, "Success.")
 }
@@ -74,9 +68,6 @@ func addEvent(context echo.Context) error {
 		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid event: %v", err))
 	}
 	log.L.Debugf("Received event: %+v", event)
-
-	// forward event
-	forwarding.Forward(event, jobs.APIForward)
 
 	jobs.EventChan <- event
 	return context.JSON(http.StatusOK, "Success.")
