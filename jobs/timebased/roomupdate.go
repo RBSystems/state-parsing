@@ -7,9 +7,9 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/state-parsing/actions/action"
-	"github.com/byuoitav/state-parsing/elk"
-	"github.com/byuoitav/state-parsing/forwarding"
+	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/elk"
+	"github.com/byuoitav/state-parser/forwarding"
 )
 
 type RoomUpdateJob struct {
@@ -268,24 +268,26 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 
 	for room, power := range updatePower {
 		// build state
-		state := forwarding.StateDistribution{
+		state := forwarding.State{
+			ID:    room,
 			Key:   "power",
 			Value: power,
 		}
 
 		log.L.Infof("marking %s power as %v", room, power)
-		forwarding.SendToStateBuffer(state, room, "room")
+		forwarding.BufferState(state, "room")
 	}
 
 	for room, alerting := range updateAlerting {
 		// build state
-		state := forwarding.StateDistribution{
+		state := forwarding.State{
+			ID:    room,
 			Key:   "alerting",
 			Value: alerting == 1, // to turn it into a bool
 		}
 
 		log.L.Infof("marking %s alerting as %v", room, alerting)
-		forwarding.SendToStateBuffer(state, room, "room")
+		forwarding.BufferState(state, "room")
 	}
 
 	log.L.Debugf("Successfully updated room state.")

@@ -7,29 +7,29 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/salt-translator-service/elk"
-	"github.com/byuoitav/state-parsing/actions"
-	"github.com/byuoitav/state-parsing/forwarding"
+	"github.com/byuoitav/state-parser/actions"
+	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
 var (
-	// buffered channel to send events through
-	EventChan     chan elkreporting.ElkEvent
+	// EventChan is where all events to have jobs run on should go.
+	EventChan chan elkreporting.ElkEvent
+
+	// HeartbeatChan is where all heartbeats should go to have jobs run on them.
 	HeartbeatChan chan elk.Event
 
-	// maximum number of workers
+	// MaxWorkers is the max number of go routines that should be running jobs.
 	MaxWorkers = os.Getenv("MAX_WORKERS")
 
-	// maximum size to queue events, before making the request hang
+	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
-
-	// forwarding urls
-	APIForward       = os.Getenv("ELASTIC_API_EVENTS")
-	HeartbeatForward = os.Getenv("ELASTIC_HEARTBEAT_EVENTS")
 
 	runners []*runner
 )
@@ -59,12 +59,6 @@ func init() {
 	if err != nil {
 		log.L.Fatalf("$MAX_QUEUE must be a number")
 	}
-
-	// validate forwarding urls exist
-	if len(APIForward) == 0 || len(HeartbeatForward) == 0 {
-		log.L.Fatalf("$ELASTIC_API_EVENTS and $ELASTIC_HEARTBEAT_EVENTS must be set.")
-	}
-	log.L.Infof("\n\nForwarding URLs:\n\tAPI_FORWARD:\t\t%v\n\tHEARTBEAT_FORWARD:\t%v\n", APIForward, HeartbeatForward)
 
 	// parse configuration
 	path := os.Getenv("JOB_CONFIG_LOCATION")
@@ -100,7 +94,7 @@ func init() {
 
 		// check if job exists
 		isValid := false
-		for name, _ := range Jobs {
+		for name := range Jobs {
 			if strings.EqualFold(config.Name, name) {
 				isValid = true
 				break
@@ -137,17 +131,19 @@ func init() {
 	}
 }
 
+// StartJobScheduler starts workers to run jobs, defined in the config.json file.
 func StartJobScheduler() {
 	maxWorkers, _ := strconv.Atoi(MaxWorkers)
 	maxQueue, _ := strconv.Atoi(MaxQueue)
 
 	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.", len(runners), maxWorkers, maxQueue)
+	wg := sync.WaitGroup{}
 
 	EventChan = make(chan elkreporting.ElkEvent, maxQueue)
 	HeartbeatChan = make(chan elk.Event, maxQueue)
 
 	// start action managers
-	actions.StartActionManagers()
+	go actions.StartActionManagers()
 
 	// start runners
 	var matchRunners []*runner
@@ -167,40 +163,35 @@ func StartJobScheduler() {
 	// start event workers
 	for i := 0; i < maxWorkers; i++ {
 		log.L.Debugf("Starting event worker %v", i)
+		wg.Add(1)
 
 		go func() {
 			for {
 				select {
 				case event := <-EventChan:
-					log.L.Debugf("Received event: %+v", event)
-
-					// forward to elk
-					go forwarding.Forward(&event, APIForward)
-					go forwarding.DistributeEvent(&event)
-
 					// see if we need to execute any jobs from this event
-					for _, runner := range matchRunners {
-						if runner.doesEventMatch(&event) {
-							go runner.run(&event)
+					for i := range matchRunners {
+						if matchRunners[i].doesEventMatch(&event) {
+							go matchRunners[i].run(&event)
 						}
 					}
 
 				case heartbeat := <-HeartbeatChan:
-					log.L.Debugf("Received heartbeat: %+v", heartbeat)
-
-					// forward to elk
-					go forwarding.Forward(&heartbeat, HeartbeatForward)
-					go forwarding.DistributeHeartbeat(&heartbeat)
+					// forward heartbeat
+					go forwarding.Forward(heartbeat, eventbased.HeartbeatForward)
+					go forwarding.DistributeHeartbeat(heartbeat)
 				}
 			}
 		}()
 	}
+
+	wg.Wait()
 }
 
 func (r *runner) run(context interface{}) {
-	log.L.Infof("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
+	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 	actions.Execute(r.Job.Run(context))
-	log.L.Infof("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
+	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 
 func (r *runner) runDaily() {

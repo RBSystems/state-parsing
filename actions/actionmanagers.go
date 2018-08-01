@@ -1,8 +1,10 @@
 package actions
 
 import (
+	"sync"
+
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parsing/actions/action"
+	"github.com/byuoitav/state-parser/actions/action"
 )
 
 var ingestionMap map[string]chan action.Payload
@@ -24,11 +26,13 @@ func StartActionManagers() {
 	}
 
 	log.L.Infof("Starting action scheduler. Executing action types: %v", actionList)
+	wg := sync.WaitGroup{}
 
 	// build each of the individual action managers
 	for name, act := range Actions {
 		ingestionMap[name] = make(chan action.Payload, 2000) // TODO make this size configurable?
 
+		wg.Add(1)
 		manager := &actionManager{
 			Name:       name,
 			Action:     act,
@@ -36,6 +40,8 @@ func StartActionManagers() {
 		}
 		go manager.start()
 	}
+
+	wg.Wait()
 }
 
 // Execute queues a slice of actions to be executed.
@@ -48,7 +54,7 @@ func Execute(actions []action.Payload) {
 }
 
 func (a *actionManager) start() {
-	// TODO scale number of action managers as size of payload chan increases?
+	// TODO scale number of action workers as size of payload chan increases?
 	for act := range a.ActionChan {
 		go func(action action.Payload) {
 			result := a.Action.Execute(action)

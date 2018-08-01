@@ -24,7 +24,7 @@ var (
 	DEVICE_INDEX = os.Getenv("ELK_STATIC_DEVICE_INDEX")
 	ROOM_INDEX   = os.Getenv("ELK_STATIC_ROOM_INDEX")
 
-	apiAddr  = os.Getenv("ELK_DIRECT_ADDRESS") // or should this be ELK_ADDR?
+	APIAddr  = os.Getenv("ELK_DIRECT_ADDRESS") // or should this be ELK_ADDR?
 	username = os.Getenv("ELK_SA_USERNAME")
 	password = os.Getenv("ELK_SA_PASSWORD")
 )
@@ -38,14 +38,14 @@ func init() {
 		log.L.Fatalf("ELK_STATIC_ROOM_INDEX is not set")
 	}
 
-	if len(apiAddr) == 0 || len(username) == 0 || len(password) == 0 {
+	if len(APIAddr) == 0 || len(username) == 0 || len(password) == 0 {
 		log.L.Fatalf("ELASTIC_API_EVENTS, ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
 	}
 }
 
 func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
 	// format whole address
-	addr := fmt.Sprintf("%s%s", apiAddr, endpoint)
+	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)
 	log.L.Debugf("Making ELK request against: %s", addr)
 
 	var reqBody []byte

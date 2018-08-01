@@ -12,11 +12,12 @@ import (
 	"github.com/byuoitav/common/nerr"
 )
 
-func Forward(e interface{}, url string) *nerr.E {
+// Forward makes a post request with <data> to <url>
+func Forward(data interface{}, url string) *nerr.E {
 	start := time.Now()
 
-	log.L.Debugf("Forwarding event %+v to %v", e, url)
-	b, err := json.Marshal(e)
+	log.L.Debugf("Forwarding event %+v to %v", data, url)
+	b, err := json.Marshal(data)
 	if err != nil {
 		return nerr.Translate(err).Addf("unable to forward event")
 	}

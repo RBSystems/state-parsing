@@ -8,11 +8,11 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/state-parsing/actions"
-	"github.com/byuoitav/state-parsing/actions/action"
-	"github.com/byuoitav/state-parsing/actions/slack"
-	"github.com/byuoitav/state-parsing/elk"
-	"github.com/byuoitav/state-parsing/forwarding/marking"
+	"github.com/byuoitav/state-parser/actions"
+	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/actions/slack"
+	"github.com/byuoitav/state-parser/elk"
+	"github.com/byuoitav/state-parser/forwarding/marking"
 )
 
 type HeartbeatRestoredJob struct {

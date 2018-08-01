@@ -40,6 +40,15 @@
         "enabled": true
     },
     {
+        "name": "simple-forwarding",
+        "triggers": [
+            {
+                "type": "match"
+            }
+        ],
+        "enabled": true
+    },
+    {
         "name": "room-update.py",
         "triggers": [
             {
@@ -59,6 +68,9 @@
                         "type": "CORE"
                     }
                 }
+            },
+            {
+                "type": "match"
             }
         ],
         "enabled": false
