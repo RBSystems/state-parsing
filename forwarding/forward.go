@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/byuoitav/common/log"
@@ -14,6 +15,10 @@ import (
 
 // Forward makes a post request with <data> to <url>
 func Forward(data interface{}, url string) *nerr.E {
+	if len(url) == 0 {
+		return nerr.Create("URL to forward to must not be empty.", reflect.TypeOf("").String())
+	}
+
 	start := time.Now()
 
 	log.L.Debugf("Forwarding event %+v to %v", data, url)

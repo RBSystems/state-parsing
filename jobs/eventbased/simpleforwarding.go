@@ -27,8 +27,8 @@ var (
 )
 
 func init() {
-	if len(APIForward) == 0 || len(HeartbeatForward) == 0 || len(SecondAPIForward) == 0 {
-		log.L.Fatalf("$ELASTIC_API_EVENTS, $ELASTIC_HEARTBEAT_EVENTS, and $ELASTIC_API_EVENTS_TWO must be set.")
+	if len(APIForward) == 0 || len(HeartbeatForward) == 0 {
+		log.L.Fatalf("$ELASTIC_API_EVENTS and $ELASTIC_HEARTBEAT_EVENTS must be set.")
 	}
 	log.L.Infof("\n\nForwarding URLs:\n\tAPI Forward:\t\t%v\n\tSecond API Forward\t\t%v\n\tHeartbeat Forward:\t%v\n", APIForward, SecondAPIForward, HeartbeatForward)
 
