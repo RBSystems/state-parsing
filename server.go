@@ -5,11 +5,12 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
-	"github.com/byuoitav/salt-translator-service/elk"
 	"github.com/byuoitav/state-parser/forwarding"
 	"github.com/byuoitav/state-parser/jobs"
+	"github.com/byuoitav/state-parser/jobs/eventbased"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
@@ -27,9 +28,12 @@ func main() {
 
 	router.PUT("/heartbeat", addHeartbeat)
 	router.PUT("/event", addEvent)
-
 	router.POST("/heartbeat", addHeartbeat)
 	router.POST("/event", addEvent)
+
+	// dmps
+	router.POST("/dmps/event", addDMPSEvent)
+	router.POST("/dmps/heartbeat", addDMPSHeartbeat)
 
 	router.PUT("/log-level/:level", log.SetLogLevel)
 	router.GET("/log-level", log.GetLogLevel)
@@ -50,14 +54,14 @@ func status(context echo.Context) error {
 }
 
 func addHeartbeat(context echo.Context) error {
-	var heartbeat elk.Event
+	var heartbeat events.Event
 	err := context.Bind(&heartbeat)
 	if err != nil {
-		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid event: %v", err))
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid heartbeat: %v", err))
 	}
 	log.L.Debugf("Received heartbeat: %+v", heartbeat)
 
-	jobs.HeartbeatChan <- heartbeat
+	jobs.ProcessHeartbeat(heartbeat)
 	return context.JSON(http.StatusOK, "Success.")
 }
 
@@ -69,6 +73,30 @@ func addEvent(context echo.Context) error {
 	}
 	log.L.Debugf("Received event: %+v", event)
 
-	jobs.EventChan <- event
+	jobs.ProcessEvent(event)
+	return context.JSON(http.StatusOK, "Success.")
+}
+
+func addDMPSEvent(context echo.Context) error {
+	var event events.Event
+	err := context.Bind(&event)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid dmps event: %v", err))
+	}
+	log.L.Debugf("Received DMPS event: %+v", event)
+
+	go forwarding.Forward(event, eventbased.DMPSEventsForward)
+	return context.JSON(http.StatusOK, "Success.")
+}
+
+func addDMPSHeartbeat(context echo.Context) error {
+	var event events.Event
+	err := context.Bind(&event)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid dmps event: %v", err))
+	}
+	log.L.Debugf("Received DMPS heartbeat: %+v", event)
+
+	go forwarding.Forward(event, eventbased.DMPSHeartbeatForward)
 	return context.JSON(http.StatusOK, "Success.")
 }

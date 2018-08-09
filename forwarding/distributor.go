@@ -7,10 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
-
-	"github.com/byuoitav/salt-translator-service/elk"
 )
 
 // State is a representation of an update for an entry in an elk static index
@@ -119,8 +118,8 @@ func DistributeEvent(event elkreporting.ElkEvent) {
 }
 
 // DistributeHeartbeat buffers state related to a heartbeat event
-func DistributeHeartbeat(event elk.Event) {
-	if !strings.EqualFold(event.Category, "Heartbeat") {
+func DistributeHeartbeat(event events.Event) {
+	if event.Event.Type == events.HEARTBEAT {
 		// we don't care
 		return
 	}

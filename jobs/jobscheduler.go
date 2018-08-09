@@ -10,28 +10,24 @@ import (
 	"sync"
 	"time"
 
+	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
-	"github.com/byuoitav/salt-translator-service/elk"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/forwarding"
 	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
 var (
-	// EventChan is where all events to have jobs run on should go.
-	EventChan chan elkreporting.ElkEvent
-
-	// HeartbeatChan is where all heartbeats should go to have jobs run on them.
-	HeartbeatChan chan elk.Event
-
 	// MaxWorkers is the max number of go routines that should be running jobs.
 	MaxWorkers = os.Getenv("MAX_WORKERS")
 
 	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
 
-	runners []*runner
+	runners       []*runner
+	eventChan     chan elkreporting.ElkEvent
+	heartbeatChan chan events.Event
 )
 
 type runner struct {
@@ -131,6 +127,16 @@ func init() {
 	}
 }
 
+// ProcessEvent adds <event> into a queue to be processed
+func ProcessEvent(event elkreporting.ElkEvent) {
+	eventChan <- event
+}
+
+// ProcessHeartbeat adds <heartbeat> into a queue to be processed
+func ProcessHeartbeat(heartbeat events.Event) {
+	heartbeatChan <- heartbeat
+}
+
 // StartJobScheduler starts workers to run jobs, defined in the config.json file.
 func StartJobScheduler() {
 	maxWorkers, _ := strconv.Atoi(MaxWorkers)
@@ -139,8 +145,8 @@ func StartJobScheduler() {
 	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.", len(runners), maxWorkers, maxQueue)
 	wg := sync.WaitGroup{}
 
-	EventChan = make(chan elkreporting.ElkEvent, maxQueue)
-	HeartbeatChan = make(chan elk.Event, maxQueue)
+	eventChan = make(chan elkreporting.ElkEvent, maxQueue)
+	heartbeatChan = make(chan events.Event, maxQueue)
 
 	// start action managers
 	go actions.StartActionManagers()
@@ -168,7 +174,7 @@ func StartJobScheduler() {
 		go func() {
 			for {
 				select {
-				case event := <-EventChan:
+				case event := <-eventChan:
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
 						if matchRunners[i].doesEventMatch(&event) {
@@ -176,7 +182,7 @@ func StartJobScheduler() {
 						}
 					}
 
-				case heartbeat := <-HeartbeatChan:
+				case heartbeat := <-heartbeatChan:
 					// forward heartbeat
 					go forwarding.Forward(heartbeat, eventbased.HeartbeatForward)
 					go forwarding.DistributeHeartbeat(heartbeat)
