@@ -1,9 +1,9 @@
 package elk
 
 type UpdateHeader struct {
-	ID    string `json:"_id"`
-	Type  string `json:"_type"`
-	Index string `json:"_index"`
+	ID    string `json:"_id,omitempty"`
+	Type  string `json:"_type,omitemtpy"`
+	Index string `json:"_index,omitempty"`
 }
 
 type DeviceUpdateInfo struct {

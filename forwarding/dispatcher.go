@@ -33,7 +33,7 @@ func dispatchState(stateMap map[string]map[string]interface{}, mapType string) {
 	// build our payload and send it off
 	payload := []byte{}
 
-	index := getIndexName(mapType)
+	index := GetIndexName(mapType)
 
 	headerWrapper := make(map[string]elk.UpdateHeader)
 
@@ -213,7 +213,7 @@ func getDeviceRecordType(name string) (string, error) {
 	return "", errors.New(msg)
 }
 
-func getIndexName(mapType string) string {
+func GetIndexName(mapType string) string {
 	switch mapType {
 	case "room":
 		return os.Getenv("ELK_STATIC_ROOM_INDEX")
