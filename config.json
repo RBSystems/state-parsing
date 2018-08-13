@@ -7,7 +7,7 @@
                 "every": "5s"
             }
         ],
-        "enabled": true
+        "enabled": false
     },
     {
         "name": "heartbeat-restored",
@@ -17,7 +17,7 @@
                 "every": "30s"
             }
         ],
-        "enabled": true
+        "enabled": false
     },
     {
         "name": "room-update",
@@ -27,7 +27,7 @@
                 "every": "10s"
             }
         ],
-        "enabled": true
+        "enabled": false
     },
     {
         "name": "general-alert-clearing",
@@ -37,7 +37,7 @@
                 "every": "10s"
             }
         ],
-        "enabled": true
+        "enabled": false
     },
     {
         "name": "simple-forwarding",

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"runtime/debug"
 	"strconv"
 	"time"
 
@@ -51,6 +52,8 @@ func Forward(data interface{}, header elk.UpdateHeader) *nerr.E {
 	if len(header.Index) == 0 {
 		return nerr.Create("Index must not be null in update header", reflect.TypeOf("").String())
 	}
+	log.L.Debugf("Forwarding event to %+v", header)
+	log.L.Debugf("%s", debug.Stack())
 
 	b, err := json.Marshal(data)
 	if err != nil {
@@ -76,6 +79,10 @@ func forwardWorker(queue chan forwardData, dispatch *time.Ticker) {
 			header["index"] = val.Header
 			payload = append(payload, marshal(header, val.Data)...)
 		case <-dispatch.C:
+			if len(payload) == 0 {
+				continue
+			}
+
 			//send it off and create a new payload so we don't have multiple handlles on the deal
 			send(payload)
 			payload = []byte{}

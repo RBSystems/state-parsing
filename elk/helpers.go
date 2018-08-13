@@ -16,7 +16,7 @@ func GenerateIndexName(in string) string {
 		return fmt.Sprintf("%v-%v", OIT_AV, time.Now().Year())
 	case OIT_AV_HEARTBEAT:
 		year, week := time.Now().ISOWeek()
-		return fmt.Sprintf("%v-%v-%v", OIT_AV, year, week)
+		return fmt.Sprintf("%v-%v-%v", OIT_AV_HEARTBEAT, year, week)
 	case DMPS_HEARTBEAT:
 		year, week := time.Now().ISOWeek()
 		return fmt.Sprintf("%v-%v-%v", DMPS_HEARTBEAT, year, week)

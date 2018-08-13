@@ -52,13 +52,13 @@ func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
 		forwarding.DistributeEvent(*v)
 		go forwarding.Forward(*v, elk.UpdateHeader{
 			Index: elk.GenerateIndexName(elk.OIT_AV),
-			Type:  "oitavprdevent",
+			Type:  "oitaveventprd",
 		})
 	case elkreporting.ElkEvent:
 		forwarding.DistributeEvent(v)
 		go forwarding.Forward(v, elk.UpdateHeader{
 			Index: elk.GenerateIndexName(elk.OIT_AV),
-			Type:  "oitavprdevent",
+			Type:  "oitaveventprd",
 		})
 	default:
 	}

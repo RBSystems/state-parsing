@@ -119,7 +119,7 @@ func DistributeEvent(event elkreporting.ElkEvent) {
 
 // DistributeHeartbeat buffers state related to a heartbeat event
 func DistributeHeartbeat(event events.Event) {
-	if event.Event.Type == events.HEARTBEAT {
+	if event.Event.Type != events.HEARTBEAT {
 		// we don't care
 		return
 	}
