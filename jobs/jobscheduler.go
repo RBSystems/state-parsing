@@ -14,8 +14,8 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
+	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/forwarding"
-	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
 var (
@@ -184,7 +184,10 @@ func StartJobScheduler() {
 
 				case heartbeat := <-heartbeatChan:
 					// forward heartbeat
-					go forwarding.Forward(heartbeat, eventbased.HeartbeatForward)
+					go forwarding.Forward(heartbeat, elk.UpdateHeader{
+						Index: elk.GenerateIndexName(elk.OIT_AV_HEARTBEAT),
+						Type:  "heartbeat",
+					})
 					go forwarding.DistributeHeartbeat(heartbeat)
 				}
 			}

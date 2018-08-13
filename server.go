@@ -8,9 +8,9 @@ import (
 	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
+	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/forwarding"
 	"github.com/byuoitav/state-parser/jobs"
-	"github.com/byuoitav/state-parser/jobs/eventbased"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
@@ -85,7 +85,10 @@ func addDMPSEvent(context echo.Context) error {
 	}
 	log.L.Debugf("Received DMPS event: %+v", event)
 
-	go forwarding.Forward(event, eventbased.DMPSEventsForward)
+	go forwarding.Forward(event, elk.UpdateHeader{
+		Index: elk.GenerateIndexName(elk.DMPS_EVENT),
+		Type:  "dmpsevent",
+	})
 	return context.JSON(http.StatusOK, "Success.")
 }
 
@@ -97,6 +100,9 @@ func addDMPSHeartbeat(context echo.Context) error {
 	}
 	log.L.Debugf("Received DMPS heartbeat: %+v", event)
 
-	go forwarding.Forward(event, eventbased.DMPSHeartbeatForward)
+	go forwarding.Forward(event, elk.UpdateHeader{
+		Index: elk.GenerateIndexName(elk.DMPS_HEARTBEAT),
+		Type:  "dmpsheartbeat",
+	})
 	return context.JSON(http.StatusOK, "Success.")
 }
