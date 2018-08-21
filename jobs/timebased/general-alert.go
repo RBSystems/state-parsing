@@ -8,7 +8,7 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/state"
 )
 
 type GeneralAlertClearingJob struct {
@@ -78,7 +78,7 @@ func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
 
 	log.L.Debugf("[%s] Processing response data", GENERAL_ALERT_CLEARING)
 
-	alertcleared := forwarding.State{
+	alertcleared := state.State{
 		Key:   "alerting",
 		Value: false,
 	}
@@ -87,7 +87,7 @@ func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
 	for _, hit := range resp.Hits.Hits {
 		log.L.Debugf("Marking general alerting on %s as false.", hit.ID)
 		alertcleared.ID = hit.ID
-		forwarding.BufferState(alertcleared, "device")
+		state.BufferState(alertcleared, "device")
 	}
 
 	log.L.Debugf("[%s] Finished general alert clearing job.", GENERAL_ALERT_CLEARING)

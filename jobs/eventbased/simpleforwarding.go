@@ -7,7 +7,7 @@ import (
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/state"
 )
 
 var (
@@ -49,14 +49,14 @@ type SimpleForwardingJob struct {
 func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:
-		forwarding.DistributeEvent(*v)
-		go forwarding.Forward(*v, elk.UpdateHeader{
+		state.DistributeEvent(*v)
+		go state.Forward(*v, elk.UpdateHeader{
 			Index: elk.GenerateIndexName(elk.OIT_AV),
 			Type:  "oitaveventprd",
 		})
 	case elkreporting.ElkEvent:
-		forwarding.DistributeEvent(v)
-		go forwarding.Forward(v, elk.UpdateHeader{
+		state.DistributeEvent(v)
+		go state.Forward(v, elk.UpdateHeader{
 			Index: elk.GenerateIndexName(elk.OIT_AV),
 			Type:  "oitaveventprd",
 		})

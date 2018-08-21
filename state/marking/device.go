@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/state"
 )
 
 // toMark is the list of rooms, There may be one or more of them
@@ -13,7 +13,7 @@ import (
 // secondaryAlertData is the data to be filled there (e.g. last-heartbeat-received, etc)
 func MarkDevicesAsAlerting(toMark []string, secondaryAlertType string, secondaryAlertData map[string]interface{}) {
 	//build our general alerting
-	alerting := forwarding.State{
+	alerting := state.State{
 		Key:   "alerting",
 		Value: true,
 	}
@@ -22,7 +22,7 @@ func MarkDevicesAsAlerting(toMark []string, secondaryAlertType string, secondary
 	secondaryAlertValue[secondaryAlertType] = secondaryAlertData
 
 	// bulid our specifc alert
-	secondaryAlert := forwarding.State{
+	secondaryAlert := state.State{
 		Key:   "alerts",
 		Value: secondaryAlertValue,
 	}
@@ -33,8 +33,8 @@ func MarkDevicesAsAlerting(toMark []string, secondaryAlertType string, secondary
 		alerting.ID = toMark[i]
 		secondaryAlert.ID = toMark[i]
 
-		forwarding.BufferState(alerting, "device")
-		forwarding.BufferState(secondaryAlert, "device")
+		state.BufferState(alerting, "device")
+		state.BufferState(secondaryAlert, "device")
 	}
 }
 
@@ -45,12 +45,12 @@ func MarkDevicesAsNotHeartbeatAlerting(deviceIDs []string) {
 	secondaryData["lost-heartbeat"]["alerting"] = false
 	secondaryData["lost-heartbeat"]["message"] = fmt.Sprintf("Alert cleared at %s", time.Now().Format(time.RFC3339))
 
-	secondaryStatus := forwarding.State{
+	secondaryStatus := state.State{
 		Key:   "alerts",
 		Value: secondaryData,
 	}
 
-	alertingStatus := forwarding.State{
+	alertingStatus := state.State{
 		Key:   "alerting",
 		Value: false,
 	}
@@ -61,7 +61,7 @@ func MarkDevicesAsNotHeartbeatAlerting(deviceIDs []string) {
 		alertingStatus.ID = id
 		secondaryStatus.ID = id
 
-		forwarding.BufferState(secondaryStatus, "device")
-		forwarding.BufferState(alertingStatus, "device")
+		state.BufferState(secondaryStatus, "device")
+		state.BufferState(alertingStatus, "device")
 	}
 }

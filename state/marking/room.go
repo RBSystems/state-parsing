@@ -1,17 +1,17 @@
 package marking
 
-import "github.com/byuoitav/state-parser/forwarding"
+import "github.com/byuoitav/state-parser/state"
 
 func MarkRoomGeneralAlerting(toMark []string, alerting bool) {
 	//build our state
-	state := forwarding.State{
+	val := state.State{
 		Key:   "alerting",
 		Value: alerting,
 	}
 
 	//ship it off to go with the rest
 	for i := range toMark {
-		state.ID = toMark[i]
-		forwarding.BufferState(state, "room")
+		val.ID = toMark[i]
+		state.BufferState(val, state.ROOM)
 	}
 }

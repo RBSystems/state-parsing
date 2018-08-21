@@ -12,7 +12,7 @@ import (
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding/marking"
+	"github.com/byuoitav/state-parser/state/marking"
 )
 
 type HeartbeatLostJob struct {
