@@ -18,17 +18,25 @@ import (
 	"github.com/byuoitav/state-parser/state"
 )
 
-var (
-	// MaxWorkers is the max number of go routines that should be running jobs.
-	MaxWorkers = os.Getenv("MAX_WORKERS")
+// var (
 
-	// MaxQueue is the maximum number of events/heartbeats that can be queued
-	MaxQueue = os.Getenv("MAX_QUEUE")
+// 	MaxWorkers = os.Getenv("MAX_WORKERS")
 
-	runners       []*runner
-	eventChan     chan elkreporting.ElkEvent
-	heartbeatChan chan events.Event
-)
+// 	MaxQueue = os.Getenv("MAX_QUEUE")
+
+// 	runners       []*runner
+// 	eventChan     chan elkreporting.ElkEvent
+// 	heartbeatChan chan events.Event
+// )
+
+//JobPackage - moving these variables to a struct so we can have multiples running at the same time
+type JobPackage struct {
+	MaxWorkers    int
+	MaxQueue      int
+	Runners       []*runner
+	EventChan     chan elkreporting.ElkEvent
+	HeartbeatChan chan events.Event
+}
 
 type runner struct {
 	Job          Job
@@ -37,7 +45,12 @@ type runner struct {
 	TriggerIndex int
 }
 
-func init() {
+//SetUpJobPackage - set up a job package to run
+func SetUpJobPackage(MaxWorkers string, MaxQueue string, JobConfigLocation string, JobScriptsPath string) JobPackage {
+	//create the return objects
+	var thisPackage JobPackage
+	var err error
+
 	// set defaults for max workers/queue
 	if len(MaxWorkers) == 0 {
 		MaxWorkers = "10"
@@ -47,24 +60,24 @@ func init() {
 	}
 
 	// validate max workers/queue are valid numbers
-	_, err := strconv.Atoi(MaxWorkers)
+	thisPackage.MaxWorkers, err = strconv.Atoi(MaxWorkers)
 	if err != nil {
 		log.L.Fatalf("$MAX_WORKERS must be a number")
 	}
-	_, err = strconv.Atoi(MaxQueue)
+	thisPackage.MaxQueue, err = strconv.Atoi(MaxQueue)
 	if err != nil {
 		log.L.Fatalf("$MAX_QUEUE must be a number")
 	}
 
 	// parse configuration
-	path := os.Getenv("JOB_CONFIG_LOCATION")
+	path := JobConfigLocation //os.Getenv("JOB_CONFIG_LOCATION")
 	if len(path) < 1 {
 		path = "./config.json"
 	}
 	log.L.Infof("Parsing job configuration from: %s", path)
 
 	// get path for scripts
-	scriptPath := os.Getenv("JOB_SCRIPTS_PATH")
+	scriptPath := JobScriptsPath //os.Getenv("JOB_SCRIPTS_PATH")
 	if len(scriptPath) < 1 {
 		scriptPath = "./scripts/" // default script path
 	}
@@ -122,38 +135,29 @@ func init() {
 			}
 
 			log.L.Infof("Adding runner for job '%v', trigger #%v. Execution type: %v", runner.Config.Name, runner.TriggerIndex, runner.Trigger.Type)
-			runners = append(runners, runner)
+			thisPackage.Runners = append(thisPackage.Runners, runner)
 		}
 	}
-}
 
-// ProcessEvent adds <event> into a queue to be processed
-func ProcessEvent(event elkreporting.ElkEvent) {
-	eventChan <- event
-}
+	thisPackage.EventChan = make(chan elkreporting.ElkEvent, thisPackage.MaxQueue)
+	thisPackage.HeartbeatChan = make(chan events.Event, thisPackage.MaxQueue)
 
-// ProcessHeartbeat adds <heartbeat> into a queue to be processed
-func ProcessHeartbeat(heartbeat events.Event) {
-	heartbeatChan <- heartbeat
+	return thisPackage
 }
 
 // StartJobScheduler starts workers to run jobs, defined in the config.json file.
-func StartJobScheduler() {
-	maxWorkers, _ := strconv.Atoi(MaxWorkers)
-	maxQueue, _ := strconv.Atoi(MaxQueue)
+func (thisPackage *JobPackage) StartJobScheduler() {
+	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.",
+		len(thisPackage.Runners), thisPackage.MaxWorkers, thisPackage.MaxQueue)
 
-	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.", len(runners), maxWorkers, maxQueue)
 	wg := sync.WaitGroup{}
-
-	eventChan = make(chan elkreporting.ElkEvent, maxQueue)
-	heartbeatChan = make(chan events.Event, maxQueue)
 
 	// start action managers
 	go actions.StartActionManagers()
 
 	// start runners
 	var matchRunners []*runner
-	for _, runner := range runners {
+	for _, runner := range thisPackage.Runners {
 		switch runner.Trigger.Type {
 		case "daily":
 			go runner.runDaily()
@@ -167,14 +171,14 @@ func StartJobScheduler() {
 	}
 
 	// start event workers
-	for i := 0; i < maxWorkers; i++ {
+	for i := 0; i < thisPackage.MaxWorkers; i++ {
 		log.L.Debugf("Starting event worker %v", i)
 		wg.Add(1)
 
 		go func() {
 			for {
 				select {
-				case event := <-eventChan:
+				case event := <-thisPackage.EventChan:
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
 						if matchRunners[i].doesEventMatch(&event) {
@@ -182,7 +186,7 @@ func StartJobScheduler() {
 						}
 					}
 
-				case heartbeat := <-heartbeatChan:
+				case heartbeat := <-thisPackage.HeartbeatChan:
 					// forward heartbeat
 					go state.Forward(heartbeat, elk.UpdateHeader{
 						Index: elk.GenerateIndexName(elk.OIT_AV_HEARTBEAT),

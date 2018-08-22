@@ -3,21 +3,35 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
-	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/jobs"
-	"github.com/byuoitav/state-parser/state"
+	"github.com/byuoitav/state-parsing/forwarding"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
 
+var newJobPackage jobs.JobPackage
+var dmpsJobPackage jobs.JobPackage
+
 func main() {
-	go jobs.StartJobScheduler()
-	go state.StartDistributor(3 * time.Second)
+	//go jobs.StartJobScheduler()
+	go forwarding.StartDistributor(3 * time.Second)
+
+	//start the jobs packages
+	go func() {
+		newJobPackage = jobs.SetUpJobPackage(os.Getenv("MAX_WORKERS"), os.Getenv("MAX_QUEUE"), os.Getenv("JOB_CONFIG_LOCATION"), os.Getenv("JOB_SCRIPTS_PATH"))
+		newJobPackage.StartJobScheduler()
+	}()
+
+	go func() {
+		dmpsJobPackage = jobs.SetUpJobPackage(os.Getenv("MAX_WORKERS"), os.Getenv("MAX_QUEUE"), os.Getenv("DMPS_JOB_CONFIG_LOCATION"), os.Getenv("DMPS_JOB_SCRIPTS_PATH"))
+		dmpsJobPackage.StartJobScheduler()
+	}()
 
 	port := ":10010"
 	router := echo.New()
@@ -61,7 +75,7 @@ func addHeartbeat(context echo.Context) error {
 	}
 	log.L.Debugf("Received heartbeat: %+v", heartbeat)
 
-	jobs.ProcessHeartbeat(heartbeat)
+	newJobPackage.HeartbeatChan <- heartbeat
 	return context.JSON(http.StatusOK, "Success.")
 }
 
@@ -73,22 +87,7 @@ func addEvent(context echo.Context) error {
 	}
 	log.L.Debugf("Received event: %+v", event)
 
-	jobs.ProcessEvent(event)
-	return context.JSON(http.StatusOK, "Success.")
-}
-
-func addDMPSEvent(context echo.Context) error {
-	var event events.Event
-	err := context.Bind(&event)
-	if err != nil {
-		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid dmps event: %v", err))
-	}
-	log.L.Debugf("Received DMPS event: %+v", event)
-
-	go state.Forward(event, elk.UpdateHeader{
-		Index: elk.GenerateIndexName(elk.DMPS_EVENT),
-		Type:  "dmpsevent",
-	})
+	newJobPackage.EventChan <- event
 	return context.JSON(http.StatusOK, "Success.")
 }
 
@@ -100,9 +99,26 @@ func addDMPSHeartbeat(context echo.Context) error {
 	}
 	log.L.Debugf("Received DMPS heartbeat: %+v", event)
 
-	go state.Forward(event, elk.UpdateHeader{
-		Index: elk.GenerateIndexName(elk.DMPS_HEARTBEAT),
-		Type:  "dmpsheartbeat",
-	})
+	dmpsJobPackage.HeartbeatChan <- event
+	// go forwarding.Forward(event, elk.UpdateHeader{
+	// 	Index: elk.GenerateIndexName(elk.DMPS_HEARTBEAT),
+	// 	Type:  "dmpsheartbeat",
+	// })
+	return context.JSON(http.StatusOK, "Success.")
+}
+
+func addDMPSEvent(context echo.Context) error {
+	var event elkreporting.ElkEvent
+	err := context.Bind(&event)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid dmps event: %v", err))
+	}
+	log.L.Debugf("Received DMPS event: %+v", event)
+
+	dmpsJobPackage.EventChan <- event
+	// go forwarding.Forward(event, elk.UpdateHeader{
+	// 	Index: elk.GenerateIndexName(elk.DMPS_EVENT),
+	// 	Type:  "dmpsevent",
+	// })
 	return context.JSON(http.StatusOK, "Success.")
 }
