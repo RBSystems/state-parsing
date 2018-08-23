@@ -14,12 +14,20 @@ type Cache interface {
 	GetRoomRecord(roomID string) (StaticRoom, *nerr.E)
 }
 
-func GetCache() Cache {
+const (
+	DMPS    = "dmps"
+	DEFAULT = "default"
+)
+
+func GetCache(cacheType string) Cache {
 	//initialize before returning?
+	roomIndex, deviceIndex := getIndexesByType(cacheType)
+
 	return &cache{
 		deviceCache: make(map[string]SaticDevice),
 		roomCache:   make(map[string]StaticRoom),
 	}
+
 }
 
 type cache struct {
@@ -47,15 +55,42 @@ func (c *cache) CheckAndStoreDevice(device StaticDevice) (bool, StaticDevice, *n
 
 	if !ok {
 		//we ned to add to the map
+		c.deviceLock.Lock()
+		deviceCache[device.ID] = device
+		c.deviceLock.Unlock()
+
+		//return the whole device
+		return true, device, nil
 	}
 
 	//we need to do a comparison, update any deltas, then return those fields
+	diff, merged, changes, err := CompareDevices(v, device)
+	if err != nil {
+		return false, SaticDevice{}, err.Addf("Couldn't compare devices")
+	}
+	if !changes {
+		return false, diff, nil
+	}
 
+	//there were changes to save
+	c.deviceLock.Lock()
+	deviceCache[merged.ID] = device
+	c.deviceLock.Unlock()
+
+	return true, diff, nil
 }
 
 //GetDeviceRecord returns a device with the corresponding ID, if any is found in the cache
 func (C *cache) GetDeviceRecord(deviceID string) (StaticDevice, *nerr.E) {
 
+	c.deviceLock.RLock()
+	v := deviceCache[deviceID]
+	c.deviceLock.RUnlock()
+	if len(v.ID) == 0 {
+		return v, nerr.Create("Not found", "not-found")
+	}
+
+	return v, nil
 }
 
 /*CheckAndStoreRoom takes a room, will check to see if there are deltas compared to the values in the map, and store any changes.
@@ -64,10 +99,26 @@ Bool returned denotes if there were any changes. True indicates that there were 
 Room returned contains ONLY the deltas.
 */
 func (c *cache) CheckAndStoreRoom(room StaticRoom) (bool, StaticRoom, *nerr.E) {
-
+	return false, room, nil
 }
 
 //GetRoomRecord returns a room
 func (C *cache) GetRoomRecord(roomID string) (StaticRoom, *nerr.E) {
+	c.roomLock.Lock
+	v := roomCache[roomID]
+	c.roomLock.RUnlock()
+	if len(v.ID) == 0 {
+		return v, nerr.Create("Not found", "not-found")
+	}
+}
 
+func getIndexesByType(cacheType string) (room, device string) {
+	switch cacheType {
+	case DEFAULT:
+		return "oit-static-av-rooms", "oit-static-av-devices"
+	case DMPS:
+		return "oit-static-av-rooms-legacy", "oit-static-av-devices-legacy"
+	default:
+		return "", ""
+	}
 }
