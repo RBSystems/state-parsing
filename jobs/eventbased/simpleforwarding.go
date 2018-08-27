@@ -47,19 +47,22 @@ type SimpleForwardingJob struct {
 
 // Run fowards events to an elk timeseries index.
 func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
+
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:
-		state.DistributeEvent(*v)
 		go state.Forward(*v, elk.UpdateHeader{
-			Index: elk.GenerateIndexName(elk.OIT_AV),
+			Index: elk.GenerateIndexName(elk.OIT_AV_ALL),
 			Type:  "oitaveventprd",
 		})
+
+		state.DistributeEvent(*v)
 	case elkreporting.ElkEvent:
-		state.DistributeEvent(v)
 		go state.Forward(v, elk.UpdateHeader{
-			Index: elk.GenerateIndexName(elk.OIT_AV),
+			Index: elk.GenerateIndexName(elk.OIT_AV_ALL),
 			Type:  "oitaveventprd",
 		})
+
+		state.DistributeEvent(v)
 	default:
 	}
 

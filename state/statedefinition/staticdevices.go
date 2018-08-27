@@ -38,29 +38,29 @@ type StaticDevice struct {
 	Volume *int  `json:"volume,omitempty"`
 
 	//Fields specific to Microphones
-	BatteryChargeBars        *int   `json:"battery-charge-bars,omitempty"`
-	BatteryChargeMinutes     *int   `json:"battery-charge-minutes,omitempty"`
-	BatteryChargePercentage  *int   `json:"battery-charge-percentage,omitempty"`
-	BatteryLevelHoursMinutes *int   `json:"battery-charge-hours-minutes,omitempty"`
-	BatteryCycles            *int   `json:"battery-cycles,omitempty"`
-	BatteryType              string `json:"battery-type,omitempty"`
-	Interference             string `json:"*intererence,omitempty"`
+	BatteryChargeBars         *int   `json:"battery-charge-bars,omitempty"`
+	BatteryChargeMinutes      *int   `json:"battery-charge-minutes,omitempty"`
+	BatteryChargePercentage   *int   `json:"battery-charge-percentage,omitempty"`
+	BatteryChargeHoursMinutes *int   `json:"battery-charge-hours-minutes,omitempty"`
+	BatteryCycles             *int   `json:"battery-cycles,omitempty"`
+	BatteryType               string `json:"battery-type,omitempty"`
+	Interference              string `json:"*intererence,omitempty"`
 
 	//meta fields for use in kibana
-	Control              string `json:"control,omitempty"`                //the Hostname - used in a URL
-	EnableNotification   string `json:"enable-notifications,omitempty"`   //the Hostname - used in a URL
-	SuppressNotification string `json:"suppress-notifications,omitempty"` //the Hostname - used in a URL
-	ViewDashboard        string `json:"ViewDashboard,omitempty"`          //the Hostname - used in a URL
+	Control               string `json:"control,omitempty"`                //the Hostname - used in a URL
+	EnableNotifications   string `json:"enable-notifications,omitempty"`   //the Hostname - used in a URL
+	SuppressNotifications string `json:"suppress-notifications,omitempty"` //the Hostname - used in a URL
+	ViewDashboard         string `json:"ViewDashboard,omitempty"`          //the Hostname - used in a URL
 
 }
 
 //CompareDevices takes a base devices, and calculates the difference between the two, returning it in the staticDevice return value. Bool denotes if there were any differences
-func CompareDevices(base, new StaticDevice) (diff staticDevice, merged staticDevice, changes bool, err *nerr.E) {
+func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDevice, changes bool, err *nerr.E) {
 
 	//common fields
 	diff.ID, merged.ID, changes = compareString(base.ID, new.ID, changes)
 	diff.Alerting, merged.Alerting, changes = compareBool(base.Alerting, new.Alerting, changes)
-	diff.Alerts, merged.Alerts, changes = compareAlerts(base.Alerts, new.Alets, changes)
+	diff.Alerts, merged.Alerts, changes = compareAlerts(base.Alerts, new.Alerts, changes)
 	diff.NotificationsSuppressed, merged.NotificationsSuppressed, changes = compareBool(base.NotificationsSuppressed, new.NotificationsSuppressed, changes)
 	diff.Building, merged.Building, changes = compareString(base.Building, new.Building, changes)
 	diff.Room, merged.Room, changes = compareString(base.Room, new.Room, changes)
@@ -89,7 +89,7 @@ func CompareDevices(base, new StaticDevice) (diff staticDevice, merged staticDev
 	diff.BatteryChargeMinutes, merged.BatteryChargeMinutes, changes = compareInt(base.BatteryChargeMinutes, new.BatteryChargeMinutes, changes)
 	diff.BatteryChargePercentage, merged.BatteryChargePercentage, changes = compareInt(base.BatteryChargePercentage, new.BatteryChargePercentage, changes)
 	diff.BatteryChargeHoursMinutes, merged.BatteryChargeHoursMinutes, changes = compareInt(base.BatteryChargeHoursMinutes, new.BatteryChargeHoursMinutes, changes)
-	diff.BatteryChargeCycles, merged.BatteryChargeCycles, changes = compareInt(base.BatteryChargeCycles, new.BatteryChargeCycles, changes)
+	diff.BatteryCycles, merged.BatteryCycles, changes = compareInt(base.BatteryCycles, new.BatteryCycles, changes)
 	diff.BatteryType, merged.BatteryType, changes = compareString(base.BatteryType, new.BatteryType, changes)
 	diff.Interference, merged.Interference, changes = compareString(base.Interference, new.Interference, changes)
 
@@ -102,7 +102,7 @@ func CompareDevices(base, new StaticDevice) (diff staticDevice, merged staticDev
 	return
 }
 
-func compareString(base, new, changes bool) (string, string, bool) {
+func compareString(base, new string, changes bool) (string, string, bool) {
 	if new != "" {
 		if base != new {
 			return new, new, true

@@ -8,17 +8,17 @@ type Alert struct {
 	Message   string    `json:"message,omitempty"`
 }
 
-func compareAlerts(base, new map[string]Alert, changes bool) (diff map[string]Alert, merged map[string]Alert, changes bool) {
+func compareAlerts(base, new map[string]Alert, changes bool) (diff map[string]Alert, merged map[string]Alert, c bool) {
 	for k, v := range new {
 		basev, ok := base[k]
 		if !ok {
-			changes = true
+			c = true
 			base[k] = v
 			diff[k] = v
 		}
 		new, tempChanges := compareAlert(basev, v)
 		if tempChanges {
-			changes = true
+			c = true
 			base[k] = new
 			diff[k] = new
 		}
@@ -26,10 +26,12 @@ func compareAlerts(base, new map[string]Alert, changes bool) (diff map[string]Al
 	return
 }
 
-func compareAlert(base, new Alert) (after alert, changes bool) {
+func compareAlert(base, new Alert) (after Alert, changes bool) {
 	if base.Alerting != new.Alerting || base.AlertSent.Equal(new.AlertSent) || base.Message != new.Message {
 		after = new
 		changes = true
 		return
 	}
+
+	return
 }

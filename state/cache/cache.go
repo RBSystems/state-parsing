@@ -6,7 +6,7 @@ import (
 	"github.com/byuoitav/common/nerr"
 )
 
-//Cache is our state cache - it's meant to be an in-memory representation of the static indexes
+//Cache is our state cache - it's meant to be a representation of the static indexes
 type Cache interface {
 	CheckAndStoreDevice(device StaticDevice) (bool, StaticDevice, *nerr.E)
 	GetDeviceRecord(deviceID string) (StaticDevice, *nerr.E)
@@ -19,22 +19,23 @@ const (
 	DEFAULT = "default"
 )
 
-func GetCache(cacheType string) Cache {
-	//initialize before returning?
-	roomIndex, deviceIndex := getIndexesByType(cacheType)
+var Caches map[string]*Cache
 
-	return &cache{
-		deviceCache: make(map[string]SaticDevice),
-		roomCache:   make(map[string]StaticRoom),
-	}
-
+func init() {
+	//start
+	InitializeCaches()
 }
 
-type cache struct {
-	deviceLock  sync.RWMuted //lock for the device cache
+func GetCache(cacheType string) Cache {
+
+	return Caches[cacheType]
+}
+
+type memorycache struct {
+	deviceLock  *sync.RWMuted //lock for the device memorycache
 	deviceCache map[string]StaticDevice
 
-	roomLock  sync.RWMuted //lock for the room cache
+	roomLock  *sync.RWMuted //lock for the room memorycache
 	roomCache map[string]StaticRoom
 }
 
@@ -43,7 +44,7 @@ type cache struct {
 Bool returned denotes if there were any changes. True indicates that there were updates
 Device returned contains ONLY the deltas.
 */
-func (c *cache) CheckAndStoreDevice(device StaticDevice) (bool, StaticDevice, *nerr.E) {
+func (c *memorycache) CheckAndStoreDevice(device StaticDevice) (bool, StaticDevice, *nerr.E) {
 	if len(device.ID) == 0 {
 		return false, StaticDevice{}, nerr.Create("Static Device must have an ID field to be loaded into the databaset", "invalid-device")
 	}
@@ -80,8 +81,8 @@ func (c *cache) CheckAndStoreDevice(device StaticDevice) (bool, StaticDevice, *n
 	return true, diff, nil
 }
 
-//GetDeviceRecord returns a device with the corresponding ID, if any is found in the cache
-func (C *cache) GetDeviceRecord(deviceID string) (StaticDevice, *nerr.E) {
+//GetDeviceRecord returns a device with the corresponding ID, if any is found in the memorycache
+func (C *memorycache) GetDeviceRecord(deviceID string) (StaticDevice, *nerr.E) {
 
 	c.deviceLock.RLock()
 	v := deviceCache[deviceID]
@@ -98,12 +99,12 @@ func (C *cache) GetDeviceRecord(deviceID string) (StaticDevice, *nerr.E) {
 Bool returned denotes if there were any changes. True indicates that there were updates
 Room returned contains ONLY the deltas.
 */
-func (c *cache) CheckAndStoreRoom(room StaticRoom) (bool, StaticRoom, *nerr.E) {
+func (c *memorycache) CheckAndStoreRoom(room StaticRoom) (bool, StaticRoom, *nerr.E) {
 	return false, room, nil
 }
 
 //GetRoomRecord returns a room
-func (C *cache) GetRoomRecord(roomID string) (StaticRoom, *nerr.E) {
+func (C *memorycache) GetRoomRecord(roomID string) (StaticRoom, *nerr.E) {
 	c.roomLock.Lock
 	v := roomCache[roomID]
 	c.roomLock.RUnlock()

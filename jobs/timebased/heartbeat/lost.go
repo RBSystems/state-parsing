@@ -13,6 +13,7 @@ import (
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/marking"
+	"github.com/byuoitav/state-parser/state/statedefinition"
 )
 
 type HeartbeatLostJob struct {
@@ -82,11 +83,11 @@ type heartbeatLostQueryResponse struct {
 		Total    int     `json:"total,omitempty"`
 		MaxScore float64 `json:"max_score,omitempty"`
 		Hits     []struct {
-			Index  string           `json:"_index,omitempty"`
-			Type   string           `json:"_type,omitempty"`
-			ID     string           `json:"_id,omitempty"`
-			Score  float64          `json:"_score,omitempty"`
-			Source elk.StaticDevice `json:"_source,omitempty"`
+			Index  string                       `json:"_index,omitempty"`
+			Type   string                       `json:"_type,omitempty"`
+			ID     string                       `json:"_id,omitempty"`
+			Score  float64                      `json:"_score,omitempty"`
+			Source statedefinition.StaticDevice `json:"_source,omitempty"`
 		} `json:"hits,omitempty"`
 	} `json:"hits,omitempty"`
 }
@@ -140,15 +141,15 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 		roomsToCheck[curHit.Room] = true
 
 		//make sure that it's marked as alerting
-		if curHit.Alerting == false || curHit.Alerts[elkAlertField].Alerting == false {
+		if !*curHit.Alerting || !curHit.Alerts[elkAlertField].Alerting {
 			//we need to mark it to be updated as alerting
 			devicesToUpdate[resp.Hits.Hits[i].ID] = elk.DeviceUpdateInfo{
 				Name: resp.Hits.Hits[i].ID,
-				Info: curHit.LastHeartbeat,
+				Info: curHit.LastHeartbeat.Format(time.RFC3339),
 			}
 		}
 
-		if curHit.Suppress == true {
+		if *curHit.NotificationsSuppressed {
 			//we don't actually send the alert
 			continue
 		}
@@ -165,7 +166,7 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 				},
 				slack.AlertField{
 					Title: "Last Heartbeat",
-					Value: curHit.LastHeartbeat,
+					Value: curHit.LastHeartbeat.Format(time.RFC3339),
 					Short: true,
 				},
 			},

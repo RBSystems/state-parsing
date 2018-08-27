@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
@@ -13,7 +14,19 @@ import (
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/marking"
+	"github.com/byuoitav/state-parser/state/statedefinition"
 )
+
+var False *bool
+var True *bool
+
+func init() {
+	tmp := false
+	False = &tmp
+
+	tmpt := true
+	True = &tmpt
+}
 
 type HeartbeatRestoredJob struct {
 }
@@ -66,11 +79,11 @@ type heartbeatRestoredQueryResponse struct {
 		Total    int     `json:"total,omitempty"`
 		MaxScore float64 `json:"max_score,omitempty"`
 		Hits     []struct {
-			Index  string           `json:"_index,omitempty"`
-			Type   string           `json:"_type,omitempty"`
-			ID     string           `json:"_id,omitempty"`
-			Score  float64          `json:"_score,omitempty"`
-			Source elk.StaticDevice `json:"_source,omitempty"`
+			Index  string                       `json:"_index,omitempty"`
+			Type   string                       `json:"_type,omitempty"`
+			ID     string                       `json:"_id,omitempty"`
+			Score  float64                      `json:"_score,omitempty"`
+			Source statedefinition.StaticDevice `json:"_source,omitempty"`
 		} `json:"hits,omitempty"`
 	} `json:"hits,omitempty"`
 }
@@ -136,7 +149,7 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 		deviceIDsToUpdate = append(deviceIDsToUpdate, resp.Hits.Hits[i].ID)
 
 		// if a device's alerts aren't suppressed, create the alert
-		if device.Suppress {
+		if *device.NotificationsSuppressed {
 			continue
 		}
 
@@ -151,7 +164,7 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 				},
 				slack.AlertField{
 					Title: "Received at",
-					Value: device.LastHeartbeat,
+					Value: device.LastHeartbeat.Format(time.RFC3339),
 					Short: true,
 				},
 			},
