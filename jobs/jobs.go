@@ -8,7 +8,7 @@ import (
 )
 
 type Job interface {
-	Run(ctx interface{}) []action.Payload
+	Run(ctx interface{}, r *runner) []action.Payload
 }
 
 var Jobs = map[string]Job{
@@ -20,9 +20,10 @@ var Jobs = map[string]Job{
 }
 
 type JobConfig struct {
-	Name     string    `json:"name"`
-	Triggers []Trigger `json:"triggers"`
-	Enabled  bool      `json:"enabled"`
+	Name      string    `json:"name"`
+	Triggers  []Trigger `json:"triggers"`
+	Enabled   bool      `json:"enabled"`
+	Parameter string    `json:"parameter,omitempty"`
 }
 
 type Trigger struct {
