@@ -120,7 +120,7 @@ type Bucket struct {
 	DocCount int    `json:"doc_count"`
 }
 
-func (r *RoomUpdateJob) Run(context interface{}) []action.Payload {
+func (r *RoomUpdateJob) Run(context interface{}, parameter string) []action.Payload {
 	log.L.Debugf("Starting room update job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s,%s/_search", elk.DEVICE_INDEX, elk.ROOM_INDEX), []byte(roomUpdateQuery))

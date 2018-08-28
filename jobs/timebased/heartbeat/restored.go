@@ -75,7 +75,7 @@ type heartbeatRestoredQueryResponse struct {
 	} `json:"hits,omitempty"`
 }
 
-func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Payload {
+func (h *HeartbeatRestoredJob) Run(context interface{}, parameter string) []action.Payload {
 	log.L.Debugf("Starting heartbeat restored job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatRestoredQuery))

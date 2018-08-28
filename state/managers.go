@@ -29,7 +29,7 @@ func startManager(toStart Manager) error {
 	toStart.DeltaMap = make(map[string]map[string]interface{})
 
 	//avoid allocation every time
-	var update bool
+	//var update bool
 
 	for {
 		select {

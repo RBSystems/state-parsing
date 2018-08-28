@@ -1,9 +1,13 @@
 package eventbased
 
 import (
+	"fmt"
 	"time"
+
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
+	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/actions/mom"
 )
 
 // var (
@@ -30,35 +34,38 @@ type DMPSAlertsAlertJob struct {
 }
 
 // Run fowards events to an elk timeseries index.
-func (*DMPSAlertsAlertJob) Run(context interface{}) []action.Payload {
+func (*DMPSAlertsAlertJob) Run(context interface{}, parameter string) []action.Payload {
 
 	var theEvent elkreporting.ElkEvent
 
-	switch v := context.(type) {
+	switch context.(type) {
 	case *elkreporting.ElkEvent:
-		theEvent = &context
+		theEvent = context.(elkreporting.ElkEvent)
 	case elkreporting.ElkEvent:
-		theEvent = context
+		theEvent = context.(elkreporting.ElkEvent)
 	default:
 	}
 
+	timeParse, _ := time.Parse(time.RFC3339, theEvent.Timestamp)
+	timeOutput := timeParse.Format("01/02/2006 15:04:05")
+
 	toReturn := []action.Payload{
 		action.Payload{
-			Type: actions.Mom,
+			Type:   actions.Mom,
 			Device: theEvent.Hostname,
-			Content: mom.Alert {				
-				Host : theEvent.Hostname
-				Element : theEvent.Event.Device
-				Severity : 2 //warning
-				AlertOutput : fmt.Sprintf("DMPS [%v] Device [%v] alerting on [%v] with value [%v", 
-					theEvent.Hostname, theEvent.Event.Device, theEvent.Event.EventInfoKey, theEvent.Event.EventInfoValue)
-				AlertTime :  time.Parse(time.RFC3339, theEvent.Timestamp).Format("01/02/2006 15:04:05")
-				Service : "" // hard coded by the Sentinel/MOM group
-				KB : "KB0000000"
-				Ticket : ""
-			}
-		}
+			Content: mom.Alert{
+				Host:     theEvent.Hostname,
+				Element:  theEvent.Event.Event.Device,
+				Severity: 2, //warning,
+				AlertOutput: fmt.Sprintf("DMPS [%v] Device [%v] alerting on [%v] with value [%v",
+					theEvent.Hostname, theEvent.Event.Event.Device, theEvent.Event.Event.EventInfoKey, theEvent.Event.Event.EventInfoValue),
+				AlertTime: timeOutput,
+				Service:   "", // hard coded by the Sentinel/MOM group
+				KB:        "KB0000000",
+				Ticket:    "",
+			},
+		},
 	}
 
-	return nil
+	return toReturn
 }

@@ -203,7 +203,7 @@ func (thisPackage *JobPackage) StartJobScheduler() {
 
 func (r *runner) run(context interface{}) {
 	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
-	actions.Execute(r.Job.Run(context))
+	actions.Execute(r.Job.Run(context, r.Config.Parameter))
 	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 

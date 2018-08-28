@@ -46,7 +46,7 @@ type SimpleForwardingJob struct {
 }
 
 // Run fowards events to an elk timeseries index.
-func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
+func (*SimpleForwardingJob) Run(context interface{}, parameter string) []action.Payload {
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:
 		state.DistributeEvent(*v)
