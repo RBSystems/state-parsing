@@ -22,7 +22,8 @@ const (
 	elkAlertField  = "lost-heartbeat"
 	HEARTBEAT_LOST = "heartbeat-lost"
 
-	heartbeatLostQuery = `{
+	heartbeatLostQuery = `
+	{
   "query": {
     "bool": {
       "must": [
@@ -53,6 +54,15 @@ const (
               }
             }
           }
+        },
+        {
+          "bool": {
+            "must_not": {
+              "exists": {
+                "field": "alerts"
+              }
+            }
+          }
         }
       ],
       "minimum_should_match": 2,
@@ -65,7 +75,8 @@ const (
       }
     }
   },
-  "size": 100}
+  "size": 100
+}
 `
 )
 
@@ -123,10 +134,12 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 	actionsByRoom := make(map[string][]action.Payload)
 	toReturn := []action.Payload{}
 
-	if len(resp.Hits.Hits) <= 0 {
+	if len(resp.Hits.Hits) == 0 {
 		log.L.Infof("[%s] No heartbeats lost", HEARTBEAT_LOST)
 		return toReturn, nil
 	}
+
+	log.L.Infof("%v heartbeats lost.", len(resp.Hits.Hits))
 
 	/*
 		We've got some heartbeats that are lost - we need to verify that they're not suppressing alerts, for themselves or for the room in general.
@@ -134,24 +147,27 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 	*/
 
 	for i := range resp.Hits.Hits {
+		log.L.Debugf("Processing lost heartbeat for %v", resp.Hits.Hits[i].ID)
 		curHit := resp.Hits.Hits[i].Source
 
-		//add the room to be checked
+		// add the room to be checked
 		roomsToCheck[curHit.Room] = true
 
-		//make sure that it's marked as alerting
-		if curHit.Alerting == false || curHit.Alerts[elkAlertField].Alerting == false {
-			//we need to mark it to be updated as alerting
+		// make sure that it's marked as alerting
+		if !curHit.Alerting || !curHit.Alerts[elkAlertField].Alerting {
+			// we need to mark it to be updated as alerting
 			devicesToUpdate[resp.Hits.Hits[i].ID] = elk.DeviceUpdateInfo{
 				Name: resp.Hits.Hits[i].ID,
 				Info: curHit.LastHeartbeat,
 			}
 		}
 
-		if curHit.Suppress == true {
-			//we don't actually send the alert
+		if curHit.Suppress {
+			// we don't actually send the alert
+			log.L.Debugf("Skipping building alerts for %v", resp.Hits.Hits[i].ID)
 			continue
 		}
+		log.L.Debugf("Building alerts for %v", resp.Hits.Hits[i].ID)
 
 		//otherwise we create an alert to be returned, for now we just return a slack alert
 		slackAttachment := slack.Attachment{

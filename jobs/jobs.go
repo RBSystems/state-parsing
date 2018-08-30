@@ -13,7 +13,7 @@ type Job interface {
 
 var Jobs = map[string]Job{
 	heartbeat.HEARTBEAT_LOST:         &heartbeat.HeartbeatLostJob{},
-	heartbeat.HEARTBEAT_RESTORED:     &heartbeat.HeartbeatRestoredJob{},
+	heartbeat.HeartbeatRestored:      &heartbeat.HeartbeatRestoredJob{},
 	timebased.ROOM_UPDATE:            &timebased.RoomUpdateJob{},
 	timebased.GENERAL_ALERT_CLEARING: &timebased.GeneralAlertClearingJob{},
 	eventbased.SimpleForwarding:      &eventbased.SimpleForwardingJob{},

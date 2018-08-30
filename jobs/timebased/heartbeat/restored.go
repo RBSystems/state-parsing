@@ -19,14 +19,16 @@ type HeartbeatRestoredJob struct {
 }
 
 const (
-	HEARTBEAT_RESTORED = "heartbeat-restored"
+	HeartbeatRestored = "heartbeat-restored"
 
 	heartbeatRestoredQuery = `
-	{  "_source": [
+	{
+  "_source": [
     "hostname",
     "last-heartbeat",
-	"notifications-suppressed"], 
-	"query": {
+    "notifications-suppressed"
+  ],
+  "query": {
     "bool": {
       "must": [
         {
@@ -50,7 +52,8 @@ const (
     }
   },
   "size": 1000
-  }`
+}
+`
 )
 
 type heartbeatRestoredQueryResponse struct {
@@ -110,7 +113,7 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 
 	// there are no devices that have heartbeats restored
 	if len(resp.Hits.Hits) <= 0 {
-		log.L.Infof("[%s] No heartbeats restored", HEARTBEAT_RESTORED)
+		log.L.Infof("[%s] No heartbeats restored", HeartbeatRestored)
 		return toReturn, nil
 	}
 

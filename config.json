@@ -4,10 +4,10 @@
         "triggers": [
             {
                 "type": "interval",
-                "every": "5s"
+                "every": "30s"
             }
         ],
-        "enabled": false
+        "enabled": true
     },
     {
         "name": "heartbeat-restored",
@@ -17,7 +17,7 @@
                 "every": "30s"
             }
         ],
-        "enabled": false
+        "enabled": true
     },
     {
         "name": "room-update",
@@ -46,7 +46,7 @@
                 "type": "match"
             }
         ],
-        "enabled": true
+        "enabled": false
     },
     {
         "name": "room-update.py",
