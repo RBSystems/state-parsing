@@ -21,7 +21,7 @@ var booltype = reflect.TypeOf((*bool)(nil))
 var inttype = reflect.TypeOf((*int)(nil))
 
 func init() {
-	alertRegex = regexp.MustCompile(`alert\..+`)
+	alertRegex = regexp.MustCompile(`alerts\..+`)
 }
 
 func CheckCacheForEvent() {
@@ -29,12 +29,11 @@ func CheckCacheForEvent() {
 }
 
 /*
-	NOTE: If in the code you can formulate a separate StaticDevice and compare it, defer to that approach, as the performance gain is quite significant.
-
 	SetDeviceField returns the new device, as well as a boolean denoting if the field was already set to the provided value.
 
-	If passing in an alert, we assume that the value is a statdefinition.Alert.
-	Alerts are denoted by alert.<alertName>. Alerts always return true.
+	If passing in an alert, we assume that the value is a statdefinition.Alert.	Alerts are denoted by alert.<alertName>. Alerts always return true.
+
+	NOTE: If in the code you can formulate a separate StaticDevice and compare it, defer to that approach, as the performance gain is quite significant.
 */
 func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {
 	val := reflect.TypeOf(t)
@@ -60,7 +59,15 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 		if !ok {
 			return false, t, nerr.Create(fmt.Sprintf("Can't assign a non alert %v to alert value %v.", value, key), "format-error")
 		}
-		t.Alerts[key] = v
+
+		if t.Alerts == nil {
+			t.Alerts = make(map[string]sd.Alert)
+		}
+
+		//take just the name following the '.' value
+		s := strings.Split(key, ".")
+
+		t.Alerts[s[1]] = v
 		return true, t, nil
 	}
 

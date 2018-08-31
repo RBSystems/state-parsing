@@ -194,6 +194,52 @@ func TestSetDeviceField(t *testing.T) {
 	assert.Equal(t, false, update)
 	assert.Equal(t, new.LastStateReceived.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
 	assert.NotEqual(t, new.LastStateReceived.Format(time.RFC3339Nano), pretime.Format(time.RFC3339Nano))
+
+	//alert field tests
+
+	Alert := sd.Alert{
+		Alerting:  true,
+		AlertSent: time.Now(),
+		Message:   "ABC",
+	}
+
+	NewAlert := sd.Alert{
+		Alerting:  true,
+		AlertSent: time.Now(),
+		Message:   "DEF",
+	}
+
+	update, new, err = SetDeviceField("alerts.TestAlert", Alert, time.Now(), new)
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+	assert.Equal(t, new.Alerts["TestAlert"].Message, "ABC")
+	assert.True(t, update)
+
+	update, new, err = SetDeviceField("alerts.TestAlert", Alert, time.Now(), new)
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+	assert.Equal(t, new.Alerts["TestAlert"].Message, "ABC")
+	assert.True(t, update)
+
+	update, new, err = SetDeviceField("alerts.TestAlert", NewAlert, time.Now(), new)
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+	assert.Equal(t, new.Alerts["TestAlert"].Message, "DEF")
+	assert.True(t, update)
+
+	update, new, err = SetDeviceField("alerts.TestAlert2", Alert, time.Now(), new)
+	if err != nil {
+		t.Error(err.Error())
+		t.FailNow()
+	}
+	assert.Equal(t, new.Alerts["TestAlert"].Message, "DEF")
+	assert.Equal(t, new.Alerts["TestAlert2"].Message, "ABC")
 }
 
 var UpdateRes bool
