@@ -32,10 +32,6 @@ func init() {
 		log.L.Fatalf("$ELASTIC_API_EVENTS and $ELASTIC_HEARTBEAT_EVENTS must be set.")
 	}
 	log.L.Infof("\n\nForwarding URLs:\n\tAPI Forward:\t\t%v\n\tSecond API Forward\t\t%v\n\tHeartbeat Forward:\t%v\n", APIForward, SecondAPIForward, HeartbeatForward)
-
-	if len(DMPSEventsForward) == 0 || len(DMPSHeartbeatForward) == 0 {
-		log.L.Fatalf("$ELASTIC_DMPS_EVENTS and $ELASTIC_DMPS_HEARTBEATS must be set.")
-	}
 }
 
 // SimpleForwarding is the name of this job
@@ -47,6 +43,8 @@ type SimpleForwardingJob struct {
 
 // Run fowards events to an elk timeseries index.
 func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
+
+	//	cache.GetCache(cache.DEFAULT)
 
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:

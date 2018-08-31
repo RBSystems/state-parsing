@@ -28,8 +28,8 @@ type Alert struct {
 type StaticDeviceQueryResponse struct {
 	Hits struct {
 		Wrappers []struct {
-			ID      string                       `json:"_id"`
-			Devices statedefinition.StaticDevice `json:"_source"`
+			ID     string                       `json:"_id"`
+			Device statedefinition.StaticDevice `json:"_source"`
 		} `json:"hits"`
 	} `json:"hits"`
 }
@@ -37,8 +37,8 @@ type StaticDeviceQueryResponse struct {
 type StaticRoomQueryResponse struct {
 	Hits struct {
 		Wrappers []struct {
-			ID    string                     `json:"_id"`
-			Rooms statedefinition.StaticRoom `json:"_source"`
+			ID   string                     `json:"_id"`
+			Room statedefinition.StaticRoom `json:"_source"`
 		} `json:"hits"`
 	} `json:"hits"`
 }

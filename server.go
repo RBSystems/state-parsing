@@ -19,7 +19,7 @@ func main() {
 	go jobs.StartJobScheduler()
 	go state.StartDistributor(3 * time.Second)
 
-	port := ":10010"
+	port := ":10011"
 	router := echo.New()
 	router.Pre(middleware.RemoveTrailingSlash())
 	router.Use(middleware.CORS())

@@ -15,7 +15,7 @@ type StaticRoom struct {
 	LastHeartbeat     time.Time `json:"last-heartbeat,omitempty"`
 	LastUserInput     time.Time `json:"last-user-input,omitempty"`
 
-	Power bool `json:"power,omitempty"`
+	Power string `json:"power,omitempty"`
 
 	//meta fields for Kibana
 	ViewDevices          string `json:"view-devices"`

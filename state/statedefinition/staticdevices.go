@@ -23,7 +23,7 @@ type StaticDevice struct {
 	//semi-common fields
 	LastHeartbeat time.Time `json:"last-heartbeat,omitempty"`
 	LastUserInput time.Time `json:"last-user-input,omitempty"`
-	Power         *bool     `json:"power,omitempty"`
+	Power         string    `json:"power,omitempty"`
 
 	//Control Processor Specific Fields
 	Websocket      string `json:"websocket,omitempty"`
@@ -52,6 +52,7 @@ type StaticDevice struct {
 	SuppressNotifications string `json:"suppress-notifications,omitempty"` //the Hostname - used in a URL
 	ViewDashboard         string `json:"ViewDashboard,omitempty"`          //the Hostname - used in a URL
 
+	UpdateTimes map[string]time.Time `json:"field-update-times"`
 }
 
 //CompareDevices takes a base devices, and calculates the difference between the two, returning it in the staticDevice return value. Bool denotes if there were any differences
@@ -70,7 +71,7 @@ func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDev
 	//semi-common fields
 	diff.LastHeartbeat, merged.LastHeartbeat, changes = compareTime(base.LastHeartbeat, new.LastHeartbeat, changes)
 	diff.LastUserInput, merged.LastUserInput, changes = compareTime(base.LastUserInput, new.LastUserInput, changes)
-	diff.Power, merged.Power, changes = compareBool(base.Power, new.Power, changes)
+	diff.Power, merged.Power, changes = compareString(base.Power, new.Power, changes)
 
 	//Conrol processor specific fields
 	diff.Websocket, merged.Websocket, changes = compareString(base.Websocket, new.Websocket, changes)
