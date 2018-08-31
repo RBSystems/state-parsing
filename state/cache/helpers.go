@@ -29,11 +29,11 @@ func CheckCacheForEvent() {
 }
 
 /*
+	NOTE: If in the code you can formulate a separate StaticDevice and compare it, defer to that approach, as the performance gain is quite significant.
+
 	SetDeviceField returns the new device, as well as a boolean denoting if the field was already set to the provided value.
 
 	If passing in an alert, we assume that the value is a statdefinition.Alert.
-
-
 	Alerts are denoted by alert.<alertName>. Alerts always return true.
 */
 func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {

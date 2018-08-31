@@ -195,3 +195,30 @@ func TestSetDeviceField(t *testing.T) {
 	assert.Equal(t, new.LastStateReceived.Format(time.RFC3339Nano), curtime.Format(time.RFC3339Nano))
 	assert.NotEqual(t, new.LastStateReceived.Format(time.RFC3339Nano), pretime.Format(time.RFC3339Nano))
 }
+
+var UpdateRes bool
+
+func BenchmarkUpdateDevice(b *testing.B) {
+	log.SetLevel("fatal")
+	base := sd.StaticDevice{}
+	var update bool
+
+	for n := 0; n < b.N; n++ {
+		update, base, _ = SetDeviceField("ID", "This is a test", time.Now(), base)
+	}
+	UpdateRes = update
+}
+
+func BenchmarkCompareDevice(b *testing.B) {
+	log.SetLevel("fatal")
+	base := sd.StaticDevice{}
+	new := sd.StaticDevice{ID: "This is a test"}
+
+	var update bool
+
+	for n := 0; n < b.N; n++ {
+		_, _, update, _ = sd.CompareDevices(base, new)
+	}
+
+	UpdateRes = update
+}
