@@ -19,22 +19,30 @@ func InitializeCaches() {
 
 	defRoomIndx, defDevIndx := getIndexesByType(DEFAULT)
 	//dmpsRoomIndx, dmpsDevIndx := getIndexesByType(DMPS)
+	/*
+		//get DEFAULT devices
+		defaultDevs, err := GetStaticDevices(defDevIndx)
+		if err != nil {
+			log.L.Errorf(err.Addf("Couldn't get information for default device cache").Error())
+		}
 
-	//get DEFAULT devices
-	defaultDevs, err := GetStaticDevices(defDevIndx)
-	if err != nil {
-		log.L.Errorf(err.Addf("Couldn't get information for default device cache").Error())
-	}
+		//get DEFAULT rooms
+		defaultRooms, err := GetStaticRooms(defRoomIndx)
+		if err != nil {
+			log.L.Errorf(err.Addf("Couldn't get information for default room cache").Error())
+		}
+	*/
 
-	//get DEFAULT rooms
-	defaultRooms, err := GetStaticRooms(defRoomIndx)
-	if err != nil {
-		log.L.Errorf(err.Addf("Couldn't get information for default room cache").Error())
-	}
+	defaultDevs := make(map[string]statedefinition.StaticDevice)
+	defaultRooms := make(map[string]statedefinition.StaticRoom)
 
 	cache := makeCache(defaultDevs, defaultRooms)
 	Caches[DEFAULT] = &cache
 	log.L.Infof("Default Caches initialized. %v devices and %v rooms", len(defaultDevs), len(defaultRooms))
+
+	//we need to start update runner for this cache
+	cache.startUpdateRunner()
+
 	/*
 		//get DMPS devices
 		dmpsDevs, err := GetStaticDevices(dmpsDevIndx)

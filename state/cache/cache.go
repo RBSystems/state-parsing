@@ -15,6 +15,7 @@ type Cache interface {
 	GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E)
 	CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom, *nerr.E)
 	GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E)
+	StoreDeviceEvent(toSave sd.State) (bool, *nerr.E)
 }
 
 const (
@@ -41,19 +42,30 @@ type memorycache struct {
 
 	roomLock  *sync.RWMutex //lock for the room memorycache
 	roomCache map[string]sd.StaticRoom
+
+	DeviceDeltaChannel chan sd.SaticDevice
 }
 
 func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, *nerr.E) {
 
 	return false, nil
-	/*
-		c.deviceLock.RLock()
-		c.deviceCache[toSave.ID]
-		c.deviceLock.RUnlock()
+	c.deviceLock.RLock()
+	dev := c.deviceCache[toSave.ID]
+	c.deviceLock.RUnlock()
 
-		return false, nil
-	*/
+	updates, newdev, err := SetDeviceField(toSave.Key, toSave.Value, toSave.Time, dev)
+	if err != nil {
+		return false, err.Addf("Couldn't store event %v.", toSave)
+	}
 
+	//update if necessary
+	if updates {
+		c.deviceLock.Lock()
+		c.deviceCache[newdev.ID] = newdev
+		c.deviceLock.Unlock()
+	}
+
+	return updates, nil
 }
 
 /*CheckAndStoreDevice takes a device, will check to see if there are deltas compared to the values in the map, and store any changes.
