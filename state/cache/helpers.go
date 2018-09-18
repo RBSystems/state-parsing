@@ -39,7 +39,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	val := reflect.TypeOf(t)
 	log.L.Debugf("Kind: %v", val.Kind())
 
-	//check the update times case to see if we even need to proceed.a
+	//check the update times case to see if we even need to proceed.
 	v, ok := t.UpdateTimes[key]
 	if ok {
 		if v.After(updateTime) { //the current update is more recent

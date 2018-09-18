@@ -6,8 +6,7 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions/action"
-	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/state"
+	"github.com/byuoitav/state-parser/state/cache"
 )
 
 var (
@@ -48,19 +47,10 @@ func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
 
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:
-		go state.Forward(*v, elk.UpdateHeader{
-			Index: elk.GenerateIndexName(elk.OIT_AV_ALL),
-			Type:  "oitaveventprd",
-		})
+		cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(*v)
 
-		state.DistributeEvent(*v)
 	case elkreporting.ElkEvent:
-		go state.Forward(v, elk.UpdateHeader{
-			Index: elk.GenerateIndexName(elk.OIT_AV_ALL),
-			Type:  "oitaveventprd",
-		})
-
-		state.DistributeEvent(v)
+		cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(*v)
 	default:
 	}
 

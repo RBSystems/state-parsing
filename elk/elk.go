@@ -43,9 +43,7 @@ func init() {
 	}
 }
 
-func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
-	// format whole address
-	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)
+func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 	log.L.Debugf("Making ELK request against: %s", addr)
 
 	var reqBody []byte
@@ -98,4 +96,12 @@ func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E)
 	}
 
 	return respBody, nil
+
+}
+
+func MakeELKRequest(url, method, endpoint string, body interface{}) ([]byte, *nerr.E) {
+
+	// format whole address
+	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)
+	return MakeGenericELKRequest(addr, method, body)
 }

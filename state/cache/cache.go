@@ -6,6 +6,9 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
+	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/event-translator-microservice/elkreporting"
+	"github.com/byuoitav/state-parser/state/forwarding"
 	sd "github.com/byuoitav/state-parser/state/statedefinition"
 )
 
@@ -15,7 +18,9 @@ type Cache interface {
 	GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E)
 	CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom, *nerr.E)
 	GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E)
+
 	StoreDeviceEvent(toSave sd.State) (bool, *nerr.E)
+	StoreAndForwardDeviceEvent(event elkreporting.ElkEvent) (bool, *nerr.E)
 }
 
 const (
@@ -46,7 +51,47 @@ type memorycache struct {
 	DeviceDeltaChannel chan sd.SaticDevice
 }
 
-func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, *nerr.E) {
+func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
+
+	//Forward All
+	list := forwarding.GetManagersForType(forwarding.EVENTALL)
+	for i := range list {
+		list[i].Send(v)
+	}
+
+	//Cache
+	changes, newDev, err := StoreDeviceEvent(statedefinition.State{
+		ID:    v.TargetDevice.DeviceID,
+		Key:   v.Key,
+		Time:  v.Timestamp,
+		Value: v.Value,
+	})
+
+	if err != nil {
+		return false, err.Addf("Couldn't store and forward device event")
+	}
+
+	//if there are changes
+	if changes {
+		//get the event stuff to forward
+		list = forwarding.GetManagersForType(forwarding.EVENTDELTA)
+		for i := range list {
+			list[i].Send(v)
+		}
+		list = forwarding.GetManagersForType(forwarding.DEVICEDELTA)
+		for i := range list {
+			list[i].Send(newDev)
+		}
+	}
+
+	return changes, nil
+}
+
+/*
+	StoreDeviceEvent takes an event (key value) and stores the value in the field defined as key on a device.S
+	Defer use to CheckAndStoreDevice for internal use, as there are significant speed gains.
+*/
+func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E) {
 
 	return false, nil
 	c.deviceLock.RLock()
@@ -55,7 +100,7 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, *nerr.E) {
 
 	updates, newdev, err := SetDeviceField(toSave.Key, toSave.Value, toSave.Time, dev)
 	if err != nil {
-		return false, err.Addf("Couldn't store event %v.", toSave)
+		return false, sd.StaticDevice{}, err.Addf("Couldn't store event %v.", toSave)
 	}
 
 	//update if necessary
@@ -65,7 +110,7 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, *nerr.E) {
 		c.deviceLock.Unlock()
 	}
 
-	return updates, nil
+	return updates, newdev, nil
 }
 
 /*CheckAndStoreDevice takes a device, will check to see if there are deltas compared to the values in the map, and store any changes.
