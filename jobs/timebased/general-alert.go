@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/state"
+	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/statedefinition"
 )
 
 type GeneralAlertClearingJob struct {
@@ -78,16 +80,21 @@ func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
 
 	log.L.Debugf("[%s] Processing response data", GENERAL_ALERT_CLEARING)
 
-	alertcleared := state.State{
+	alertcleared := statedefinition.State{
 		Key:   "alerting",
 		Value: false,
 	}
+	F := false
 
 	// go through and mark each of these rooms as not alerting, in the general
 	for _, hit := range resp.Hits.Hits {
 		log.L.Debugf("Marking general alerting on %s as false.", hit.ID)
-		alertcleared.ID = hit.ID
-		state.BufferState(alertcleared, "device")
+
+		device := statedefinition.StaticDevice{Alerting: *F, ID: hit.ID}
+		device.UpdateTimes = make(map[string]time.Time)
+		device.UpdatTimes["alerting"] = time.Now()
+
+		cache.GetCache(cache.DEFAULT).CheckAndStoreDevice(device)
 	}
 
 	log.L.Debugf("[%s] Finished general alert clearing job.", GENERAL_ALERT_CLEARING)

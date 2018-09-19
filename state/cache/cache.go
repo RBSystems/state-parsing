@@ -1,9 +1,6 @@
 package cache
 
 import (
-	"sync"
-	"time"
-
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/v2/events"
@@ -42,13 +39,9 @@ func GetCache(cacheType string) *Cache {
 }
 
 type memorycache struct {
-	deviceLock  *sync.RWMutex //lock for the device memorycache
-	deviceCache map[string]sd.StaticDevice
+	deviceCache map[string]DeviceItemManager
 
-	roomLock  *sync.RWMutex //lock for the room memorycache
-	roomCache map[string]sd.StaticRoom
-
-	DeviceDeltaChannel chan sd.SaticDevice
+	roomCache map[string]DeviceItemManager
 }
 
 func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
@@ -93,24 +86,33 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 */
 func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E) {
 
-	return false, nil
-	c.deviceLock.RLock()
-	dev := c.deviceCache[toSave.ID]
-	c.deviceLock.RUnlock()
+	if len(toSave.ID) < 1 {
+		return false, sd.StaticDevice{}, nerr.Create("State must include device ID", "invaid-parameter")
+	}
 
-	updates, newdev, err := SetDeviceField(toSave.Key, toSave.Value, toSave.Time, dev)
-	if err != nil {
+	manager, ok := c.deviceCache[toSave.ID]
+	if !ok {
+		//we need to create a new manager and set it up
+		manager = GetNewManager(toSave.ID)
+	}
+
+	respChan := make(chan DeviceTransactionResponse, 1)
+
+	//send a request to update
+	manager.WriteRequests <- DeviceTransactionRequest{
+		EventEdit:    true,
+		Event:        toSave,
+		ResponseChan: respChan,
+	}
+
+	//wait for a response
+	resp := <-respChan
+
+	if resp.Error != nil {
 		return false, sd.StaticDevice{}, err.Addf("Couldn't store event %v.", toSave)
 	}
 
-	//update if necessary
-	if updates {
-		c.deviceLock.Lock()
-		c.deviceCache[newdev.ID] = newdev
-		c.deviceLock.Unlock()
-	}
-
-	return updates, newdev, nil
+	return resp.Changes, resp.NewDevice, nil
 }
 
 /*CheckAndStoreDevice takes a device, will check to see if there are deltas compared to the values in the map, and store any changes.
@@ -123,53 +125,43 @@ func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 		return false, sd.StaticDevice{}, nerr.Create("Static Device must have an ID field to be loaded into the databaset", "invalid-device")
 	}
 
-	//get the current value, if any, from the map
-	c.deviceLock.RLock()
-	v, ok := c.deviceCache[device.ID]
-	c.deviceLock.RUnlock()
+	manager, ok := c.deviceCache[device.ID]
 
 	if !ok {
-		//we ned to add to the map
-		if device.UpdateTimes == nil { //initialize update times if necessary
-			device.UpdateTimes = make(map[string]time.Time)
-		}
-
-		c.deviceLock.Lock()
-		c.deviceCache[device.ID] = device
-		c.deviceLock.Unlock()
-
-		//return the whole device
-		return true, device, nil
+		manager = GetNewManager(device.ID)
 	}
 
-	//we need to do a comparison, update any deltas, then return those fields
-	diff, merged, changes, err := sd.CompareDevices(v, device)
-	if err != nil {
-		return false, sd.StaticDevice{}, err.Addf("Couldn't compare devices")
-	}
-	if !changes {
-		return false, diff, nil
+	respChan := make(chan DeviceTransactionResponse, 1)
+
+	//send a request to update
+	manager.WriteRequests <- DeviceTransactionRequest{
+		MergeDeviceEdit: true,
+		MergeDevice:     device,
+		ResponseChan:    respChan,
 	}
 
-	//there were changes to save
-	c.deviceLock.Lock()
-	c.deviceCache[merged.ID] = device
-	c.deviceLock.Unlock()
+	//wait for a response
+	resp := <-respChan
 
-	return true, diff, nil
+	if resp.Error != nil {
+		return false, sd.StaticDevice{}, err.Addf("Couldn't store event %v.", toSave)
+	}
+
+	return resp.Changes, resp.NewDevice, nil
 }
 
 //GetDeviceRecord returns a device with the corresponding ID, if any is found in the memorycache
 func (c *memorycache) GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E) {
 
-	c.deviceLock.RLock()
-	v := c.deviceCache[deviceID]
-	c.deviceLock.RUnlock()
-	if len(v.ID) == 0 {
-		return v, nerr.Create("Not found", "not-found")
+	manager, ok := c.deviceCache[device.ID]
+	if !ok {
+		return sd.StaticDevice{}, nil
 	}
 
-	return v, nil
+	respChan := make(chan sd.StaticDevice, 1)
+
+	manager.ReadRequests <- respChan
+	return <-respChan, nil
 }
 
 /*CheckAndStoreRoom takes a room, will check to see if there are deltas compared to the values in the map, and store any changes.
@@ -183,22 +175,5 @@ func (c *memorycache) CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom
 
 //GetRoomRecord returns a room
 func (c *memorycache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
-	c.roomLock.Lock()
-	v := c.roomCache[roomID]
-	c.roomLock.RUnlock()
-	if len(v.Room) == 0 {
-		return v, nerr.Create("Not found", "not-found")
-	}
-	return v, nil
-}
-
-func getIndexesByType(cacheType string) (room, device string) {
-	switch cacheType {
-	case DEFAULT:
-		return "oit-static-av-rooms", "oit-static-av-devices"
-	case DMPS:
-		return "oit-static-av-rooms-legacy", "oit-static-av-devices-legacy"
-	default:
-		return "", ""
-	}
+	return sd.StaticRoom{}, nil
 }
