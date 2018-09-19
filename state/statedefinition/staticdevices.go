@@ -20,6 +20,9 @@ type StaticDevice struct {
 	Hostname                string           `json:"hostname,omitempty"`
 	LastStateReceived       time.Time        `json:"last-state-received,omitempty"`
 
+	DeviceType string `json:device-type"`
+	DeviceName string `json:device-name"`
+
 	//semi-common fields
 	LastHeartbeat time.Time `json:"last-heartbeat,omitempty"`
 	LastUserInput time.Time `json:"last-user-input,omitempty"`
@@ -59,46 +62,102 @@ type StaticDevice struct {
 func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDevice, changes bool, err *nerr.E) {
 
 	//common fields
-	diff.ID, merged.ID, changes = compareString(base.ID, new.ID, changes)
-	diff.Alerting, merged.Alerting, changes = compareBool(base.Alerting, new.Alerting, changes)
-	diff.Alerts, merged.Alerts, changes = compareAlerts(base.Alerts, new.Alerts, changes)
-	diff.NotificationsSuppressed, merged.NotificationsSuppressed, changes = compareBool(base.NotificationsSuppressed, new.NotificationsSuppressed, changes)
-	diff.Building, merged.Building, changes = compareString(base.Building, new.Building, changes)
-	diff.Room, merged.Room, changes = compareString(base.Room, new.Room, changes)
-	diff.Hostname, merged.Hostname, changes = compareString(base.Hostname, new.Hostname, changes)
-	diff.LastStateReceived, merged.LastStateReceived, changes = compareTime(base.LastStateReceived, new.LastStateReceived, changes)
+	if new.UpdateTimes["ID"].After(base.UpdateTimes["ID"]) {
+		diff.ID, merged.ID, changes = compareString(base.ID, new.ID, changes)
+	}
+	if new.UpdateTimes["alerting"].After(base.UpdateTimes["alerting"]) {
+		diff.Alerting, merged.Alerting, changes = compareBool(base.Alerting, new.Alerting, changes)
+	}
+
+	//handle alerts special case - it's alerts.<name>
+	diff.Alerts, merged.Alerts, changes = compareAlerts(base.Alerts, base.UpdateTimes, new.Alerts, new.UpdateTimes, changes)
+
+	if new.UpdateTimes["notifications-suppressed"].After(base.UpdateTimes["notifications-suppressed"]) {
+		diff.NotificationsSuppressed, merged.NotificationsSuppressed, changes = compareBool(base.NotificationsSuppressed, new.NotificationsSuppressed, changes)
+	}
+	if new.UpdateTimes["building"].After(base.UpdateTimes["building"]) {
+		diff.Building, merged.Building, changes = compareString(base.Building, new.Building, changes)
+	}
+	if new.UpdateTimes["room"].After(base.UpdateTimes["room"]) {
+		diff.Room, merged.Room, changes = compareString(base.Room, new.Room, changes)
+	}
+	if new.UpdateTimes["hostname"].After(base.UpdateTimes["hostname"]) {
+		diff.Hostname, merged.Hostname, changes = compareString(base.Hostname, new.Hostname, changes)
+	}
+	if new.UpdateTimes["last-state-recieved"].After(base.UpdateTimes["last-state-recieved"]) {
+		diff.LastStateReceived, merged.LastStateReceived, changes = compareTime(base.LastStateReceived, new.LastStateReceived, changes)
+	}
 
 	//semi-common fields
-	diff.LastHeartbeat, merged.LastHeartbeat, changes = compareTime(base.LastHeartbeat, new.LastHeartbeat, changes)
-	diff.LastUserInput, merged.LastUserInput, changes = compareTime(base.LastUserInput, new.LastUserInput, changes)
-	diff.Power, merged.Power, changes = compareString(base.Power, new.Power, changes)
+	if new.UpdateTimes["last-heartbeat"].After(base.UpdateTimes["last-heartbeat"]) {
+		diff.LastHeartbeat, merged.LastHeartbeat, changes = compareTime(base.LastHeartbeat, new.LastHeartbeat, changes)
+	}
+	if new.UpdateTimes["last-user-input"].After(base.UpdateTimes["last-user-input"]) {
+		diff.LastUserInput, merged.LastUserInput, changes = compareTime(base.LastUserInput, new.LastUserInput, changes)
+	}
+	if new.UpdateTimes["power"].After(base.UpdateTimes["power"]) {
+		diff.Power, merged.Power, changes = compareString(base.Power, new.Power, changes)
+	}
 
 	//Conrol processor specific fields
-	diff.Websocket, merged.Websocket, changes = compareString(base.Websocket, new.Websocket, changes)
-	diff.WebsocketCount, merged.WebsocketCount, changes = compareInt(base.WebsocketCount, new.WebsocketCount, changes)
+	if new.UpdateTimes["websocket"].After(base.UpdateTimes["websocket"]) {
+		diff.Websocket, merged.Websocket, changes = compareString(base.Websocket, new.Websocket, changes)
+	}
+	if new.UpdateTimes["websocket-count"].After(base.UpdateTimes["websocket-count"]) {
+		diff.WebsocketCount, merged.WebsocketCount, changes = compareInt(base.WebsocketCount, new.WebsocketCount, changes)
+	}
 
 	//Display specific fields
-	diff.Blanked, merged.Blanked, changes = compareBool(base.Blanked, new.Blanked, changes)
-	diff.Input, merged.Input, changes = compareString(base.Input, new.Input, changes)
-
+	if new.UpdateTimes["blanked"].After(base.UpdateTimes["blanked"]) {
+		diff.Blanked, merged.Blanked, changes = compareBool(base.Blanked, new.Blanked, changes)
+	}
+	if new.UpdateTimes["input"].After(base.UpdateTimes["input"]) {
+		diff.Input, merged.Input, changes = compareString(base.Input, new.Input, changes)
+	}
 	//Audio Device specific fields
-	diff.Muted, merged.Muted, changes = compareBool(base.Muted, new.Muted, changes)
-	diff.Volume, merged.Volume, changes = compareInt(base.Volume, new.Volume, changes)
+	if new.UpdateTimes["muted"].After(base.UpdateTimes["muted"]) {
+		diff.Muted, merged.Muted, changes = compareBool(base.Muted, new.Muted, changes)
+	}
+	if new.UpdateTimes["volume"].After(base.UpdateTimes["volume"]) {
+		diff.Volume, merged.Volume, changes = compareInt(base.Volume, new.Volume, changes)
+	}
 
 	//Microphone specific fields
-	diff.BatteryChargeBars, merged.BatteryChargeBars, changes = compareInt(base.BatteryChargeBars, new.BatteryChargeBars, changes)
-	diff.BatteryChargeMinutes, merged.BatteryChargeMinutes, changes = compareInt(base.BatteryChargeMinutes, new.BatteryChargeMinutes, changes)
-	diff.BatteryChargePercentage, merged.BatteryChargePercentage, changes = compareInt(base.BatteryChargePercentage, new.BatteryChargePercentage, changes)
-	diff.BatteryChargeHoursMinutes, merged.BatteryChargeHoursMinutes, changes = compareInt(base.BatteryChargeHoursMinutes, new.BatteryChargeHoursMinutes, changes)
-	diff.BatteryCycles, merged.BatteryCycles, changes = compareInt(base.BatteryCycles, new.BatteryCycles, changes)
-	diff.BatteryType, merged.BatteryType, changes = compareString(base.BatteryType, new.BatteryType, changes)
-	diff.Interference, merged.Interference, changes = compareString(base.Interference, new.Interference, changes)
+	if new.UpdateTimes["battery-charge-bars"].After(base.UpdateTimes["battery-charge-bars"]) {
+		diff.BatteryChargeBars, merged.BatteryChargeBars, changes = compareInt(base.BatteryChargeBars, new.BatteryChargeBars, changes)
+	}
+	if new.UpdateTimes["battery-charge-minutes"].After(base.UpdateTimes["battery-charge-minutes"]) {
+		diff.BatteryChargeMinutes, merged.BatteryChargeMinutes, changes = compareInt(base.BatteryChargeMinutes, new.BatteryChargeMinutes, changes)
+	}
+	if new.UpdateTimes["battery-charge-percentage"].After(base.UpdateTimes["battery-charge-percentage"]) {
+		diff.BatteryChargePercentage, merged.BatteryChargePercentage, changes = compareInt(base.BatteryChargePercentage, new.BatteryChargePercentage, changes)
+	}
+	if new.UpdateTimes["battery-chage-hours-minutes"].After(base.UpdateTimes["battery-chage-hours-minutes"]) {
+		diff.BatteryChargeHoursMinutes, merged.BatteryChargeHoursMinutes, changes = compareInt(base.BatteryChargeHoursMinutes, new.BatteryChargeHoursMinutes, changes)
+	}
+	if new.UpdateTimes["battery-cycles"].After(base.UpdateTimes["battery-cycles"]) {
+		diff.BatteryCycles, merged.BatteryCycles, changes = compareInt(base.BatteryCycles, new.BatteryCycles, changes)
+	}
+	if new.UpdateTimes["battery-type"].After(base.UpdateTimes["battery-type"]) {
+		diff.BatteryType, merged.BatteryType, changes = compareString(base.BatteryType, new.BatteryType, changes)
+	}
+	if new.UpdateTimes["interference"].After(base.UpdateTimes["interference"]) {
+		diff.Interference, merged.Interference, changes = compareString(base.Interference, new.Interference, changes)
+	}
 
 	//meta fields
-	diff.Control, merged.Control, changes = compareString(base.Control, new.Control, changes)
-	diff.EnableNotifications, merged.EnableNotifications, changes = compareString(base.EnableNotifications, new.EnableNotifications, changes)
-	diff.SuppressNotifications, merged.SuppressNotifications, changes = compareString(base.SuppressNotifications, new.SuppressNotifications, changes)
-	diff.ViewDashboard, merged.ViewDashboard, changes = compareString(base.ViewDashboard, new.ViewDashboard, changes)
+	if new.UpdateTimes["control"].After(base.UpdateTimes["control"]) {
+		diff.Control, merged.Control, changes = compareString(base.Control, new.Control, changes)
+	}
+	if new.UpdateTimes["enable-notifications"].After(base.UpdateTimes["enable-notifications"]) {
+		diff.EnableNotifications, merged.EnableNotifications, changes = compareString(base.EnableNotifications, new.EnableNotifications, changes)
+	}
+	if new.UpdateTimes["suppress-notifications"].After(base.UpdateTimes["suppress-notifications"]) {
+		diff.SuppressNotifications, merged.SuppressNotifications, changes = compareString(base.SuppressNotifications, new.SuppressNotifications, changes)
+	}
+	if new.UpdateTimes["view-dashboard"].After(base.UpdateTimes["view-dashboard"]) {
+		diff.ViewDashboard, merged.ViewDashboard, changes = compareString(base.ViewDashboard, new.ViewDashboard, changes)
+	}
 
 	return
 }

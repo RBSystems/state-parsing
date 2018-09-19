@@ -8,14 +8,20 @@ type Alert struct {
 	Message   string    `json:"message,omitempty"`
 }
 
-func compareAlerts(base, new map[string]Alert, changes bool) (diff map[string]Alert, merged map[string]Alert, c bool) {
+func compareAlerts(base, new map[string]Alert, basetime, newtime map[string]time.Time, changes bool) (diff map[string]Alert, merged map[string]Alert, c bool) {
 	for k, v := range new {
+
 		basev, ok := base[k]
 		if !ok {
 			c = true
 			base[k] = v
 			diff[k] = v
 		}
+
+		if newtime["alerts."+k].Before(basetime["alerts."+k]) {
+			continue
+		}
+
 		new, tempChanges := compareAlert(basev, v)
 		if tempChanges {
 			c = true
