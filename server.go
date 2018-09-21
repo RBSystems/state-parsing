@@ -3,21 +3,17 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
-	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/jobs"
-	"github.com/byuoitav/state-parser/state"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 )
 
 func main() {
 	go jobs.StartJobScheduler()
-	go state.StartDistributor(3 * time.Second)
 
 	port := ":10011"
 	router := echo.New()
@@ -54,14 +50,14 @@ func status(context echo.Context) error {
 }
 
 func addHeartbeat(context echo.Context) error {
-	var heartbeat events.Event
+	var heartbeat elkreporting.ElkEvent
 	err := context.Bind(&heartbeat)
 	if err != nil {
 		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid heartbeat: %v", err))
 	}
 	log.L.Debugf("Received heartbeat: %+v", heartbeat)
 
-	jobs.ProcessHeartbeat(heartbeat)
+	jobs.ProcessEvent(heartbeat)
 	return context.JSON(http.StatusOK, "Success.")
 }
 
@@ -84,11 +80,12 @@ func addDMPSEvent(context echo.Context) error {
 		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid dmps event: %v", err))
 	}
 	log.L.Debugf("Received DMPS event: %+v", event)
-
-	go state.Forward(event, elk.UpdateHeader{
-		Index: elk.GenerateIndexName(elk.DMPS_EVENT),
-		Type:  "dmpsevent",
-	})
+	/*
+		go state.Forward(event, elk.UpdateHeader{
+			Index: elk.GenerateIndexName(elk.DMPS_EVENT),
+			Type:  "dmpsevent",
+		})
+	*/
 	return context.JSON(http.StatusOK, "Success.")
 }
 
@@ -100,9 +97,11 @@ func addDMPSHeartbeat(context echo.Context) error {
 	}
 	log.L.Debugf("Received DMPS heartbeat: %+v", event)
 
-	go state.Forward(event, elk.UpdateHeader{
-		Index: elk.GenerateIndexName(elk.DMPS_HEARTBEAT),
-		Type:  "dmpsheartbeat",
-	})
+	/*
+		go state.Forward(event, elk.UpdateHeader{
+			Index: elk.GenerateIndexName(elk.DMPS_HEARTBEAT),
+			Type:  "dmpsheartbeat",
+		})
+	*/
 	return context.JSON(http.StatusOK, "Success.")
 }

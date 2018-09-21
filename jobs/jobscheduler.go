@@ -14,8 +14,6 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
-	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/state"
 )
 
 var (
@@ -132,11 +130,6 @@ func ProcessEvent(event elkreporting.ElkEvent) {
 	eventChan <- event
 }
 
-// ProcessHeartbeat adds <heartbeat> into a queue to be processed
-func ProcessHeartbeat(heartbeat events.Event) {
-	heartbeatChan <- heartbeat
-}
-
 // StartJobScheduler starts workers to run jobs, defined in the config.json file.
 func StartJobScheduler() {
 	maxWorkers, _ := strconv.Atoi(MaxWorkers)
@@ -182,13 +175,6 @@ func StartJobScheduler() {
 						}
 					}
 
-				case heartbeat := <-heartbeatChan:
-					// forward heartbeat
-					go state.Forward(heartbeat, elk.UpdateHeader{
-						Index: elk.GenerateIndexName(elk.OIT_AV_HEARTBEAT),
-						Type:  "heartbeat",
-					})
-					go state.DistributeHeartbeat(heartbeat)
 				}
 			}
 		}()

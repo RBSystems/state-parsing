@@ -43,7 +43,7 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	v, ok := t.UpdateTimes[key]
 	if ok {
 		if v.After(updateTime) { //the current update is more recent
-			log.L.Infof("Discarding update %v:%v for device %v as we have a more recent update", key, value, t.ID)
+			log.L.Infof("Discarding update %v:%v for device %v as we have a more recent update", key, value, t.DeviceID)
 			return false, t, nil
 		}
 	}

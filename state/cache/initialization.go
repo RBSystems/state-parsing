@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"sync"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
@@ -15,10 +14,8 @@ import (
 const MAX_SIZE = 10000
 
 func InitializeCaches() {
-	Caches = make(map[string]*Cache)
+	Caches = make(map[string]Cache)
 
-	defRoomIndx, defDevIndx := getIndexesByType(DEFAULT)
-	//dmpsRoomIndx, dmpsDevIndx := getIndexesByType(DMPS)
 	/*
 		//get DEFAULT devices
 		defaultDevs, err := GetStaticDevices(defDevIndx)
@@ -33,15 +30,12 @@ func InitializeCaches() {
 		}
 	*/
 
-	defaultDevs := make(map[string]statedefinition.StaticDevice)
-	defaultRooms := make(map[string]statedefinition.StaticRoom)
+	defaultDevs := []statedefinition.StaticDevice{}
+	defaultRooms := []statedefinition.StaticRoom{}
 
 	cache := makeCache(defaultDevs, defaultRooms)
-	Caches[DEFAULT] = &cache
+	Caches[DEFAULT] = cache
 	log.L.Infof("Default Caches initialized. %v devices and %v rooms", len(defaultDevs), len(defaultRooms))
-
-	//we need to start update runner for this cache
-	cache.startUpdateRunner()
 
 	/*
 		//get DMPS devices
@@ -127,23 +121,54 @@ func GetStaticRooms(index string) ([]statedefinition.StaticRoom, *nerr.E) {
 }
 
 func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.StaticRoom) Cache {
-	toReturn := memorycache{
-		deviceLock: &sync.RWMutex{},
-		roomLock:   &sync.RWMutex{},
-	}
+
+	toReturn := memorycache{}
 
 	//go through and create our maps
-	deviceMap := make(map[string]statedefinition.StaticDevice)
+	toReturn.deviceCache = make(map[string]DeviceItemManager)
 	for i := range devices {
-		deviceMap[devices[i].ID] = devices[i]
-	}
-	toReturn.deviceCache = deviceMap
+		//check for duplicate
+		v, ok := toReturn.deviceCache[devices[i].DeviceID]
+		if ok {
+			continue
+		}
+		v = GetNewDeviceManager(devices[i].DeviceID)
 
-	roomMap := make(map[string]statedefinition.StaticRoom)
-	for i := range rooms {
-		roomMap[rooms[i].Room] = rooms[i]
+		respChan := make(chan DeviceTransactionResponse, 1)
+		v.WriteRequests <- DeviceTransactionRequest{
+			MergeDeviceEdit: true,
+			MergeDevice:     devices[i],
+			ResponseChan:    respChan,
+		}
+		val := <-respChan
+
+		if val.Error != nil {
+			log.L.Errorf("Error initializing cache for %v: %v.", devices[i].DeviceID, val.Error.Error())
+		}
+		toReturn.deviceCache[devices[i].DeviceID] = v
 	}
-	toReturn.roomCache = roomMap
+
+	toReturn.roomCache = make(map[string]RoomItemManager)
+	for i := range rooms {
+		//check for duplicate
+		v, ok := toReturn.roomCache[devices[i].DeviceID]
+		if ok {
+			continue
+		}
+		v = GetNewRoomManager(rooms[i].RoomID)
+
+		respChan := make(chan RoomTransactionResponse, 1)
+		v.WriteRequests <- RoomTransactionRequest{
+			MergeRoom:    rooms[i],
+			ResponseChan: respChan,
+		}
+		val := <-respChan
+
+		if val.Error != nil {
+			log.L.Errorf("Error initializing cache for %v: %v.", rooms[i].RoomID, val.Error.Error())
+		}
+		toReturn.roomCache[rooms[i].RoomID] = v
+	}
 
 	return &toReturn
 }

@@ -12,8 +12,9 @@ import (
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
+	"github.com/byuoitav/state-parser/state/cache"
 	"github.com/byuoitav/state-parser/state/marking"
-	"github.com/byuoitav/state-parser/state/statedefinition"
+	sd "github.com/byuoitav/state-parser/state/statedefinition"
 )
 
 type HeartbeatLostJob struct {
@@ -83,11 +84,11 @@ type heartbeatLostQueryResponse struct {
 		Total    int     `json:"total,omitempty"`
 		MaxScore float64 `json:"max_score,omitempty"`
 		Hits     []struct {
-			Index  string                       `json:"_index,omitempty"`
-			Type   string                       `json:"_type,omitempty"`
-			ID     string                       `json:"_id,omitempty"`
-			Score  float64                      `json:"_score,omitempty"`
-			Source statedefinition.StaticDevice `json:"_source,omitempty"`
+			Index  string          `json:"_index,omitempty"`
+			Type   string          `json:"_type,omitempty"`
+			ID     string          `json:"_id,omitempty"`
+			Score  float64         `json:"_score,omitempty"`
+			Source sd.StaticDevice `json:"_source,omitempty"`
 		} `json:"hits,omitempty"`
 	} `json:"hits,omitempty"`
 }
@@ -222,14 +223,28 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 	// mark devices as alerting
 	log.L.Infof("Marking devices as alerting...")
 	for i := range devicesToUpdate {
-		//we need to make a copy of the Secondary Alert Structure so we can use it
-		secondaryAlertStructure := make(map[string]interface{})
-		secondaryAlertStructure["alert-sent"] = time.Now()
-		secondaryAlertStructure["alerting"] = true
-		secondaryAlertStructure["message"] = fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info)
+
+		//create the device
+
+		s := sd.StaticDevice{
+			DeviceID:    devicesToUpdate[i].Name,
+			UpdateTimes: make(map[string]time.Time),
+			Alerts:      make(map[string]sd.Alert),
+		}
+
+		s.UpdateTimes["alerts.lost-heartbeat"] = time.Now()
+		s.Alerts["lost-heartbeat"] = sd.Alert{
+			Alerting:  true,
+			AlertSent: time.Now(),
+			Message:   fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info),
+		}
 
 		log.L.Debugf("Marking device %v as alerting.", devicesToUpdate[i])
-		marking.MarkDevicesAsAlerting([]string{devicesToUpdate[i].Name}, elkAlertField, secondaryAlertStructure)
+		_, _, err := cache.GetCache(cache.DEFAULT).CheckAndStoreDevice(s)
+		if err != nil {
+			log.L.Errorf("Couldn't mark device %v as alerting: %v", devicesToUpdate[i].Info, err.Error())
+		}
+
 	}
 
 	//now we check to make sure that the alerts we're going to send aren't in rooms that are suppressed - build

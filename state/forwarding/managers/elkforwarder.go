@@ -41,9 +41,9 @@ type ElkTimeseriesForwarder struct {
 }
 
 //returns a default elk event forwarder after setting it up.
-func GetDefaultElkTimeSeries(URL string, index func() string) (*ElkEventForwarder, *nerr.E) {
+func GetDefaultElkTimeSeries(URL string, index func() string) *ElkTimeseriesForwarder {
 	toReturn := &ElkTimeseriesForwarder{
-		IncomingChannel: make(chan events.Event, 1000),
+		incomingChannel: make(chan events.Event, 1000),
 		interval:        time.Second * 3,
 		url:             URL,
 		index:           index,
@@ -52,7 +52,7 @@ func GetDefaultElkTimeSeries(URL string, index func() string) (*ElkEventForwarde
 	//start the manager
 	go toReturn.start()
 
-	return toReturn, nil
+	return toReturn
 }
 
 func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
@@ -61,21 +61,21 @@ func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 
 	switch e := toSend.(type) {
 	case *events.Event:
-		event = &*e
+		event = *e
 	case events.Event:
 		event = e
 	default:
 		return nerr.Create("Invalid type to send via an Elk Event Forwarder, must be an event from the byuoitav/common/events package.", "invalid-type")
 	}
 
-	incomingChannel <- event
+	e.incomingChannel <- event
 
 	return nil
 }
 
 //starts the manager and buffer.
 func (e *ElkTimeseriesForwarder) start() {
-	ticker := time.Ticker(e.interval)
+	ticker := time.NewTicker(e.interval)
 
 	for {
 		select {
@@ -87,17 +87,17 @@ func (e *ElkTimeseriesForwarder) start() {
 			e.buffer = []ElkBulkUpdateItem{}
 
 		case event := <-e.incomingChannel:
-			e.buffer(event)
+			e.bufferevent(event)
 		}
 	}
 }
 
 //NOT THREAD SAFE
-func (e *ElkTimeseriesForwarder) buffer(event events.Event) {
+func (e *ElkTimeseriesForwarder) bufferevent(event events.Event) {
 	e.buffer = append(e.buffer, ElkBulkUpdateItem{
 		Header: ElkUpdateHeader{Index: HeaderIndex{
 			Index: e.index(),
-			Type:  e._type,
+			Type:  "event",
 		}},
 		Doc: event,
 	})

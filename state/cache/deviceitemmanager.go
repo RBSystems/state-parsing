@@ -35,20 +35,20 @@ type DeviceTransactionResponse struct {
 	Error     *nerr.E         //if there were errors
 }
 
-func GetNewManager(id string) DeviceItemManager {
+func GetNewDeviceManager(id string) DeviceItemManager {
 	a := DeviceItemManager{
-		IncomingWriteRequests: make(chan DeviceTransactionRequest, 100),
-		IncomingReadRequests:  make(chan chan sd.StaticDevice, 100),
+		WriteRequests: make(chan DeviceTransactionRequest, 100),
+		ReadRequests:  make(chan chan sd.StaticDevice, 100),
 	}
 
-	device := sd.StaticDevice{ID: id, UpdateTimes: make(map[string]time.Time)}
-	go StartManager(a, device)
+	device := sd.StaticDevice{DeviceID: id, UpdateTimes: make(map[string]time.Time)}
+	go StartDeviceManager(a, device)
 	return a
 }
 
-func StartManager(m DeviceItemManager, device sd.StaticDevice) {
+func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 
-	var merged, diff sd.StaticDevie
+	var merged sd.StaticDevice
 	var changes bool
 	var err *nerr.E
 
@@ -57,13 +57,13 @@ func StartManager(m DeviceItemManager, device sd.StaticDevice) {
 		case write := <-m.WriteRequests:
 
 			if write.MergeDeviceEdit {
-				if write.MergeDevice.ID != device.ID {
+				if write.MergeDevice.DeviceID != device.DeviceID {
 					write.ResponseChan <- DeviceTransactionResponse{Error: nerr.Create("Can't chagne the ID of a device", "invalid-operation"), NewDevice: device, Changes: false}
 
 				}
-				diff, merged, changes, err = sd.CompareDevices(device, write.MergeDevice)
+				_, merged, changes, err = sd.CompareDevices(device, write.MergeDevice)
 
-				if err != nil {
+				if err != nil && write.ResponseChan != nil {
 					write.ResponseChan <- DeviceTransactionResponse{Error: err, Changes: false}
 					continue
 				}
@@ -76,7 +76,7 @@ func StartManager(m DeviceItemManager, device sd.StaticDevice) {
 					write.Event.Time,
 					device,
 				)
-				if err != nil {
+				if err != nil && write.ResponseChan != nil {
 					write.ResponseChan <- DeviceTransactionResponse{Error: err, Changes: false}
 					continue
 				}
@@ -88,11 +88,15 @@ func StartManager(m DeviceItemManager, device sd.StaticDevice) {
 				device = merged
 			}
 
-			write.ResponseChan <- DeviceTransactionResponse{Error: err, NewDevice: device, Changes: changes}
+			if write.ResponseChan != nil {
+				write.ResponseChan <- DeviceTransactionResponse{Error: err, NewDevice: device, Changes: changes}
+			}
 
 		case read := <-m.ReadRequests:
 			//just send it back
-			read <- device
+			if read != nil {
+				read <- device
+			}
 		}
 	}
 }

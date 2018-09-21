@@ -99,7 +99,7 @@ func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr
 
 }
 
-func MakeELKRequest(url, method, endpoint string, body interface{}) ([]byte, *nerr.E) {
+func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
 
 	// format whole address
 	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)

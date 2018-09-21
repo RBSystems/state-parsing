@@ -186,7 +186,7 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 
 	// mark devices as not alerting
 	log.L.Infof("Marking %v devices as not alerting", len(deviceIDsToUpdate))
-	marking.MarkDevicesAsNotHeartbeatAlerting(deviceIDsToUpdate)
+	marking.ClearHeartbeatAlerts(deviceIDsToUpdate)
 
 	/* send alerts */
 	// get the rooms

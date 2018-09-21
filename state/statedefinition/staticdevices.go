@@ -11,7 +11,7 @@ import (
 //*************************
 type StaticDevice struct {
 	//common fields
-	ID                      string           `json:"ID,omitempty"`
+	DeviceID                string           `json:"deviceID,omitempty"`
 	Alerting                *bool            `json:"alerting,omitempty"`
 	Alerts                  map[string]Alert `json:"alerts,omitempty"`
 	NotificationsSuppressed *bool            `json:"notifications-suppressed,omitempty"`
@@ -62,15 +62,15 @@ type StaticDevice struct {
 func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDevice, changes bool, err *nerr.E) {
 
 	//common fields
-	if new.UpdateTimes["ID"].After(base.UpdateTimes["ID"]) {
-		diff.ID, merged.ID, changes = compareString(base.ID, new.ID, changes)
+	if new.UpdateTimes["deviceID"].After(base.UpdateTimes["deviceID"]) {
+		diff.DeviceID, merged.DeviceID, changes = compareString(base.DeviceID, new.DeviceID, changes)
 	}
 	if new.UpdateTimes["alerting"].After(base.UpdateTimes["alerting"]) {
 		diff.Alerting, merged.Alerting, changes = compareBool(base.Alerting, new.Alerting, changes)
 	}
 
 	//handle alerts special case - it's alerts.<name>
-	diff.Alerts, merged.Alerts, changes = compareAlerts(base.Alerts, base.UpdateTimes, new.Alerts, new.UpdateTimes, changes)
+	diff.Alerts, merged.Alerts, changes = compareAlerts(base.Alerts, new.Alerts, base.UpdateTimes, new.UpdateTimes, changes)
 
 	if new.UpdateTimes["notifications-suppressed"].After(base.UpdateTimes["notifications-suppressed"]) {
 		diff.NotificationsSuppressed, merged.NotificationsSuppressed, changes = compareBool(base.NotificationsSuppressed, new.NotificationsSuppressed, changes)

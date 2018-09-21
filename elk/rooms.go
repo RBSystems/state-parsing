@@ -37,7 +37,7 @@ func GetRoomsBulk(rooms []string) ([]statedefinition.StaticRoom, *nerr.E) {
 	query.Query.IDS.Values = rooms
 
 	endpoint := fmt.Sprintf("/%s/_search", ROOM_INDEX)
-	body, err := MakeELKRequest("POST", endpoint, query)
+	body, err := MakeGenericELKRequest("POST", endpoint, query)
 	if err != nil {
 		return []statedefinition.StaticRoom{}, err.Addf("failed to get rooms bulk")
 	}
@@ -63,8 +63,8 @@ func AlertingSuppressedRooms(toCheck []statedefinition.StaticRoom) (map[string]b
 	//go through each room in the array and check if it's already alerting
 
 	for i := range toCheck {
-		alerting[toCheck[i].Room] = toCheck[i].Alerting
-		suppressed[toCheck[i].Room] = toCheck[i].NotificationsSuppressed
+		alerting[toCheck[i].RoomID] = *toCheck[i].Alerting
+		suppressed[toCheck[i].RoomID] = *toCheck[i].NotificationsSuppressed
 	}
 
 	return alerting, suppressed

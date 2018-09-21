@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parser/state/forwarding/managers"
 )
 
@@ -18,16 +19,20 @@ const (
 	DEVICEDELTA = "device-delta"
 )
 
-func GetManagersForType(string Type) []BufferManager {
-	switch Type {
-	case EVENTDELTA:
-		return getEventDeltaManagers()
-	case EVENTALL:
-		return getEventAllManagers()
-	case DEVICEDELTA:
-	}
+var managerMap map[string][]BufferManager
 
-	return []BufferManager{}
+func init() {
+	log.L.Infof("Initializing buffer managers")
+	managerMap = make(map[string][]BufferManager)
+
+	managerMap[EVENTDELTA] = getEventDeltaManagers()
+	managerMap[EVENTALL] = getEventAllManagers()
+	managerMap[DEVICEDELTA] = getDeviceDeltaManagers()
+	log.L.Infof("Buffer managers initialized")
+}
+
+func GetManagersForType(Type string) []BufferManager {
+	return managerMap[Type]
 }
 
 /*
@@ -38,7 +43,7 @@ func getEventDeltaManagers() []BufferManager {
 		//this is the Delta events forwarder
 		managers.GetDefaultElkTimeSeries(
 			os.Getenv("ELK_DIRECT_ADDRESS"),
-			func() {
+			func() string {
 				return fmt.Sprintf("oit-av-delta-events-%v", time.Now().Year)
 			},
 		//insert other forwarders here
@@ -54,7 +59,7 @@ func getEventAllManagers() []BufferManager {
 		//this is the All events forwarder
 		managers.GetDefaultElkTimeSeries(
 			os.Getenv("ELK_DIRECT_ADDRESS"),
-			func() {
+			func() string {
 				return fmt.Sprintf("oit-av-all-events-%v", time.Now().Format("20060102"))
 			},
 		//insert other forwarders here
