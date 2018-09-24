@@ -30,8 +30,9 @@ type JobConfig struct {
 
 // Trigger .
 type Trigger struct {
-	Type  string      `json:"type"`  // required for all
-	At    string      `json:"at"`    // required for 'time'
-	Every string      `json:"every"` // required for 'interval'
-	Match MatchConfig `json:"match"` // required for 'event'
+	Type     string          `json:"type"`      // required for all
+	At       string          `json:"at"`        // required for 'time'
+	Every    string          `json:"every"`     // required for 'interval'
+	NewMatch *NewMatchConfig `json:"new-match"` // required for 'event'
+	OldMatch *OldMatchConfig `json:"old-match"` // required for 'event'
 }

@@ -7,11 +7,6 @@ import (
 	"github.com/byuoitav/common/v2/events"
 )
 
-// MatchConfig .
-type MatchConfig interface {
-	doesEventMatch(interface{}) bool
-}
-
 // NewMatchConfig contains the logic for building/matching regex for events that come in
 type NewMatchConfig struct {
 	Count int
@@ -53,7 +48,7 @@ type NewMatchConfig struct {
 	}
 }
 
-func (r *runner) buildNewMatchRegex() MatchConfig {
+func (r *runner) buildNewMatchRegex() *NewMatchConfig {
 	m := &NewMatchConfig{}
 	m.Count = 0
 
@@ -121,12 +116,7 @@ func (r *runner) buildNewMatchRegex() MatchConfig {
 	return m
 }
 
-func (m *NewMatchConfig) doesEventMatch(e interface{}) bool {
-	event, ok := e.(*events.Event)
-	if !ok {
-		return false
-	}
-
+func (m *NewMatchConfig) doesEventMatch(event *events.Event) bool {
 	if m.Count == 0 {
 		return true
 	}

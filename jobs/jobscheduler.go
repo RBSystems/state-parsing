@@ -116,7 +116,11 @@ func init() {
 
 			// build the regex if it's a match type
 			if strings.EqualFold(runner.Trigger.Type, "new-match") {
-				runner.Trigger.Match = runner.buildNewMatchRegex()
+				runner.Trigger.NewMatch = runner.buildNewMatchRegex()
+			}
+
+			if strings.EqualFold(runner.Trigger.Type, "old-match") {
+				runner.Trigger.OldMatch = runner.buildOldMatchRegex()
 			}
 
 			log.L.Infof("Adding runner for job '%v', trigger #%v. Execution type: %v", runner.Config.Name, runner.TriggerIndex, runner.Trigger.Type)
@@ -157,7 +161,9 @@ func StartJobScheduler() {
 			go runner.runDaily()
 		case "interval":
 			go runner.runInterval()
-		case "match":
+		case "new-match":
+			matchRunners = append(matchRunners, runner)
+		case "old-match":
 			matchRunners = append(matchRunners, runner)
 		default:
 			log.L.Warnf("unknown trigger type '%v' for job %v|%v", runner.Trigger.Type, runner.Config.Name, runner.TriggerIndex)
@@ -175,14 +181,14 @@ func StartJobScheduler() {
 				case event := <-eventChan:
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
-						if matchRunners[i].Trigger.Match.doesEventMatch(&event) {
+						if matchRunners[i].Trigger.OldMatch.doesEventMatch(&event) {
 							go matchRunners[i].run(&event)
 						}
 					}
 				case event := <-v2EventChan:
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
-						if matchRunners[i].Trigger.Match.doesEventMatch(&event) {
+						if matchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
 							go matchRunners[i].run(&event)
 						}
 					}

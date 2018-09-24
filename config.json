@@ -43,7 +43,16 @@
         "name": "simple-forwarding",
         "triggers": [
             {
-                "type": "match"
+                "type": "new-match"
+            }
+        ],
+        "enabled": true
+    },
+    {
+        "name": "simple-forwarding",
+        "triggers": [
+            {
+                "type": "old-match"
             }
         ],
         "enabled": true
@@ -60,8 +69,8 @@
                 "every": "5m"
             },
             {
-                "type": "match",
-                "match": {
+                "type": "old-match",
+                "old-match": {
                     "hostname": "teton",
                     "event": {
                         "eventInfoKey": "button.*",
