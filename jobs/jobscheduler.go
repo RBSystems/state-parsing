@@ -115,8 +115,8 @@ func init() {
 			}
 
 			// build the regex if it's a match type
-			if strings.EqualFold(runner.Trigger.Type, "match") {
-				runner.buildMatchRegex()
+			if strings.EqualFold(runner.Trigger.Type, "new-match") {
+				runner.Trigger.Match = runner.buildNewMatchRegex()
 			}
 
 			log.L.Infof("Adding runner for job '%v', trigger #%v. Execution type: %v", runner.Config.Name, runner.TriggerIndex, runner.Trigger.Type)
@@ -130,7 +130,7 @@ func ProcessEvent(event elkreporting.ElkEvent) {
 	eventChan <- event
 }
 
-// ProcessEvent adds <event> into a queue to be processed
+// ProcessV2Event adds <event> into a queue to be processed
 func ProcessV2Event(event v2.Event) {
 	v2EventChan <- event
 }
@@ -175,16 +175,16 @@ func StartJobScheduler() {
 				case event := <-eventChan:
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
-						if matchRunners[i].doesEventMatch(&event) {
+						if matchRunners[i].Trigger.Match.doesEventMatch(&event) {
 							go matchRunners[i].run(&event)
 						}
 					}
 				case event := <-v2EventChan:
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
-
-						//we need to check on matching here too, but we have to rework type to do that.
-						go matchRunners[i].run(&event)
+						if matchRunners[i].Trigger.Match.doesEventMatch(&event) {
+							go matchRunners[i].run(&event)
+						}
 					}
 
 				}
