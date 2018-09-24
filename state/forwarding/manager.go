@@ -44,7 +44,7 @@ func getEventDeltaManagers() []BufferManager {
 		managers.GetDefaultElkTimeSeries(
 			os.Getenv("ELK_DIRECT_ADDRESS"),
 			func() string {
-				return fmt.Sprintf("oit-av-delta-events-%v", time.Now().Year)
+				return fmt.Sprintf("oit-av-delta-events-%v", time.Now().Year())
 			},
 		//insert other forwarders here
 		),

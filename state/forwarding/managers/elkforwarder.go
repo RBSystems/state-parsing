@@ -44,7 +44,7 @@ type ElkTimeseriesForwarder struct {
 func GetDefaultElkTimeSeries(URL string, index func() string) *ElkTimeseriesForwarder {
 	toReturn := &ElkTimeseriesForwarder{
 		incomingChannel: make(chan events.Event, 1000),
-		interval:        time.Second * 3,
+		interval:        time.Second * 30,
 		url:             URL,
 		index:           index,
 	}
@@ -81,7 +81,7 @@ func (e *ElkTimeseriesForwarder) start() {
 		select {
 		case <-ticker.C:
 			//send it off
-			log.L.Debugf("Sending bulk ELK update for %v", e.index)
+			log.L.Debugf("Sending bulk ELK update for %v", e.index())
 
 			go forward(e.url, e.buffer)
 			e.buffer = []ElkBulkUpdateItem{}
@@ -105,6 +105,13 @@ func (e *ElkTimeseriesForwarder) bufferevent(event events.Event) {
 
 func forward(url string, toSend []ElkBulkUpdateItem) {
 
+	log.L.Debugf("Sending and update for %v devices.", len(toSend))
+
+	//DEBUG
+	for i := range toSend {
+		log.L.Debugf("%+v", toSend[i])
+	}
+
 	log.L.Debugf("Building payload")
 	//build our payload
 	payload := []byte{}
@@ -127,6 +134,10 @@ func forward(url string, toSend []ElkBulkUpdateItem) {
 
 	//once our payload is built
 	log.L.Debugf("Payload built, sending...")
+
+	//DEBUG
+	return
+	//END DEBUG
 
 	url = strings.Trim(url, "/")         //remove any trailing slash so we can append it again
 	addr := fmt.Sprintf("%v/_bulk", url) //make the addr

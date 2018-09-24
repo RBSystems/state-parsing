@@ -6,6 +6,7 @@ import (
 
 	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
+	v2 "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/jobs"
 	"github.com/labstack/echo"
@@ -13,6 +14,7 @@ import (
 )
 
 func main() {
+	log.SetLevel("debug")
 	go jobs.StartJobScheduler()
 
 	port := ":10011"
@@ -26,6 +28,8 @@ func main() {
 	router.PUT("/event", addEvent)
 	router.POST("/heartbeat", addHeartbeat)
 	router.POST("/event", addEvent)
+
+	router.POST("/v2/event", addV2Event)
 
 	// dmps
 	router.POST("/dmps/event", addDMPSEvent)
@@ -70,6 +74,17 @@ func addEvent(context echo.Context) error {
 	log.L.Debugf("Received event: %+v", event)
 
 	jobs.ProcessEvent(event)
+	return context.JSON(http.StatusOK, "Success.")
+}
+func addV2Event(context echo.Context) error {
+	var event v2.Event
+	err := context.Bind(&event)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid event: %v", err))
+	}
+	log.L.Debugf("Received event: %+v", event)
+
+	jobs.ProcessV2Event(event)
 	return context.JSON(http.StatusOK, "Success.")
 }
 

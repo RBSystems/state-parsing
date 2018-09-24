@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
+	v2 "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
 )
@@ -23,9 +23,9 @@ var (
 	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
 
-	runners       []*runner
-	eventChan     chan elkreporting.ElkEvent
-	heartbeatChan chan events.Event
+	runners     []*runner
+	eventChan   chan elkreporting.ElkEvent
+	v2EventChan chan v2.Event
 )
 
 type runner struct {
@@ -130,6 +130,11 @@ func ProcessEvent(event elkreporting.ElkEvent) {
 	eventChan <- event
 }
 
+// ProcessEvent adds <event> into a queue to be processed
+func ProcessV2Event(event v2.Event) {
+	v2EventChan <- event
+}
+
 // StartJobScheduler starts workers to run jobs, defined in the config.json file.
 func StartJobScheduler() {
 	maxWorkers, _ := strconv.Atoi(MaxWorkers)
@@ -139,7 +144,7 @@ func StartJobScheduler() {
 	wg := sync.WaitGroup{}
 
 	eventChan = make(chan elkreporting.ElkEvent, maxQueue)
-	heartbeatChan = make(chan events.Event, maxQueue)
+	v2EventChan = make(chan v2.Event, maxQueue)
 
 	// start action managers
 	go actions.StartActionManagers()
@@ -173,6 +178,13 @@ func StartJobScheduler() {
 						if matchRunners[i].doesEventMatch(&event) {
 							go matchRunners[i].run(&event)
 						}
+					}
+				case event := <-v2EventChan:
+					// see if we need to execute any jobs from this event
+					for i := range matchRunners {
+
+						//we need to check on matching here too, but we have to rework type to do that.
+						go matchRunners[i].run(&event)
 					}
 
 				}

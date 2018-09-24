@@ -29,7 +29,7 @@ var Caches map[string]Cache
 func init() {
 	log.L.Infof("Initializing Caches")
 	//start
-	//	InitializeCaches()
+	InitializeCaches()
 	log.L.Infof("Caches Initialized.")
 }
 
@@ -65,6 +65,9 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 
 	//if there are changes and it's not a heartbeat event
 	if changes && !events.HasTag(v, events.Heartbeat) {
+
+		log.L.Debugf("Event resulted in changes")
+
 		//get the event stuff to forward
 		list = forwarding.GetManagersForType(forwarding.EVENTDELTA)
 		for i := range list {
@@ -91,8 +94,11 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 
 	manager, ok := c.deviceCache[toSave.ID]
 	if !ok {
+		log.L.Debugf("Creating a new device manager for %v", toSave.ID)
+
 		//we need to create a new manager and set it up
 		manager = GetNewDeviceManager(toSave.ID)
+		c.deviceCache[toSave.ID] = manager
 	}
 
 	respChan := make(chan DeviceTransactionResponse, 1)
