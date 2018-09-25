@@ -14,7 +14,7 @@ import (
 
 type ElkBulkUpdateItem struct {
 	Header ElkUpdateHeader
-	Doc    events.Event
+	Doc    interface{}
 }
 
 type ElkUpdateHeader struct {
@@ -24,6 +24,7 @@ type ElkUpdateHeader struct {
 type HeaderIndex struct {
 	Index string `json:"_index"`
 	Type  string `json:"_type"`
+	ID    string `json:"_id,omitempty"`
 }
 
 //there are other types, but we don't worry about them, since we don't really do any smart parsing at this time.
@@ -34,19 +35,19 @@ type BulkUpdateResponse struct {
 //NOT THREAD SAFE
 type ElkTimeseriesForwarder struct {
 	incomingChannel chan events.Event
-	interval        time.Duration //how often to send an update
-	url             string
-	index           func() string //function to get the index
 	buffer          []ElkBulkUpdateItem
+	ElkStaticForwarder
 }
 
 //returns a default elk event forwarder after setting it up.
 func GetDefaultElkTimeSeries(URL string, index func() string) *ElkTimeseriesForwarder {
 	toReturn := &ElkTimeseriesForwarder{
 		incomingChannel: make(chan events.Event, 1000),
-		interval:        time.Second * 30,
-		url:             URL,
-		index:           index,
+		ElkStaticForwarder: ElkStaticForwarder{
+			interval: time.Second * 30,
+			url:      URL,
+			index:    index,
+		},
 	}
 
 	//start the manager
@@ -75,6 +76,8 @@ func (e *ElkTimeseriesForwarder) Send(toSend interface{}) error {
 
 //starts the manager and buffer.
 func (e *ElkTimeseriesForwarder) start() {
+
+	log.L.Infof("Starting event forwarder for %v", e.index())
 	ticker := time.NewTicker(e.interval)
 
 	for {

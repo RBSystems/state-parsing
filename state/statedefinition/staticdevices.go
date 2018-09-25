@@ -47,13 +47,13 @@ type StaticDevice struct {
 	BatteryChargeHoursMinutes *int   `json:"battery-charge-hours-minutes,omitempty"`
 	BatteryCycles             *int   `json:"battery-cycles,omitempty"`
 	BatteryType               string `json:"battery-type,omitempty"`
-	Interference              string `json:"*intererence,omitempty"`
+	Interference              string `json:"intererence,omitempty"`
 
 	//meta fields for use in kibana
-	Control               string `json:"control,omitempty"`                //the Hostname - used in a URL
-	EnableNotifications   string `json:"enable-notifications,omitempty"`   //the Hostname - used in a URL
-	SuppressNotifications string `json:"suppress-notifications,omitempty"` //the Hostname - used in a URL
-	ViewDashboard         string `json:"ViewDashboard,omitempty"`          //the Hostname - used in a URL
+	Control               string `json:"control,omitempty"`                //the id - used in a URL
+	EnableNotifications   string `json:"enable-notifications,omitempty"`   //the id - used in a URL
+	SuppressNotifications string `json:"suppress-notifications,omitempty"` //the id - used in a URL
+	ViewDashboard         string `json:"ViewDashboard,omitempty"`          //the id - used in a URL
 
 	UpdateTimes map[string]time.Time `json:"field-update-times"`
 }

@@ -8,8 +8,8 @@ import (
 
 type StaticRoom struct {
 	//information fields
-	BuildingID string `json:"building,omitempty"`
-	RoomID     string `json:"room,omitempty"`
+	BuildingID string `json:"buildingID,omitempty"`
+	RoomID     string `json:"roomID,omitempty"`
 
 	//State fields
 	NotificationsSuppressed *bool `json:"notifications-suppressed,omitempty"`

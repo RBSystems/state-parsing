@@ -44,7 +44,7 @@ func getEventDeltaManagers() []BufferManager {
 		managers.GetDefaultElkTimeSeries(
 			os.Getenv("ELK_DIRECT_ADDRESS"),
 			func() string {
-				return fmt.Sprintf("oit-av-delta-events-%v", time.Now().Year())
+				return fmt.Sprintf("av-delta-events-%v", time.Now().Year())
 			},
 		//insert other forwarders here
 		),
@@ -60,12 +60,11 @@ func getEventAllManagers() []BufferManager {
 		managers.GetDefaultElkTimeSeries(
 			os.Getenv("ELK_DIRECT_ADDRESS"),
 			func() string {
-				return fmt.Sprintf("oit-av-all-events-%v", time.Now().Format("20060102"))
+				return fmt.Sprintf("av-all-events-%v", time.Now().Format("20060102"))
 			},
 		//insert other forwarders here
 		),
 	}
-	return []BufferManager{}
 }
 
 /*
@@ -75,5 +74,23 @@ func getEventAllManagers() []BufferManager {
 */
 func getDeviceDeltaManagers() []BufferManager {
 
-	return []BufferManager{}
+	return []BufferManager{
+		//Device static index
+		managers.GetDefaultElkStaticDeviceForwarder(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return "oit-static-av-devices-v2"
+			},
+			15*time.Second,
+			true,
+		),
+		managers.GetDefaultElkStaticDeviceForwarder(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return "oit-static-av-devices-history"
+			},
+			15*time.Second,
+			false,
+		),
+	}
 }

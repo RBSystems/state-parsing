@@ -40,9 +40,18 @@ func GetNewDeviceManager(id string) DeviceItemManager {
 		WriteRequests: make(chan DeviceTransactionRequest, 100),
 		ReadRequests:  make(chan chan sd.StaticDevice, 100),
 	}
+	F := false
 
 	//build a standard device
-	device := sd.StaticDevice{DeviceID: id, UpdateTimes: make(map[string]time.Time)}
+	device := sd.StaticDevice{
+		DeviceID:              id,
+		UpdateTimes:           make(map[string]time.Time),
+		Control:               id,
+		EnableNotifications:   id,
+		SuppressNotifications: id,
+		ViewDashboard:         id,
+		Alerting:              &F,
+	}
 
 	go StartDeviceManager(a, device)
 	return a
