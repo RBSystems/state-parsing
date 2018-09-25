@@ -45,7 +45,7 @@ type OldMatchConfig struct {
 	}
 }
 
-func (r *runner) buildOldMatchRegex() MatchConfig {
+func (r *runner) buildOldMatchRegex() *OldMatchConfig {
 	m := &OldMatchConfig{}
 	m.Count = 0
 
@@ -108,12 +108,7 @@ func (r *runner) buildOldMatchRegex() MatchConfig {
 	return m
 }
 
-func (m *OldMatchConfig) doesEventMatch(e interface{}) bool {
-	event, ok := e.(*elkreporting.ElkEvent)
-	if !ok {
-		return false
-	}
-
+func (m *OldMatchConfig) doesEventMatch(event *elkreporting.ElkEvent) bool {
 	if m.Count == 0 {
 		return true
 	}
