@@ -14,12 +14,12 @@ import (
 	sd "github.com/byuoitav/state-parser/state/statedefinition"
 )
 
+// RoomUpdateJob .
 type RoomUpdateJob struct {
 }
 
 const (
-	ROOM_UPDATE = "room-update"
-
+	roomUpdate      = "room-update"
 	roomUpdateQuery = `
 	{
 "_source": false,
@@ -117,44 +117,44 @@ type roomQueryResponse struct {
 	} `json:"aggregations"`
 }
 
+// Bucket bucket
 type Bucket struct {
 	Key      string `json:"key"`
 	DocCount int    `json:"doc_count"`
 }
 
-func (r *RoomUpdateJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (r *RoomUpdateJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting room update job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s,%s/_search", elk.DEVICE_INDEX, elk.ROOM_INDEX), []byte(roomUpdateQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run room update job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var data roomQueryResponse
 	gerr := json.Unmarshal(body, &data)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run room update job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	acts, err := r.processData(data)
+	err = r.processData(data, actionWrite)
 	if err != nil {
 		log.L.Warnf("failed to process room update data: %s", err.String())
-		return acts
 	}
 
 	log.L.Debugf("Finished room update job.")
-	return acts
 }
 
-func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *nerr.E) {
-	log.L.Debugf("[%s] Processing room update data.", ROOM_UPDATE)
+func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan action.Payload) *nerr.E {
+	log.L.Debugf("[%s] Processing room update data.", roomUpdate)
 
 	updateRoom := make(map[string]sd.StaticRoom)
 
 	for _, room := range data.Aggregations.Rooms.Buckets {
-		log.L.Debugf("[%s] Processing room: %s", ROOM_UPDATE, room.Key)
+		log.L.Debugf("[%s] Processing room: %s", roomUpdate, room.Key)
 
 		// make sure both indicies are there
 		if len(room.Index.Buckets) > 2 || len(room.Index.Buckets) == 0 {
@@ -163,7 +163,7 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 				indicies = append(indicies, index.Key)
 			}
 
-			log.L.Warnf("[%s] %s has >2 or 0 indicies. ignoring this room. indicies: %s", ROOM_UPDATE, room.Key, indicies)
+			log.L.Warnf("[%s] %s has >2 or 0 indicies. ignoring this room. indicies: %s", roomUpdate, room.Key, indicies)
 			continue
 
 		} else if len(room.Index.Buckets) == 1 {
@@ -258,7 +258,7 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 			updateRoom[room.Key] = updateRoomEntry
 		}
 
-		var roomAlerting *bool = nil
+		var roomAlerting *bool
 
 		//for taking pointers :eyeroll:
 		var True = true
@@ -310,7 +310,6 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 	}
 
 	// update the rooms
-
 	for key, room := range updateRoom {
 		log.L.Infof("Sending room %v for updates", key)
 
@@ -324,5 +323,5 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 
 	log.L.Debugf("Successfully updated room state.")
 
-	return []action.Payload{}, nil
+	return nil
 }

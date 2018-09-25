@@ -14,6 +14,7 @@ import (
 	v2 "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
+	"github.com/byuoitav/state-parser/actions/action"
 )
 
 var (
@@ -203,7 +204,16 @@ func StartJobScheduler() {
 
 func (r *runner) run(context interface{}) {
 	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
-	actions.Execute(r.Job.Run(context))
+
+	actionChan := make(chan action.Payload, 50)
+	go func() {
+		for action := range actionChan {
+			actions.Execute(action)
+		}
+	}()
+
+	r.Job.Run(context, actionChan)
+	close(actionChan)
 	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 

@@ -10,14 +10,16 @@ import (
 	"github.com/byuoitav/state-parser/actions/action"
 )
 
+// ScriptJob .
 type ScriptJob struct {
 	Path string
 }
 
-func (j *ScriptJob) Run(ctx interface{}) []action.Payload {
+// Run runs the script
+func (j *ScriptJob) Run(ctx interface{}, actionWrite chan action.Payload) {
 	if len(j.Path) == 0 {
 		log.L.Errorf("path for a script job wasn't set. can't run this job.")
-		return []action.Payload{}
+		return
 	}
 
 	// add context for timeout
@@ -34,9 +36,8 @@ func (j *ScriptJob) Run(ctx interface{}) []action.Payload {
 	err := cmd.Run()
 	if err != nil {
 		log.L.Warnf("error executing script %s: %s", j.Path, err)
-		return []action.Payload{}
+		return
 	}
 
 	log.L.Infof("Script %s ran successfuly.")
-	return []action.Payload{}
 }

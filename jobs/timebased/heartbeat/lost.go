@@ -17,12 +17,12 @@ import (
 	sd "github.com/byuoitav/state-parser/state/statedefinition"
 )
 
-type HeartbeatLostJob struct {
+// LostJob .
+type LostJob struct {
 }
 
 const (
-	elkAlertField  = "lost-heartbeat"
-	HEARTBEAT_LOST = "heartbeat-lost"
+	elkAlertField = "lost-heartbeat"
 
 	heartbeatLostQuery = `{
   "query": {
@@ -93,41 +93,39 @@ type heartbeatLostQueryResponse struct {
 	} `json:"hits,omitempty"`
 }
 
-func (h *HeartbeatLostJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (h *LostJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting heartbeat lost job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatLostQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run heartbeat lost job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var hrresp heartbeatLostQueryResponse
 	gerr := json.Unmarshal(body, &hrresp)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run heartbeat lost job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	acts, err := h.processResponse(hrresp)
+	err = h.processResponse(hrresp, actionWrite)
 	if err != nil {
 		log.L.Warn("failed to process heartbeat lost response: %s", err.String())
-		return acts
 	}
 
 	log.L.Debugf("Finished heartbeat lost job.")
-	return acts
 }
 
-func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]action.Payload, *nerr.E) {
+func (h *LostJob) processResponse(resp heartbeatLostQueryResponse, actionWrite chan action.Payload) *nerr.E {
 	roomsToCheck := make(map[string]bool)
 	devicesToUpdate := make(map[string]elk.DeviceUpdateInfo)
 	actionsByRoom := make(map[string][]action.Payload)
-	toReturn := []action.Payload{}
 
 	if len(resp.Hits.Hits) <= 0 {
-		log.L.Infof("[%s] No heartbeats lost", HEARTBEAT_LOST)
-		return toReturn, nil
+		log.L.Infof("[%s] No heartbeats lost", "heartbeat-lost")
+		return nil
 	}
 
 	/*
@@ -196,20 +194,20 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 	*/
 	rms, err := elk.GetRoomsBulk(func(vals map[string]bool) []string {
 		toReturn := []string{}
-		for k, _ := range vals {
+		for k := range vals {
 			toReturn = append(toReturn, k)
 		}
 		return toReturn
 	}(roomsToCheck))
 	if err != nil {
-		return toReturn, err
+		return err
 	}
 
 	alerting, suppressed := elk.AlertingSuppressedRooms(rms)
 
 	roomsToMark := []string{}
 	//check the rooms that we have in roomsToCheck to validate that we need to mark them as alerting
-	for k, _ := range roomsToCheck {
+	for k := range roomsToCheck {
 		if alerting[k] {
 			//add it to the list to mark as alerting
 			roomsToMark = append(roomsToMark, k)
@@ -258,11 +256,9 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 
 		//otherwise add them to the list to be returned
 		for i := range acts {
-			toReturn = append(toReturn, acts[i])
+			actionWrite <- acts[i]
 		}
 	}
 
-	log.L.Infof("Created %v actions.", len(toReturn))
-
-	return toReturn, nil
+	return nil
 }

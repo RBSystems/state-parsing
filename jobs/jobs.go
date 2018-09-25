@@ -9,16 +9,17 @@ import (
 
 // Job .
 type Job interface {
-	Run(ctx interface{}) []action.Payload
+	Run(ctx interface{}, actionWrite chan action.Payload)
 }
 
 // Jobs .
 var Jobs = map[string]Job{
-	heartbeat.HEARTBEAT_LOST:         &heartbeat.HeartbeatLostJob{},
-	heartbeat.HEARTBEAT_RESTORED:     &heartbeat.HeartbeatRestoredJob{},
-	timebased.ROOM_UPDATE:            &timebased.RoomUpdateJob{},
-	timebased.GENERAL_ALERT_CLEARING: &timebased.GeneralAlertClearingJob{},
-	eventbased.SimpleForwarding:      &eventbased.SimpleForwardingJob{},
+	"heartbeat-lost":         &heartbeat.LostJob{},
+	"heartbeat-restored":     &heartbeat.RestoredJob{},
+	"room-update":            &timebased.RoomUpdateJob{},
+	"general-alert-clearing": &timebased.GeneralAlertClearingJob{},
+	"simple-forwarding":      &eventbased.SimpleForwardingJob{},
+	"duplicate-errors":       &eventbased.DuplicateErrorsJob{},
 }
 
 // JobConfig .
