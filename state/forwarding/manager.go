@@ -75,5 +75,23 @@ func getEventAllManagers() []BufferManager {
 */
 func getDeviceDeltaManagers() []BufferManager {
 
-	return []BufferManager{}
+	return []BufferManager{
+		//Device static index
+		managers.GetDefaultElkStaticDeviceForwarder(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return "oit-static-av-devices-v2"
+			},
+			15*time.Second,
+			true,
+		),
+		managers.GetDefaultElkStaticDeviceForwarder(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return "oit-static-av-devices-history"
+			},
+			15*time.Second,
+			false,
+		),
+	}
 }
