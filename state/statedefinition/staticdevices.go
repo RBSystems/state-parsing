@@ -19,14 +19,14 @@ type StaticDevice struct {
 	Room                    string           `json:"room,omitempty"`
 	Hostname                string           `json:"hostname,omitempty"`
 	LastStateReceived       time.Time        `json:"last-state-received,omitempty"`
+	LastHeartbeat           time.Time        `json:"last-heartbeat,omitempty"`
+	LastUserInput           time.Time        `json:"last-user-input,omitempty"`
 
-	DeviceType string `json:device-type"`
-	DeviceName string `json:device-name"`
+	DeviceType string `json:"device-type,omitempty"`
+	DeviceName string `json:"device-name,omitempty"`
 
-	//semi-common fields
-	LastHeartbeat time.Time `json:"last-heartbeat,omitempty"`
-	LastUserInput time.Time `json:"last-user-input,omitempty"`
-	Power         string    `json:"power,omitempty"`
+	//semi-common fields LastHeartbeat time.Time `json:"last-heartbeat,omitempty"` LastUserInput time.Time `json:"last-user-input,omitempty"`
+	Power string `json:"power,omitempty"`
 
 	//Control Processor Specific Fields
 	Websocket      string `json:"websocket,omitempty"`
@@ -55,7 +55,7 @@ type StaticDevice struct {
 	SuppressNotifications string `json:"suppress-notifications,omitempty"` //the id - used in a URL
 	ViewDashboard         string `json:"ViewDashboard,omitempty"`          //the id - used in a URL
 
-	UpdateTimes map[string]time.Time `json:"field-update-times"`
+	UpdateTimes map[string]time.Time `json:"field-state-received"`
 }
 
 //CompareDevices takes a base devices, and calculates the difference between the two, returning it in the staticDevice return value. Bool denotes if there were any differences
@@ -84,9 +84,6 @@ func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDev
 	if new.UpdateTimes["hostname"].After(base.UpdateTimes["hostname"]) {
 		diff.Hostname, merged.Hostname, changes = compareString(base.Hostname, new.Hostname, changes)
 	}
-	if new.UpdateTimes["last-state-recieved"].After(base.UpdateTimes["last-state-recieved"]) {
-		diff.LastStateReceived, merged.LastStateReceived, changes = compareTime(base.LastStateReceived, new.LastStateReceived, changes)
-	}
 
 	//semi-common fields
 	if new.UpdateTimes["last-heartbeat"].After(base.UpdateTimes["last-heartbeat"]) {
@@ -94,6 +91,9 @@ func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDev
 	}
 	if new.UpdateTimes["last-user-input"].After(base.UpdateTimes["last-user-input"]) {
 		diff.LastUserInput, merged.LastUserInput, changes = compareTime(base.LastUserInput, new.LastUserInput, changes)
+	}
+	if new.UpdateTimes["last-state-received"].After(base.UpdateTimes["last-state-received"]) {
+		diff.LastStateReceived, merged.LastStateReceived, changes = compareTime(base.LastStateReceived, new.LastStateReceived, changes)
 	}
 	if new.UpdateTimes["power"].After(base.UpdateTimes["power"]) {
 		diff.Power, merged.Power, changes = compareString(base.Power, new.Power, changes)

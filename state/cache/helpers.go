@@ -218,3 +218,12 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 	//if we made it here, it means that the field isn't found
 	return false, t, nerr.Create(fmt.Sprintf("Field %v isn't a valid field for a device.", key), "field-error")
 }
+
+func HasTag(toCheck string, tags []string) bool {
+	for i := range tags {
+		if toCheck == tags[i] {
+			return true
+		}
+	}
+	return false
+}

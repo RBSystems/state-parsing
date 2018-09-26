@@ -19,7 +19,7 @@ func TestSetDeviceField(t *testing.T) {
 		t.Error(err.Error())
 		t.FailNow()
 	}
-	assert.Equal(t, new.ID, "This is a test")
+	assert.Equal(t, new.DeviceID, "This is a test")
 
 	update, new, err = SetDeviceField("ID", "This is a test", time.Now(), new)
 	if err != nil {
@@ -34,7 +34,7 @@ func TestSetDeviceField(t *testing.T) {
 		t.FailNow()
 	}
 	assert.Equal(t, false, update)
-	assert.NotEqual(t, new.ID, "Shouldn't make it in.")
+	assert.NotEqual(t, new.DeviceID, "Shouldn't make it in.")
 
 	update, new, err = SetDeviceField("input", "abc", time.Now().Add(-1*time.Hour), new)
 	if err != nil {
@@ -250,7 +250,7 @@ func BenchmarkUpdateDevice(b *testing.B) {
 	var update bool
 
 	for n := 0; n < b.N; n++ {
-		update, base, _ = SetDeviceField("ID", "This is a test", time.Now(), base)
+		update, base, _ = SetDeviceField("DeviceID", "This is a test", time.Now(), base)
 	}
 	UpdateRes = update
 }
@@ -258,7 +258,7 @@ func BenchmarkUpdateDevice(b *testing.B) {
 func BenchmarkCompareDevice(b *testing.B) {
 	log.SetLevel("fatal")
 	base := sd.StaticDevice{}
-	new := sd.StaticDevice{ID: "This is a test"}
+	new := sd.StaticDevice{DeviceID: "This is a test"}
 
 	var update bool
 

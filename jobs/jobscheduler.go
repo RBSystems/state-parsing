@@ -155,6 +155,7 @@ func StartJobScheduler() {
 
 	// start runners
 	var matchRunners []*runner
+	var v2MatchRunners []*runner
 	for _, runner := range runners {
 		switch runner.Trigger.Type {
 		case "daily":
@@ -162,7 +163,7 @@ func StartJobScheduler() {
 		case "interval":
 			go runner.runInterval()
 		case "new-match":
-			matchRunners = append(matchRunners, runner)
+			v2MatchRunners = append(v2MatchRunners, runner)
 		case "old-match":
 			matchRunners = append(matchRunners, runner)
 		default:
@@ -187,9 +188,9 @@ func StartJobScheduler() {
 					}
 				case event := <-v2EventChan:
 					// see if we need to execute any jobs from this event
-					for i := range matchRunners {
-						if matchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
-							go matchRunners[i].run(&event)
+					for i := range v2MatchRunners {
+						if v2MatchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
+							go v2MatchRunners[i].run(&event)
 						}
 					}
 

@@ -1,16 +1,19 @@
 package cache
 
 import (
+	"strings"
 	"time"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
+	"github.com/byuoitav/common/v2/events"
 	sd "github.com/byuoitav/state-parser/state/statedefinition"
+	"github.com/fatih/color"
 )
 
 /*
 Device Item Manager handles managing access to a single device in a cache. Changes to the device are submitted via the IncomingWriteChan and reads are submitted via the IncomingReadChan.
-*/
-type DeviceItemManager struct {
+*/type DeviceItemManager struct {
 	WriteRequests chan DeviceTransactionRequest //channel to buffer changes to the device.
 	ReadRequests  chan chan sd.StaticDevice
 }
@@ -40,11 +43,14 @@ func GetNewDeviceManager(id string) DeviceItemManager {
 		WriteRequests: make(chan DeviceTransactionRequest, 100),
 		ReadRequests:  make(chan chan sd.StaticDevice, 100),
 	}
-	F := false
 
-	//build a standard device
+	rm := strings.Split(id, "-")
+
+	F := false //build a standard device
 	device := sd.StaticDevice{
 		DeviceID:              id,
+		Room:                  rm[0] + "-" + rm[1],
+		Building:              rm[0],
 		UpdateTimes:           make(map[string]time.Time),
 		Control:               id,
 		EnableNotifications:   id,
@@ -69,7 +75,7 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 
 			if write.MergeDeviceEdit {
 				if write.MergeDevice.DeviceID != device.DeviceID {
-					write.ResponseChan <- DeviceTransactionResponse{Error: nerr.Create("Can't chagne the ID of a device", "invalid-operation"), NewDevice: device, Changes: false}
+					write.ResponseChan <- DeviceTransactionResponse{Error: nerr.Create("Can't change the ID of a device", "invalid-operation"), NewDevice: device, Changes: false}
 
 				}
 				_, merged, changes, err = sd.CompareDevices(device, write.MergeDevice)
@@ -92,6 +98,13 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 					continue
 				}
 
+				log.L.Debugf(color.HiBlueString("Tags: %v", write.Event.Tags))
+
+				//if it has a user-generated tag
+				if HasTag(events.UserGenerated, write.Event.Tags) {
+					merged.LastUserInput = write.Event.Time
+				}
+				merged.LastStateReceived = write.Event.Time
 			}
 
 			if changes {
