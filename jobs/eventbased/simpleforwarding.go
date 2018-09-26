@@ -37,22 +37,18 @@ func init() {
 	log.L.Infof("\n\nForwarding URLs:\n\tAPI Forward:\t\t%v\n\tSecond API Forward\t\t%v\n\tHeartbeat Forward:\t%v\n", APIForward, SecondAPIForward, HeartbeatForward)
 }
 
-// SimpleForwarding is the name of this job
-const SimpleForwarding = "simple-forwarding"
-
 // SimpleForwardingJob is exported to add it as a job.
 type SimpleForwardingJob struct {
 }
 
 // Run fowards events to an elk timeseries index.
-func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
+func (*SimpleForwardingJob) Run(context interface{}, actionWrite chan action.Payload) {
 
 	//	cache.GetCache(cache.DEFAULT)
 
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:
 		//translate
-
 		cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(TranslateEvent(*v))
 	case elkreporting.ElkEvent:
 		//translate
@@ -64,7 +60,7 @@ func (*SimpleForwardingJob) Run(context interface{}) []action.Payload {
 	default:
 	}
 
-	return nil
+	return
 }
 
 func TranslateEvent(e elkreporting.ElkEvent) v2.Event {

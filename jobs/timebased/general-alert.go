@@ -13,12 +13,11 @@ import (
 	"github.com/byuoitav/state-parser/state/statedefinition"
 )
 
+// GeneralAlertClearingJob .
 type GeneralAlertClearingJob struct {
 }
 
 const (
-	GENERAL_ALERT_CLEARING = "general-alert-clearing"
-
 	generalAlertClearingQuery = `{
 	"_source": [
 		"hostname"
@@ -61,24 +60,25 @@ type generalAlertClearingQueryResponse struct {
 	} `json:"hits"`
 }
 
-func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (g *GeneralAlertClearingJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting general-alert clearing job")
 
 	// The query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(generalAlertClearingQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run general alert clearing job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var resp generalAlertClearingQueryResponse
 	gerr := json.Unmarshal(body, &resp)
 	if err != nil {
 		log.L.Warn("couldn't unmarshal elk response to run general alert clearing job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	log.L.Debugf("[%s] Processing response data", GENERAL_ALERT_CLEARING)
+	log.L.Debugf("[%s] Processing response data", "general-alert-clearing")
 
 	F := false
 
@@ -93,6 +93,5 @@ func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
 		cache.GetCache(cache.DEFAULT).CheckAndStoreDevice(device)
 	}
 
-	log.L.Debugf("[%s] Finished general alert clearing job.", GENERAL_ALERT_CLEARING)
-	return []action.Payload{}
+	log.L.Debugf("[%s] Finished general alert clearing job.", "general-alert-clearing")
 }

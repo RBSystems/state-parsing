@@ -58,6 +58,20 @@
         "enabled": true
     },
     {
+        "name": "duplicate-errors",
+        "triggers": [
+            {
+                "type": "new-match",
+                "new-match": {
+                    "tags": [
+                        "error"
+                    ]
+                }
+            }
+        ],
+        "enabled": true
+    },
+    {
         "name": "room-update.py",
         "triggers": [
             {

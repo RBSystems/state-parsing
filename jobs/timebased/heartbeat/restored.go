@@ -17,23 +17,11 @@ import (
 	"github.com/byuoitav/state-parser/state/statedefinition"
 )
 
-var False *bool
-var True *bool
-
-func init() {
-	tmp := false
-	False = &tmp
-
-	tmpt := true
-	True = &tmpt
-}
-
-type HeartbeatRestoredJob struct {
+// RestoredJob .
+type RestoredJob struct {
 }
 
 const (
-	HEARTBEAT_RESTORED = "heartbeat-restored"
-
 	heartbeatRestoredQuery = `
 	{  "_source": [
     "hostname",
@@ -88,43 +76,41 @@ type heartbeatRestoredQueryResponse struct {
 	} `json:"hits,omitempty"`
 }
 
-func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (h *RestoredJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting heartbeat restored job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatRestoredQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run heartbeat restored job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var hrresp heartbeatRestoredQueryResponse
 	gerr := json.Unmarshal(body, &hrresp)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run heartbeat restored job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	acts, err := h.processResponse(hrresp)
+	err = h.processResponse(hrresp, actionWrite)
 	if err != nil {
 		log.L.Warn("failed to process heartbeat restored response: %s", err.String())
-		return acts
 	}
 
 	log.L.Debugf("Finished heartbeat restored job.")
-	return acts
 }
 
-func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryResponse) ([]action.Payload, *nerr.E) {
+func (h *RestoredJob) processResponse(resp heartbeatRestoredQueryResponse, actionWrite chan action.Payload) *nerr.E {
 	roomsToCheck := make(map[string]bool)
-	// devicesToUpdate :=
 	deviceIDsToUpdate := []string{}
 	actionsByRoom := make(map[string][]action.Payload)
-	toReturn := []action.Payload{}
+	//	toReturn := []action.Payload{}
 
 	// there are no devices that have heartbeats restored
 	if len(resp.Hits.Hits) <= 0 {
-		log.L.Infof("[%s] No heartbeats restored", HEARTBEAT_RESTORED)
-		return toReturn, nil
+		log.L.Infof("[%s] No heartbeats restored", "heartbeat-restored")
+		return nil
 	}
 
 	// loop through all the devices that have had restored heartbeats
@@ -192,13 +178,13 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 	// get the rooms
 	rooms, err := elk.GetRoomsBulk(func(vals map[string]bool) []string {
 		ret := []string{}
-		for k, _ := range vals {
+		for k := range vals {
 			ret = append(ret, k)
 		}
 		return ret
 	}(roomsToCheck))
 	if err != nil {
-		return toReturn, err
+		return err
 	}
 
 	// figure out if a room's alerts are suppressed
@@ -212,9 +198,9 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 		}
 
 		for i := range acts {
-			toReturn = append(toReturn, acts[i])
+			actionWrite <- acts[i]
 		}
 	}
 
-	return toReturn, nil
+	return nil
 }

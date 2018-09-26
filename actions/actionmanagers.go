@@ -45,11 +45,9 @@ func StartActionManagers() {
 }
 
 // Execute queues a slice of actions to be executed.
-func Execute(actions []action.Payload) {
-	for i := range actions {
-		if _, ok := ingestionMap[actions[i].Type]; ok {
-			ingestionMap[actions[i].Type] <- actions[i]
-		}
+func Execute(actions action.Payload) {
+	if _, ok := ingestionMap[actions.Type]; ok {
+		ingestionMap[actions.Type] <- actions
 	}
 }
 
