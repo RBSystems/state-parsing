@@ -36,7 +36,7 @@ func GetRoomsBulk(rooms []string) ([]statedefinition.StaticRoom, *nerr.E) {
 	query.Query.IDS.Type = "room"
 	query.Query.IDS.Values = rooms
 
-	endpoint := fmt.Sprintf("/%s/_search", ROOM_INDEX)
+	endpoint := fmt.Sprintf("/%s/_search", "oit-av-static-rooms")
 	body, err := MakeGenericELKRequest("POST", endpoint, query)
 	if err != nil {
 		return []statedefinition.StaticRoom{}, err.Addf("failed to get rooms bulk")

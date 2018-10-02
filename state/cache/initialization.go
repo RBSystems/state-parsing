@@ -11,18 +11,20 @@ import (
 	"github.com/byuoitav/state-parser/state/statedefinition"
 )
 
-const MAX_SIZE = 10000
+const maxSize = 10000
 
+const defaultDevIndex = "oit-static-av-devices-v2"
+
+//InitializeCaches initializes the caches with data from ELK
 func InitializeCaches() {
 	Caches = make(map[string]Cache)
 
+	//get DEFAULT devices
+	defaultDevs, err := GetStaticDevices(defaultDevIndex)
+	if err != nil {
+		log.L.Errorf(err.Addf("Couldn't get information for default device cache").Error())
+	}
 	/*
-		//get DEFAULT devices
-		defaultDevs, err := GetStaticDevices(defDevIndx)
-		if err != nil {
-			log.L.Errorf(err.Addf("Couldn't get information for default device cache").Error())
-		}
-
 		//get DEFAULT rooms
 		defaultRooms, err := GetStaticRooms(defRoomIndx)
 		if err != nil {
@@ -30,7 +32,7 @@ func InitializeCaches() {
 		}
 	*/
 
-	defaultDevs := []statedefinition.StaticDevice{}
+	//defaultDevs := []statedefinition.StaticDevice{}
 	defaultRooms := []statedefinition.StaticRoom{}
 
 	cache := makeCache(defaultDevs, defaultRooms)
@@ -57,9 +59,11 @@ func InitializeCaches() {
 	*/
 }
 
+//GetStaticDevices queries the provided index in ELK and unmarshals the records into a list of static devices
 func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
+	log.L.Debugf("Getting device information from %v", index)
 	query := elk.GenericQuery{
-		Size: MAX_SIZE,
+		Size: maxSize,
 	}
 
 	b, er := json.Marshal(query)
@@ -83,6 +87,10 @@ func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
 	var toReturn []statedefinition.StaticDevice
 	for i := range queryResp.Hits.Wrappers {
 		toReturn = append(toReturn, queryResp.Hits.Wrappers[i].Device)
+		//DEBUG
+		if queryResp.Hits.Wrappers[i].Device.DeviceID == "ITB-1101-D1" {
+			log.L.Debugf("%v", queryResp.Hits.Wrappers[i].Device.UpdateTimes["power"])
+		}
 	}
 
 	return toReturn, nil
@@ -90,7 +98,7 @@ func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
 
 func GetStaticRooms(index string) ([]statedefinition.StaticRoom, *nerr.E) {
 	query := elk.GenericQuery{
-		Size: MAX_SIZE,
+		Size: maxSize,
 	}
 
 	b, er := json.Marshal(query)
@@ -132,7 +140,17 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 		if ok {
 			continue
 		}
-		v = GetNewDeviceManager(devices[i].DeviceID)
+
+		if len(devices[i].DeviceID) < 1 {
+			log.L.Errorf("DeviceID cannot be blank. Device: %+v", devices[i])
+			continue
+		}
+
+		v, err := GetNewDeviceManagerWithDevice(devices[i])
+		if err != nil {
+			log.L.Errorf("Cannot create device manager for %v: %v", devices[i].DeviceID, err.Error())
+			continue
+		}
 
 		respChan := make(chan DeviceTransactionResponse, 1)
 		v.WriteRequests <- DeviceTransactionRequest{
