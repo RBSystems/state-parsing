@@ -44,10 +44,10 @@ func StartActionManagers() {
 	wg.Wait()
 }
 
-// Execute queues a slice of actions to be executed.
-func Execute(actions action.Payload) {
-	if _, ok := ingestionMap[actions.Type]; ok {
-		ingestionMap[actions.Type] <- actions
+// Execute queues an actions to be executed.
+func Execute(action action.Payload) {
+	if _, ok := ingestionMap[action.Type]; ok {
+		ingestionMap[action.Type] <- action
 	}
 }
 

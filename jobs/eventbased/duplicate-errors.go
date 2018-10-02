@@ -1,9 +1,14 @@
 package eventbased
 
 import (
+	"fmt"
+	"time"
+
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/jobs/eventstore"
 )
 
@@ -24,6 +29,8 @@ var eventStore *eventstore.Store
 // build event store in init
 func init() {
 	eventStore = eventstore.New(areThereDuplicateErrors)
+	eventStore.SetPrune(eventstore.PruneDurationAgo(time.Minute * 20))
+	eventStore.SetSort(eventstore.SortByTime)
 }
 
 // Run is executed each time an event comes through
@@ -42,37 +49,30 @@ func (*DuplicateErrorsJob) Run(context interface{}, actionWrite chan action.Payl
 	}
 
 	eventStore.Store(k, *event)
-	/*
-		// send the alerts
-		// clear the key from the map
-		seen.Lock()
-		delete(seen.at, k)
-		seen.Unlock()
+}
 
-		// fire off alerts
-		actionWrite <- action.Payload{
+func areThereDuplicateErrors(events []events.Event) {
+	if len(events) >= maxAlertCount {
+		actions.Execute(action.Payload{
 			Type:   actions.Slack,
-			Device: event.TargetDevice.DeviceID,
+			Device: events[0].TargetDevice.DeviceID,
 			Content: slack.Attachment{
-				Fallback: fmt.Sprintf("Duplicate errors detected on %v", event.TargetDevice.DeviceID),
+				Fallback: fmt.Sprintf("Duplicate errors detected on %v", events[0].TargetDevice.DeviceID),
 				Title:    "Error",
 				Fields: []slack.AlertField{
 					slack.AlertField{
 						Title: "Key",
-						Value: event.Key,
+						Value: events[0].Key,
 						Short: true,
 					},
 					slack.AlertField{
 						Title: "Value",
-						Value: event.Value,
+						Value: events[0].Value,
 						Short: true,
 					},
 				},
 				Color: "danger",
 			},
-		}
-	*/
-}
-
-func areThereDuplicateErrors(events []events.Event) {
+		})
+	}
 }
