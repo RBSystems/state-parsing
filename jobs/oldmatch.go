@@ -3,7 +3,6 @@ package jobs
 import (
 	"fmt"
 	"regexp"
-	"time"
 
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 )
@@ -122,7 +121,7 @@ func (m *OldMatchConfig) doesEventMatch(event *elkreporting.ElkEvent) bool {
 
 	if m.Regex.Timestamp != nil {
 		reg := m.Regex.Timestamp.Copy()
-		if !reg.MatchString(event.Timestamp.Format(time.RFC3339)) {
+		if !reg.MatchString(event.Timestamp) {
 			return false
 		}
 	}

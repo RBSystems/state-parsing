@@ -2,6 +2,7 @@ package eventbased
 
 import (
 	"os"
+	"time"
 
 	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
@@ -62,9 +63,11 @@ func (*SimpleForwardingJob) Run(context interface{}, actionWrite chan action.Pay
 }
 
 func TranslateEvent(e elkreporting.ElkEvent) v2.Event {
+	time, _ := time.Parse(time.RFC3339, e.Timestamp)
+
 	toReturn := v2.Event{
 		GeneratingSystem: e.Hostname,
-		Timestamp:        e.Timestamp,
+		Timestamp:        time,
 		TargetDevice: v2.BasicDeviceInfo{
 			DeviceID: e.Event.Event.Device,
 			BasicRoomInfo: v2.BasicRoomInfo{
