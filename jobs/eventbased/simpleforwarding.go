@@ -2,6 +2,7 @@ package eventbased
 
 import (
 	"os"
+	"strings"
 	"time"
 
 	"github.com/byuoitav/common/events"
@@ -10,6 +11,7 @@ import (
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/fatih/color"
 )
 
 var (
@@ -63,7 +65,18 @@ func (*SimpleForwardingJob) Run(context interface{}, actionWrite chan action.Pay
 }
 
 func TranslateEvent(e elkreporting.ElkEvent) v2.Event {
-	time, _ := time.Parse(time.RFC3339, e.Timestamp)
+	time, _ := time.Parse(e.Timestamp, time.RFC3339)
+
+	//check to see if the room id is already good
+	if !strings.Contains(e.Room, "-") {
+		//we need to build it
+		e.Room = e.Building + "-" + e.Room
+	}
+
+	if !strings.Contains(e.Event.Event.Device, "-") {
+		//we need to build it
+		e.Event.Event.Device = e.Room + "-" + e.Event.Event.Device
+	}
 
 	toReturn := v2.Event{
 		GeneratingSystem: e.Hostname,
@@ -90,6 +103,9 @@ func TranslateEvent(e elkreporting.ElkEvent) v2.Event {
 }
 
 func GetTagsFromOldEvent(e elkreporting.ElkEvent) []string {
+
+	log.L.Debugf(color.HiBlueString("%v", e.Event.Event.EventCause))
+	log.L.Debugf(color.HiBlueString("%v", e.Event.Event.Type))
 
 	var toReturn []string
 	switch e.Event.Event.Type {

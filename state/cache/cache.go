@@ -57,6 +57,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		Key:   v.Key,
 		Time:  v.Timestamp,
 		Value: v.Value,
+		Tags:  v.EventTags,
 	})
 
 	if err != nil {

@@ -44,7 +44,7 @@ func GetDefaultElkTimeSeries(URL string, index func() string) *ElkTimeseriesForw
 	toReturn := &ElkTimeseriesForwarder{
 		incomingChannel: make(chan events.Event, 1000),
 		ElkStaticForwarder: ElkStaticForwarder{
-			interval: time.Second * 30,
+			interval: time.Second * 15,
 			url:      URL,
 			index:    index,
 		},
@@ -110,6 +110,11 @@ func forward(url string, toSend []ElkBulkUpdateItem) {
 
 	log.L.Debugf("Sending and update for %v devices.", len(toSend))
 
+	if len(toSend) == 0 {
+		log.L.Infof("No updates to send. returning.")
+		return
+	}
+
 	//DEBUG
 	for i := range toSend {
 		log.L.Debugf("%+v", toSend[i])
@@ -137,10 +142,6 @@ func forward(url string, toSend []ElkBulkUpdateItem) {
 
 	//once our payload is built
 	log.L.Debugf("Payload built, sending...")
-
-	//DEBUG
-	return
-	//END DEBUG
 
 	url = strings.Trim(url, "/")         //remove any trailing slash so we can append it again
 	addr := fmt.Sprintf("%v/_bulk", url) //make the addr
