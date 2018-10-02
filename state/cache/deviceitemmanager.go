@@ -45,6 +45,10 @@ func GetNewDeviceManager(id string) DeviceItemManager {
 	}
 
 	rm := strings.Split(id, "-")
+	if len(rm) != 3 {
+		log.L.Errorf("Invalid Device %v", id)
+		return DeviceItemManager{}
+	}
 
 	F := false //build a standard device
 	device := sd.StaticDevice{
@@ -63,6 +67,23 @@ func GetNewDeviceManager(id string) DeviceItemManager {
 	return a
 }
 
+//GetNewDeviceManagerWithDevice will assume overwriting of all the info, won't initialize to default values
+func GetNewDeviceManagerWithDevice(dev sd.StaticDevice) (DeviceItemManager, *nerr.E) {
+	a := DeviceItemManager{
+		WriteRequests: make(chan DeviceTransactionRequest, 100),
+		ReadRequests:  make(chan chan sd.StaticDevice, 100),
+	}
+
+	rm := strings.Split(dev.DeviceID, "-")
+	if len(rm) != 3 {
+		return DeviceItemManager{}, nerr.Create("Invalid device, must have deviceID", "invalid")
+	}
+
+	go StartDeviceManager(a, dev)
+	return a, nil
+}
+
+//StartDeviceManager is a blocking call to start that device manager listening over the read and write channels.
 func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 
 	var merged sd.StaticDevice

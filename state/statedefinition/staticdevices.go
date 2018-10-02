@@ -173,7 +173,7 @@ func compareString(base, new string, changes bool) (string, string, bool) {
 
 func compareBool(base, new *bool, changes bool) (*bool, *bool, bool) {
 	if new != nil {
-		if *base != *new {
+		if base == nil || *base != *new {
 			return new, new, true
 		}
 	}
@@ -182,7 +182,7 @@ func compareBool(base, new *bool, changes bool) (*bool, *bool, bool) {
 
 func compareInt(base, new *int, changes bool) (*int, *int, bool) {
 	if new != nil {
-		if *base != *new {
+		if base == nil || *base != *new {
 			return new, new, true
 		}
 	}

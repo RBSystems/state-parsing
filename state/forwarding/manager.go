@@ -9,6 +9,7 @@ import (
 	"github.com/byuoitav/state-parser/state/forwarding/managers"
 )
 
+//BufferManager is meant to handle buffering events/updates to the eventual forever home of the information
 type BufferManager interface {
 	Send(toSend interface{}) error
 }
@@ -31,6 +32,7 @@ func init() {
 	log.L.Infof("Buffer managers initialized")
 }
 
+//GetManagersForType a
 func GetManagersForType(Type string) []BufferManager {
 	return managerMap[Type]
 }
