@@ -115,7 +115,7 @@ func (e *ElkStaticDeviceForwarder) start() {
 			//send it off
 			log.L.Debugf("Sending bulk ELK update for %v", e.index())
 
-			go prepAndForward(e.url, e.buffer)
+			go prepAndForward(e.index(), e.url, e.buffer)
 			e.buffer = make(map[string]ElkBulkUpdateItem)
 
 		case event := <-e.incomingChannel:
@@ -134,7 +134,7 @@ func (e *ElkStaticRoomForwarder) start() {
 			//send it off
 			log.L.Debugf("Sending bulk ELK update for %v", e.index())
 
-			go prepAndForward(e.url, e.buffer)
+			go prepAndForward(e.index(), e.url, e.buffer)
 			e.buffer = make(map[string]ElkBulkUpdateItem)
 
 		case event := <-e.incomingChannel:
@@ -186,11 +186,11 @@ func (e *ElkStaticRoomForwarder) bufferevent(event sd.StaticRoom) {
 	}
 }
 
-func prepAndForward(url string, vals map[string]ElkBulkUpdateItem) {
+func prepAndForward(caller, url string, vals map[string]ElkBulkUpdateItem) {
 	var toUpdate []ElkBulkUpdateItem
 	for _, v := range vals {
 		toUpdate = append(toUpdate, v)
 	}
 
-	forward(url, toUpdate)
+	forward(caller, url, toUpdate)
 }

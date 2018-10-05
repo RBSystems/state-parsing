@@ -18,6 +18,7 @@ const (
 	EVENTDELTA  = "elk-delta"
 	EVENTALL    = "elk-all"
 	DEVICEDELTA = "device-delta"
+	DEVICEALL   = "device-all"
 )
 
 var managerMap map[string][]BufferManager
@@ -29,18 +30,19 @@ func init() {
 	managerMap[EVENTDELTA] = getEventDeltaManagers()
 	managerMap[EVENTALL] = getEventAllManagers()
 	managerMap[DEVICEDELTA] = getDeviceDeltaManagers()
+	managerMap[DEVICEALL] = getDeviceAllManagers()
 	log.L.Infof("Buffer managers initialized")
 }
 
 //GetManagersForType a
 func GetManagersForType(Type string) []BufferManager {
+	log.L.Debugf("Getting all managers for %v", Type)
 	return managerMap[Type]
 }
 
 /*
 	1) Forward to ELK index oit-av-delta-events
-*/
-func getEventDeltaManagers() []BufferManager {
+*/func getEventDeltaManagers() []BufferManager {
 	return []BufferManager{
 		//this is the Delta events forwarder
 		managers.GetDefaultElkTimeSeries(
@@ -70,11 +72,27 @@ func getEventAllManagers() []BufferManager {
 }
 
 /*
-	1) Forward to ELK index oit-static-av-devices
 	2) Forward to ELK index oit-static-av-devices-history
 	2) Forward to Couch database oit-static-av-devices
 */
 func getDeviceDeltaManagers() []BufferManager {
+
+	return []BufferManager{
+		managers.GetDefaultElkStaticDeviceForwarder(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return "oit-static-av-devices-history"
+			},
+			15*time.Second,
+			false,
+		),
+	}
+}
+
+/*
+	1) Forward to ELK index oit-static-av-devices
+*/
+func getDeviceAllManagers() []BufferManager {
 
 	return []BufferManager{
 		//Device static index
@@ -85,14 +103,6 @@ func getDeviceDeltaManagers() []BufferManager {
 			},
 			15*time.Second,
 			true,
-		),
-		managers.GetDefaultElkStaticDeviceForwarder(
-			os.Getenv("ELK_DIRECT_ADDRESS"),
-			func() string {
-				return "oit-static-av-devices-history"
-			},
-			15*time.Second,
-			false,
 		),
 	}
 }

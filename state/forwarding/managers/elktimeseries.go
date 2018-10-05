@@ -86,7 +86,7 @@ func (e *ElkTimeseriesForwarder) start() {
 			//send it off
 			log.L.Debugf("Sending bulk ELK update for %v", e.index())
 
-			go forward(e.url, e.buffer)
+			go forward(e.index(), e.url, e.buffer)
 			e.buffer = []ElkBulkUpdateItem{}
 
 		case event := <-e.incomingChannel:
@@ -106,12 +106,12 @@ func (e *ElkTimeseriesForwarder) bufferevent(event events.Event) {
 	})
 }
 
-func forward(url string, toSend []ElkBulkUpdateItem) {
+func forward(caller, url string, toSend []ElkBulkUpdateItem) {
 
-	log.L.Debugf("Sending and update for %v devices.", len(toSend))
+	log.L.Infof("%v Sending bulk upsert for %v items.", caller, len(toSend))
 
 	if len(toSend) == 0 {
-		log.L.Infof("No updates to send. returning.")
+		log.L.Infof("%v No updates to send. returning.", caller)
 		return
 	}
 
@@ -120,18 +120,18 @@ func forward(url string, toSend []ElkBulkUpdateItem) {
 		log.L.Debugf("%+v", toSend[i])
 	}
 
-	log.L.Debugf("Building payload")
+	log.L.Debugf("%v Building payload", caller)
 	//build our payload
 	payload := []byte{}
 	for i := range toSend {
 		headerbytes, err := json.Marshal(toSend[i].Header)
 		if err != nil {
-			log.L.Errorf("Couldn't marshal header for elk event bulk update: %v", toSend[i])
+			log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
 			continue
 		}
 		bodybytes, err := json.Marshal(toSend[i].Doc)
 		if err != nil {
-			log.L.Errorf("Couldn't marshal header for elk event bulk update: %v", toSend[i])
+			log.L.Errorf("%v Couldn't marshal header for elk event bulk update: %v", caller, toSend[i])
 			continue
 		}
 		payload = append(payload, headerbytes...)
@@ -141,14 +141,14 @@ func forward(url string, toSend []ElkBulkUpdateItem) {
 	}
 
 	//once our payload is built
-	log.L.Debugf("Payload built, sending...")
+	log.L.Debugf("%v Payload built, sending...", caller, caller)
 
 	url = strings.Trim(url, "/")         //remove any trailing slash so we can append it again
 	addr := fmt.Sprintf("%v/_bulk", url) //make the addr
 
 	resp, er := elk.MakeGenericELKRequest(addr, "POST", payload)
 	if er != nil {
-		log.L.Errorf("Couldn't send bulk update. error %v", er.Error())
+		log.L.Errorf("%v Couldn't send bulk update. error %v", caller, er.Error())
 		return
 	}
 
@@ -156,12 +156,12 @@ func forward(url string, toSend []ElkBulkUpdateItem) {
 
 	err := json.Unmarshal(resp, &elkresp)
 	if err != nil {
-		log.L.Errorf("Unknown response received from ELK in response to bulk update: %s", resp)
+		log.L.Errorf("%v Unknown response received from ELK in response to bulk update: %s", caller, resp)
 		return
 	}
 	if elkresp.Errors {
-		log.L.Errorf("Errors received from ELK during bulk update %v", resp)
+		log.L.Errorf("%v Errors received from ELK during bulk update %v", caller, resp)
 		return
 	}
-	log.L.Debugf("Successfully sent bulk ELK updates")
+	log.L.Debugf("%v Successfully sent bulk ELK updates", caller)
 }

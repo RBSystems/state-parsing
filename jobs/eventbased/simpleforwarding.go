@@ -7,6 +7,7 @@ import (
 
 	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/common/nerr"
 	v2 "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions/action"
@@ -45,27 +46,34 @@ type SimpleForwardingJob struct {
 // Run fowards events to an elk timeseries index.
 func (*SimpleForwardingJob) Run(context interface{}, actionWrite chan action.Payload) {
 
+	var err *nerr.E
 	//	cache.GetCache(cache.DEFAULT)
-
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:
 		//translate
-		cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(TranslateEvent(*v))
+		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(TranslateEvent(*v))
 	case elkreporting.ElkEvent:
 		//translate
-		cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(TranslateEvent(v))
+		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(TranslateEvent(v))
 	case v2.Event:
-		cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(v)
+		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(v)
 	case *v2.Event:
-		cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(*v)
+		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(*v)
 	default:
+	}
+
+	if err != nil {
+		log.L.Warnf("Problem storing event: %v", err.Error())
 	}
 
 	return
 }
 
 func TranslateEvent(e elkreporting.ElkEvent) v2.Event {
-	time, _ := time.Parse(e.Timestamp, time.RFC3339)
+	time, err := time.Parse(time.RFC3339, e.Timestamp)
+	if err != nil {
+		log.L.Warnf("Couldn't parse time %v: %v", e.Timestamp, err.Error())
+	}
 
 	//check to see if the room id is already good
 	if !strings.Contains(e.Room, "-") {

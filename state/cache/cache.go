@@ -6,6 +6,7 @@ import (
 	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/state-parser/state/forwarding"
 	sd "github.com/byuoitav/state-parser/state/statedefinition"
+	"github.com/fatih/color"
 )
 
 //Cache is our state cache - it's meant to be a representation of the static indexes
@@ -45,6 +46,7 @@ type memorycache struct {
 }
 
 func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
+	log.L.Debugf("Event: %+v", v)
 
 	//Forward All
 	list := forwarding.GetManagersForType(forwarding.EVENTALL)
@@ -63,6 +65,12 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 
 	if err != nil {
 		return false, err.Addf("Couldn't store and forward device event")
+	}
+
+	list = forwarding.GetManagersForType(forwarding.DEVICEALL)
+	for i := range list {
+		log.L.Debugf(color.HiBlueString("Sending"))
+		list[i].Send(newDev)
 	}
 
 	//if there are changes and it's not a heartbeat event

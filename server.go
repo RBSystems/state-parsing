@@ -14,7 +14,6 @@ import (
 )
 
 func main() {
-	log.SetLevel("debug")
 	go jobs.StartJobScheduler()
 
 	port := ":10011"

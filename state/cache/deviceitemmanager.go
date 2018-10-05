@@ -108,12 +108,21 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 			}
 
 			if write.EventEdit {
-				changes, merged, err = SetDeviceField(
-					write.Event.Key,
-					write.Event.Value,
-					write.Event.Time,
-					device,
-				)
+				if HasTag(events.Heartbeat, write.Event.Tags) {
+					changes, merged, err = SetDeviceField(
+						"last-heartbeat",
+						write.Event.Time,
+						write.Event.Time,
+						device,
+					)
+				} else {
+					changes, merged, err = SetDeviceField(
+						write.Event.Key,
+						write.Event.Value,
+						write.Event.Time,
+						device,
+					)
+				}
 				if err != nil && write.ResponseChan != nil {
 					write.ResponseChan <- DeviceTransactionResponse{Error: err, Changes: false}
 					continue
