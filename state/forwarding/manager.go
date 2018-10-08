@@ -42,7 +42,9 @@ func GetManagersForType(Type string) []BufferManager {
 
 /*
 	1) Forward to ELK index oit-av-delta-events
-*/func getEventDeltaManagers() []BufferManager {
+*/
+func getEventDeltaManagers() []BufferManager {
+	//	return []BufferManager{}
 	return []BufferManager{
 		//this is the Delta events forwarder
 		managers.GetDefaultElkTimeSeries(
@@ -59,6 +61,7 @@ func GetManagersForType(Type string) []BufferManager {
 	1) Forward to ELK index oit-av-all-events
 */
 func getEventAllManagers() []BufferManager {
+	//	return []BufferManager{}
 	return []BufferManager{
 		//this is the All events forwarder
 		managers.GetDefaultElkTimeSeries(
@@ -85,6 +88,11 @@ func getDeviceDeltaManagers() []BufferManager {
 			},
 			15*time.Second,
 			false,
+		),
+		managers.GetDefaultCouchDeviceBuffer(
+			"https://couchdb-prd.avs.byu.edu",
+			"device-state",
+			15*time.Second,
 		),
 	}
 }
