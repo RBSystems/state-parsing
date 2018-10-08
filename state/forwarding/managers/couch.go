@@ -33,8 +33,7 @@ func GetDefaultCouchDeviceBuffer(couchaddr, database string, interval time.Durat
 		reingestionChannel: make(chan CouchStaticDevice, 1000),
 		revChannel:         make(chan []Rev, 100),
 
-		curBuffer: make(map[string]CouchStaticDevice),
-		revBuffer: make(map[string]Rev),
+		curBuffer: make(map[string]CouchStaticDevice), revBuffer: make(map[string]Rev),
 
 		interval:  interval,
 		database:  database,
@@ -174,10 +173,12 @@ type CouchBulkUpdateResponse struct {
 
 //assume is run in go routine
 func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<- []Rev, reingestionChannel chan<- CouchStaticDevice, addr, database string) {
+
 	if len(toSend) < 1 {
-		log.L.Debugf("[couchdb] No devices to send, returning...")
+		log.L.Infof("[couchdb] No devices to send, returning...")
 		return
 	}
+	log.L.Infof("Sending bulk update to %v/%v", addr, database)
 
 	//go through the map and create the CouchStaticUpdateBody
 	body := CouchStaticUpdateBody{}

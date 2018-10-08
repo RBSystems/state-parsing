@@ -28,10 +28,9 @@ const (
 var Caches map[string]Cache
 
 func init() {
-	log.SetLevel("debug")
 	log.L.Infof("Initializing Caches")
 	//start
-	go InitializeCaches()
+	InitializeCaches()
 	log.L.Infof("Caches Initialized.")
 }
 
