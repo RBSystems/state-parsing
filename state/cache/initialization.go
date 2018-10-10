@@ -23,8 +23,7 @@ func InitializeCaches() {
 	defaultDevs, err := GetStaticDevices(defaultDevIndex)
 	if err != nil {
 		log.L.Errorf(err.Addf("Couldn't get information for default device cache").Error())
-	}
-	/*
+	} /*
 		//get DEFAULT rooms
 		defaultRooms, err := GetStaticRooms(defRoomIndx)
 		if err != nil {
@@ -87,10 +86,6 @@ func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
 	var toReturn []statedefinition.StaticDevice
 	for i := range queryResp.Hits.Wrappers {
 		toReturn = append(toReturn, queryResp.Hits.Wrappers[i].Device)
-		//DEBUG
-		if queryResp.Hits.Wrappers[i].Device.DeviceID == "ITB-1101-D1" {
-			log.L.Debugf("%v", queryResp.Hits.Wrappers[i].Device.UpdateTimes["power"])
-		}
 	}
 
 	return toReturn, nil
@@ -132,6 +127,8 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 
 	toReturn := memorycache{}
 
+	//toMerge := []statedefinition.StaticDevice{}
+
 	//go through and create our maps
 	toReturn.deviceCache = make(map[string]DeviceItemManager)
 	for i := range devices {
@@ -152,6 +149,17 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 			continue
 		}
 
+		/*
+			if devices[i].DeviceType == "" {
+				//get the device type
+				a := statedefinition.StaticDevice{
+					DeviceID:   devices[i].DeviceID,
+					DeviceType: GetDeviceTypeByID(devices[i].DeviceID),
+				}
+				toMerge = append(toMerge, a)
+			}
+		*/
+
 		respChan := make(chan DeviceTransactionResponse, 1)
 		v.WriteRequests <- DeviceTransactionRequest{
 			MergeDeviceEdit: true,
@@ -165,6 +173,21 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 		}
 		toReturn.deviceCache[devices[i].DeviceID] = v
 	}
+	/*
+		//do it at some point
+		go func(v []statedefinition.StaticDevice) {
+			log.L.Info(color.HiBlueString("Adding device type for %v devices in 10 seconds", len(v)))
+			time.Sleep(10 * time.Second)
+			log.L.Info(color.HiBlueString("Adding device type for %v devices now", len(v)))
+			for _, i := range v {
+				dev, _ := GetCache(DEFAULT).GetDeviceRecord(i.DeviceID)
+				dev.DeviceType = i.DeviceType
+				dev.UpdateTimes["device-type"] = time.Now()
+
+				GetCache(DEFAULT).CheckAndStoreDevice(dev)
+			}
+		}(toMerge)
+	*/
 
 	toReturn.roomCache = make(map[string]RoomItemManager)
 	for i := range rooms {

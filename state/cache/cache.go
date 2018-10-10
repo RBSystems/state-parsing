@@ -6,7 +6,6 @@ import (
 	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/state-parser/state/forwarding"
 	sd "github.com/byuoitav/state-parser/state/statedefinition"
-	"github.com/fatih/color"
 )
 
 //Cache is our state cache - it's meant to be a representation of the static indexes
@@ -73,7 +72,6 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 
 	list = forwarding.GetManagersForType(forwarding.DEVICEALL)
 	for i := range list {
-		log.L.Debugf(color.HiBlueString("Sending"))
 		list[i].Send(newDev)
 	}
 
@@ -137,7 +135,6 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 /*CheckAndStoreDevice takes a device, will check to see if there are deltas compared to the values in the map, and store any changes.
 
 Bool returned denotes if there were any changes. True indicates that there were updates
-Device returned contains ONLY the deltas.
 */
 func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.StaticDevice, *nerr.E) {
 	if len(device.DeviceID) == 0 {
@@ -164,6 +161,18 @@ func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 
 	if resp.Error != nil {
 		return false, sd.StaticDevice{}, resp.Error.Addf("Couldn't store device %v.", device)
+	}
+
+	if resp.Changes {
+		list := forwarding.GetManagersForType(forwarding.DEVICEDELTA)
+		for i := range list {
+			list[i].Send(resp.NewDevice)
+		}
+
+		list = forwarding.GetManagersForType(forwarding.DEVICEALL)
+		for i := range list {
+			list[i].Send(resp.NewDevice)
+		}
 	}
 
 	return resp.Changes, resp.NewDevice, nil

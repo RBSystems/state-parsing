@@ -22,8 +22,9 @@ type StaticDevice struct {
 	LastHeartbeat           time.Time        `json:"last-heartbeat,omitempty"`
 	LastUserInput           time.Time        `json:"last-user-input,omitempty"`
 
-	DeviceType string `json:"device-type,omitempty"`
-	DeviceName string `json:"device-name,omitempty"`
+	DeviceType  string `json:"device-type,omitempty"`
+	DeviceClass string `json:"device-class,omitempty"`
+	DeviceName  string `json:"device-name,omitempty"`
 
 	//semi-common fields LastHeartbeat time.Time `json:"last-heartbeat,omitempty"` LastUserInput time.Time `json:"last-user-input,omitempty"`
 	Power string `json:"power,omitempty"`
@@ -61,6 +62,9 @@ type StaticDevice struct {
 //CompareDevices takes a base devices, and calculates the difference between the two, returning it in the staticDevice return value. Bool denotes if there were any differences
 func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDevice, changes bool, err *nerr.E) {
 
+	//base is our base
+	merged = base
+
 	//common fields
 	if new.UpdateTimes["deviceID"].After(base.UpdateTimes["deviceID"]) {
 		diff.DeviceID, merged.DeviceID, changes = compareString(base.DeviceID, new.DeviceID, changes)
@@ -83,6 +87,17 @@ func CompareDevices(base, new StaticDevice) (diff StaticDevice, merged StaticDev
 	}
 	if new.UpdateTimes["hostname"].After(base.UpdateTimes["hostname"]) {
 		diff.Hostname, merged.Hostname, changes = compareString(base.Hostname, new.Hostname, changes)
+	}
+
+	if new.UpdateTimes["device-name"].After(base.UpdateTimes["device-name"]) {
+		diff.DeviceName, merged.DeviceName, changes = compareString(base.DeviceName, new.DeviceName, changes)
+	}
+	if new.UpdateTimes["device-class"].After(base.UpdateTimes["device-class"]) {
+		diff.DeviceClass, merged.DeviceClass, changes = compareString(base.DeviceClass, new.DeviceClass, changes)
+	}
+
+	if new.UpdateTimes["device-type"].After(base.UpdateTimes["device-type"]) {
+		diff.DeviceType, merged.DeviceType, changes = compareString(base.DeviceType, new.DeviceType, changes)
 	}
 
 	//semi-common fields

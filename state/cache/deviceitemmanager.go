@@ -8,7 +8,6 @@ import (
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/v2/events"
 	sd "github.com/byuoitav/state-parser/state/statedefinition"
-	"github.com/fatih/color"
 )
 
 /*
@@ -129,8 +128,6 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 					continue
 				}
 
-				log.L.Debugf(color.HiBlueString("Tags: %v", write.Event.Tags))
-
 				//if it has a user-generated tag
 				if HasTag(events.UserGenerated, write.Event.Tags) {
 					merged.LastUserInput = write.Event.Time
@@ -150,7 +147,13 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 		case read := <-m.ReadRequests:
 			//just send it back
 			if read != nil {
-				read <- device
+				//we need to
+				newdev := device
+				newdev.UpdateTimes = make(map[string]time.Time)
+				for k, v := range device.UpdateTimes {
+					newdev.UpdateTimes[k] = v
+				}
+				read <- newdev
 			}
 		}
 	}
