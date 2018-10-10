@@ -61,6 +61,7 @@ func GetNewDeviceManager(id string) DeviceItemManager {
 		SuppressNotifications: id,
 		ViewDashboard:         id,
 		Alerting:              &F,
+		DeviceType:            GetDeviceTypeByID(id),
 	}
 
 	go StartDeviceManager(a, device)

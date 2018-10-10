@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
@@ -14,7 +15,6 @@ import (
 )
 
 var alertRegex *regexp.Regexp
-
 var stringtype = reflect.TypeOf("")
 var timetype = reflect.TypeOf(time.Now())
 var booltype = reflect.TypeOf((*bool)(nil))
@@ -226,4 +226,47 @@ func HasTag(toCheck string, tags []string) bool {
 		}
 	}
 	return false
+}
+
+var translationMap = map[string]string{
+	"D":  "display",
+	"CP": "control-processor",
+
+	"DSP":   "digital-signal-processor",
+	"PC":    "computer",
+	"SW":    "video-switcher",
+	"MICJK": "microphone-jack",
+	"SP":    "scheduling-panel",
+	"MIC":   "microphone",
+	"DS":    "divider-sensor",
+	"GW":    "gateway",
+	"VIA":   "via",
+	"HDMI":  "hdmi",
+	"RX":    "receiver",
+	"TX":    "transmitter",
+	"RCV":   "microphone-reciever",
+	"EN":    "encoder",
+}
+
+func GetDeviceTypeByID(id string) string {
+
+	split := strings.Split(id, "-")
+	if len(split) != 3 {
+		log.L.Warnf("[dispatcher] Invalid hostname for device: %v", id)
+		return ""
+	}
+
+	for pos, char := range split[2] {
+		if unicode.IsDigit(char) {
+			val, ok := translationMap[split[2][:pos]]
+			if !ok {
+				log.L.Warnf("Invalid device type: %v", split[2][:pos])
+				return ""
+			}
+			return val
+		}
+	}
+
+	log.L.Warnf("no valid translation for :%v", split[2])
+	return ""
 }

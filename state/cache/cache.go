@@ -53,6 +53,11 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		list[i].Send(v)
 	}
 
+	//if it's an error, we don't want to try and store it, as it probably won't correlate to a device field
+	if HasTag(events.Error, v.EventTags) {
+		return false, nil
+	}
+
 	//Cache
 	changes, newDev, err := c.StoreDeviceEvent(sd.State{
 		ID:    v.TargetDevice.DeviceID,

@@ -123,6 +123,8 @@ func GetTagsFromOldEvent(e elkreporting.ElkEvent) []string {
 		toReturn = append(toReturn, v2.Heartbeat)
 	case events.DETAILSTATE:
 		toReturn = append(toReturn, v2.DetailState)
+	case events.ERROR:
+		toReturn = append(toReturn, v2.Error)
 	default:
 		toReturn = append(toReturn, e.Event.Event.Type.String())
 	}

@@ -175,7 +175,7 @@ type CouchBulkUpdateResponse struct {
 func sendBulkDeviceUpdate(toSend map[string]CouchStaticDevice, returnChan chan<- []Rev, reingestionChannel chan<- CouchStaticDevice, addr, database string) {
 
 	if len(toSend) < 1 {
-		log.L.Infof("[couchdb] No devices to send, returning...")
+		log.L.Infof("%v/%v No devices to send, returning...", addr, database)
 		return
 	}
 	log.L.Infof("Sending bulk update to %v/%v", addr, database)
