@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/state-parser/state/statedefinition"
+	"github.com/byuoitav/common/state/statedefinition"
 )
 
 type roomQueryResponse struct {

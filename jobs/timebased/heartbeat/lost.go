@@ -14,7 +14,7 @@ import (
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/cache"
 	"github.com/byuoitav/state-parser/state/marking"
-	sd "github.com/byuoitav/state-parser/state/statedefinition"
+	sd "github.com/byuoitav/common/state/statedefinition"
 )
 
 // LostJob .

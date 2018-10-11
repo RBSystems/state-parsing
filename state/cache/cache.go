@@ -5,7 +5,7 @@ import (
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/state-parser/state/forwarding"
-	sd "github.com/byuoitav/state-parser/state/statedefinition"
+	sd "github.com/byuoitav/common/state/statedefinition"
 )
 
 //Cache is our state cache - it's meant to be a representation of the static indexes

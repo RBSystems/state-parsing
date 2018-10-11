@@ -8,7 +8,7 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/state/statedefinition"
+	"github.com/byuoitav/common/state/statedefinition"
 )
 
 const maxSize = 10000

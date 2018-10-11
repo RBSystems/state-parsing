@@ -1,7 +1,7 @@
 package forwarding
 
 import (
-	sd "github.com/byuoitav/state-parser/state/statedefinition"
+	sd "github.com/byuoitav/common/state/statedefinition"
 )
 
 var DevicesStaticForwardingChannel chan sd.StaticDevice

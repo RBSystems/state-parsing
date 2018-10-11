@@ -1,6 +1,6 @@
 package elk
 
-import "github.com/byuoitav/state-parser/state/statedefinition"
+import "github.com/byuoitav/common/state/statedefinition"
 
 type UpdateHeader struct {
 	ID    string `json:"_id,omitempty"`

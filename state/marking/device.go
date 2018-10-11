@@ -7,7 +7,7 @@ import (
 	"github.com/byuoitav/common/log"
 
 	"github.com/byuoitav/state-parser/state/cache"
-	sd "github.com/byuoitav/state-parser/state/statedefinition"
+	sd "github.com/byuoitav/common/state/statedefinition"
 )
 
 var False = false

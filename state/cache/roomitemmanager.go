@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/byuoitav/common/nerr"
-	sd "github.com/byuoitav/state-parser/state/statedefinition"
+	sd "github.com/byuoitav/common/state/statedefinition"
 )
 
 /*

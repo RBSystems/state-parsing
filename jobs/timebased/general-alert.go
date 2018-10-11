@@ -10,7 +10,7 @@ import (
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/cache"
-	"github.com/byuoitav/state-parser/state/statedefinition"
+	"github.com/byuoitav/common/state/statedefinition"
 )
 
 // GeneralAlertClearingJob .

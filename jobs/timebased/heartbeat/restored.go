@@ -14,7 +14,7 @@ import (
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/marking"
-	"github.com/byuoitav/state-parser/state/statedefinition"
+	"github.com/byuoitav/common/state/statedefinition"
 )
 
 // RestoredJob .
