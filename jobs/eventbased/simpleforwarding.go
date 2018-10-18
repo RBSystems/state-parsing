@@ -12,6 +12,7 @@ import (
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/forwarding"
 	"github.com/fatih/color"
 )
 
@@ -43,22 +44,33 @@ func init() {
 type SimpleForwardingJob struct {
 }
 
+//LegacyEvent is just a format for checking if it's from a dmps
+type LegacyEvent struct {
+	v2.Event
+}
+
 // Run fowards events to an elk timeseries index.
 func (*SimpleForwardingJob) Run(context interface{}, actionWrite chan action.Payload) {
 
 	var err *nerr.E
-	//	cache.GetCache(cache.DEFAULT)
+	//	cache.GetCache(forwarding.DEFAULT)
 	switch v := context.(type) {
 	case *elkreporting.ElkEvent:
 		//translate
-		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(TranslateEvent(*v))
+		_, err = cache.GetCache(forwarding.DEFAULT).StoreAndForwardEvent(TranslateEvent(*v))
 	case elkreporting.ElkEvent:
 		//translate
-		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(TranslateEvent(v))
+		_, err = cache.GetCache(forwarding.DEFAULT).StoreAndForwardEvent(TranslateEvent(v))
 	case v2.Event:
-		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(v)
+		_, err = cache.GetCache(forwarding.DEFAULT).StoreAndForwardEvent(v)
 	case *v2.Event:
-		_, err = cache.GetCache(cache.DEFAULT).StoreAndForwardEvent(*v)
+		_, err = cache.GetCache(forwarding.DEFAULT).StoreAndForwardEvent(*v)
+
+	case LegacyEvent:
+		_, err = cache.GetCache(forwarding.DMPS).StoreAndForwardEvent(v.Event)
+	case *LegacyEvent:
+		_, err = cache.GetCache(forwarding.DMPS).StoreAndForwardEvent(v.Event)
+
 	default:
 	}
 
@@ -69,6 +81,7 @@ func (*SimpleForwardingJob) Run(context interface{}, actionWrite chan action.Pay
 	return
 }
 
+//TranslateEvent .
 func TranslateEvent(e elkreporting.ElkEvent) v2.Event {
 	time, err := time.Parse(time.RFC3339, e.Timestamp)
 	if err != nil {

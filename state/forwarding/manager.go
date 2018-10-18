@@ -19,25 +19,45 @@ const (
 	EVENTALL    = "elk-all"
 	DEVICEDELTA = "device-delta"
 	DEVICEALL   = "device-all"
+
+	LEGACYEVENTDELTA  = "legacy-elk-delta"
+	LEGACYEVENTALL    = "legacy-elk-all"
+	LEGACYDEVICEDELTA = "legacy-device-delta"
+	LEGACYDEVICEALL   = "legacy-device-all"
+
+	DMPS    = "dmps"
+	DEFAULT = "default"
 )
 
-var managerMap map[string][]BufferManager
+var managerMap map[string]map[string][]BufferManager
 
 func init() {
 	log.L.Infof("Initializing buffer managers")
-	managerMap = make(map[string][]BufferManager)
+	managerMap = make(map[string]map[string][]BufferManager)
 
-	managerMap[EVENTDELTA] = getEventDeltaManagers()
-	managerMap[EVENTALL] = getEventAllManagers()
-	managerMap[DEVICEDELTA] = getDeviceDeltaManagers()
-	managerMap[DEVICEALL] = getDeviceAllManagers()
+	managerMap[DEFAULT] = make(map[string][]BufferManager)
+	managerMap[DEFAULT][EVENTDELTA] = getEventDeltaManagers()
+	managerMap[DEFAULT][EVENTALL] = getEventAllManagers()
+	managerMap[DEFAULT][DEVICEDELTA] = getDeviceDeltaManagers()
+	managerMap[DEFAULT][DEVICEALL] = getDeviceAllManagers()
+
+	managerMap[DMPS] = make(map[string][]BufferManager)
+	managerMap[DMPS][LEGACYEVENTDELTA] = getLegacyEventDeltaManagers()
+	managerMap[DMPS][LEGACYEVENTALL] = getLegacyEventAllManagers()
+	managerMap[DMPS][LEGACYDEVICEDELTA] = getLegacyDeviceDeltaManagers()
+	managerMap[DMPS][LEGACYDEVICEALL] = getLegacyDeviceAllManagers()
 	log.L.Infof("Buffer managers initialized")
 }
 
 //GetManagersForType a
-func GetManagersForType(Type string) []BufferManager {
-	log.L.Debugf("Getting all managers for %v", Type)
-	return managerMap[Type]
+func GetManagersForType(cacheType, BufferType string) []BufferManager {
+	log.L.Debugf("Getting all managers for %v", cacheType)
+	if v, ok := managerMap[cacheType]; ok {
+		return v[BufferType]
+	}
+
+	log.L.Errorf("Uknown cache type: %v", cacheType)
+	return []BufferManager{}
 }
 
 /*
@@ -108,6 +128,81 @@ func getDeviceAllManagers() []BufferManager {
 			os.Getenv("ELK_DIRECT_ADDRESS"),
 			func() string {
 				return "oit-static-av-devices-v2"
+			},
+			15*time.Second,
+			true,
+		),
+	}
+}
+
+/*
+	1) Forward to ELK index legacy-av-delta-events
+*/
+func getLegacyEventDeltaManagers() []BufferManager {
+	//	return []BufferManager{}
+	return []BufferManager{
+		//this is the Delta events forwarder
+		managers.GetDefaultElkTimeSeries(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return fmt.Sprintf("legacy-av-delta-events-%v", time.Now().Year())
+			},
+		//insert other forwarders here
+		),
+	}
+}
+
+/*
+	1) Forward to ELK index legacy-av-all-events
+*/
+func getLegacyEventAllManagers() []BufferManager {
+	//	return []BufferManager{}
+	return []BufferManager{
+		//this is the All events forwarder
+		managers.GetDefaultElkTimeSeries(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return fmt.Sprintf("legacy-av-all-events-%v", time.Now().Format("20060102"))
+			},
+		//insert other forwarders here
+		),
+	}
+}
+
+/*
+	2) Forward to ELK index oit-legacy-static-av-devices-history
+	2) Forward to Couch database legacy-device-state
+*/
+func getLegacyDeviceDeltaManagers() []BufferManager {
+
+	return []BufferManager{
+		managers.GetDefaultElkStaticDeviceForwarder(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return "legacy-oit-static-av-devices-history"
+			},
+			15*time.Second,
+			false,
+		),
+		managers.GetDefaultCouchDeviceBuffer(
+			"https://couchdb-prd.avs.byu.edu",
+			"legacy-device-state",
+			15*time.Second,
+		),
+	}
+}
+
+/*
+	1) Forward to ELK index oit-legacy-static-av-devices-v2
+*/
+func getLegacyDeviceAllManagers() []BufferManager {
+
+	return []BufferManager{
+		//Device static index
+		managers.GetDefaultElkStaticDeviceForwarder(
+			os.Getenv("ELK_DIRECT_ADDRESS"),
+			func() string {
+				return "legacy-oit-static-av-devices-v2"
 			},
 			15*time.Second,
 			true,

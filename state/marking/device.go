@@ -6,8 +6,9 @@ import (
 
 	"github.com/byuoitav/common/log"
 
-	"github.com/byuoitav/state-parser/state/cache"
 	sd "github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 var False = false
@@ -29,7 +30,7 @@ func ClearHeartbeatAlerts(deviceIDs []string) {
 
 	for _, id := range deviceIDs {
 		device.DeviceID = id
-		_, _, err := cache.GetCache(cache.DEFAULT).CheckAndStoreDevice(device)
+		_, _, err := cache.GetCache(forwarding.DEFAULT).CheckAndStoreDevice(device)
 		if err != nil {
 			log.L.Errorf("Couldn't clear hearteat alerts for %v: %v", id, err.Error())
 		}

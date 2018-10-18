@@ -7,13 +7,15 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/state-parser/elk"
+	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 const maxSize = 10000
 
 const defaultDevIndex = "oit-static-av-devices-v2"
+const defaultDMPSIndex = "oit-static-av-devices-legacy-v2"
 
 //InitializeCaches initializes the caches with data from ELK
 func InitializeCaches() {
@@ -33,18 +35,23 @@ func InitializeCaches() {
 
 	//defaultDevs := []statedefinition.StaticDevice{}
 	defaultRooms := []statedefinition.StaticRoom{}
+	cache := makeCache(defaultDevs, defaultRooms, forwarding.DEFAULT)
 
-	cache := makeCache(defaultDevs, defaultRooms)
-	Caches[DEFAULT] = cache
+	Caches[forwarding.DEFAULT] = cache
 	log.L.Infof("Default Caches initialized. %v devices and %v rooms", len(defaultDevs), len(defaultRooms))
 
-	/*
-		//get DMPS devices
-		dmpsDevs, err := GetStaticDevices(dmpsDevIndx)
-		if err != nil {
-			log.L.Errorf(err.Addf("Couldn't get information for dmps device cache").Error())
-		}
+	//get DMPS devices
+	dmpsDevs, err := GetStaticDevices(defaultDMPSIndex)
+	if err != nil {
+		log.L.Errorf(err.Addf("Couldn't get information for dmps device cache").Error())
+	}
 
+	dmpsrooms := []statedefinition.StaticRoom{}
+	dmpscache := makeCache(dmpsDevs, dmpsrooms, forwarding.DMPS)
+
+	Caches[forwarding.DMPS] = dmpscache
+	log.L.Infof("DMPS Caches initialized. %v devices and %v rooms", len(dmpsDevs), len(dmpsrooms))
+	/*
 		//get DMPS rooms
 		dmpsRooms, err := GetStaticRooms(dmpsRoomIndx)
 		if err != nil {
@@ -91,6 +98,7 @@ func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
 	return toReturn, nil
 }
 
+//GetStaticRooms retrieves the list of static rooms from the privided elk index - assumes the ELK_DIRECT_ADDRESS env variable.
 func GetStaticRooms(index string) ([]statedefinition.StaticRoom, *nerr.E) {
 	query := elk.GenericQuery{
 		Size: maxSize,
@@ -123,9 +131,11 @@ func GetStaticRooms(index string) ([]statedefinition.StaticRoom, *nerr.E) {
 
 }
 
-func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.StaticRoom) Cache {
+func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.StaticRoom, cacheType string) Cache {
 
-	toReturn := memorycache{}
+	toReturn := memorycache{
+		cacheType: cacheType,
+	}
 
 	//toMerge := []statedefinition.StaticDevice{}
 

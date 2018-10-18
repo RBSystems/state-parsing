@@ -29,6 +29,7 @@ func main() {
 	router.POST("/event", addEvent)
 
 	router.POST("/v2/event", addV2Event)
+	router.POST("/leagacy/v2/event", addV2LegacyEvent)
 
 	// dmps
 	router.POST("/dmps/event", addDMPSEvent)
@@ -75,6 +76,7 @@ func addEvent(context echo.Context) error {
 	jobs.ProcessEvent(event)
 	return context.JSON(http.StatusOK, "Success.")
 }
+
 func addV2Event(context echo.Context) error {
 	var event v2.Event
 	err := context.Bind(&event)
@@ -84,6 +86,18 @@ func addV2Event(context echo.Context) error {
 	log.L.Debugf("Received event: %+v", event)
 
 	jobs.ProcessV2Event(event)
+	return context.JSON(http.StatusOK, "Success.")
+}
+
+func addV2LegacyEvent(context echo.Context) error {
+	var event v2.Event
+	err := context.Bind(&event)
+	if err != nil {
+		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid event: %v", err))
+	}
+	log.L.Debugf("Received event: %+v", event)
+
+	jobs.ProcessLevacyV2Event(event)
 	return context.JSON(http.StatusOK, "Success.")
 }
 

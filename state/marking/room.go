@@ -4,8 +4,9 @@ import (
 	"time"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/state-parser/state/cache"
 	sd "github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 func MarkRoomGeneralAlerting(toMark []string, alerting bool) {
@@ -18,7 +19,7 @@ func MarkRoomGeneralAlerting(toMark []string, alerting bool) {
 	//ship it off to go with the rest
 	for i := range toMark {
 		room.RoomID = toMark[i]
-		_, _, err := cache.GetCache(cache.DEFAULT).CheckAndStoreRoom(room)
+		_, _, err := cache.GetCache(forwarding.DEFAULT).CheckAndStoreRoom(room)
 		if err != nil {
 			log.L.Errorf("Couldn't clear general alert for %v: %v", toMark[i], err.Error())
 

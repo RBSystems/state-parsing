@@ -15,6 +15,7 @@ import (
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
 var (
@@ -24,9 +25,11 @@ var (
 	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
 
-	runners     []*runner
-	eventChan   chan elkreporting.ElkEvent
-	v2EventChan chan v2.Event
+	runners   []*runner
+	eventChan chan elkreporting.ElkEvent
+
+	v2EventChan       chan v2.Event
+	v2LegacyEventChan chan v2.Event
 )
 
 type runner struct {
@@ -140,6 +143,11 @@ func ProcessV2Event(event v2.Event) {
 	v2EventChan <- event
 }
 
+// ProcessLevacyV2Event adds <event> into a queue to be processed
+func ProcessLevacyV2Event(event v2.Event) {
+
+}
+
 // StartJobScheduler starts workers to run jobs, defined in the config.json file.
 func StartJobScheduler() {
 	maxWorkers, _ := strconv.Atoi(MaxWorkers)
@@ -187,11 +195,24 @@ func StartJobScheduler() {
 							go matchRunners[i].run(&event)
 						}
 					}
+
 				case event := <-v2EventChan:
 					// see if we need to execute any jobs from this event
 					for i := range v2MatchRunners {
 						if v2MatchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
 							go v2MatchRunners[i].run(&event)
+						}
+					}
+
+				case event := <-v2LegacyEventChan:
+					le := eventbased.LegacyEvent{
+						Event: event,
+					}
+
+					// see if we need to execute any jobs from this event
+					for i := range v2MatchRunners {
+						if v2MatchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
+							go v2MatchRunners[i].run(&le)
 						}
 					}
 
