@@ -69,7 +69,7 @@
                 }
             }
         ],
-        "enabled": true
+        "enabled": false
     },
     {
         "name": "room-update.py",

@@ -20,10 +20,10 @@ const (
 	DEVICEDELTA = "device-delta"
 	DEVICEALL   = "device-all"
 
-	LEGACYEVENTDELTA  = "legacy-elk-delta"
-	LEGACYEVENTALL    = "legacy-elk-all"
-	LEGACYDEVICEDELTA = "legacy-device-delta"
-	LEGACYDEVICEALL   = "legacy-device-all"
+	LEGACYEVENTDELTA  = "elk-delta"
+	LEGACYEVENTALL    = "elk-all"
+	LEGACYDEVICEDELTA = "device-delta"
+	LEGACYDEVICEALL   = "device-all"
 
 	DMPS    = "dmps"
 	DEFAULT = "default"
@@ -51,12 +51,12 @@ func init() {
 
 //GetManagersForType a
 func GetManagersForType(cacheType, BufferType string) []BufferManager {
-	log.L.Debugf("Getting all managers for %v", cacheType)
+	log.L.Debugf("Getting %s managers for %v", BufferType, cacheType)
 	if v, ok := managerMap[cacheType]; ok {
 		return v[BufferType]
 	}
 
-	log.L.Errorf("Uknown cache type: %v", cacheType)
+	log.L.Errorf("Unknown cache type: %v", cacheType)
 	return []BufferManager{}
 }
 

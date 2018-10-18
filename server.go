@@ -29,7 +29,7 @@ func main() {
 	router.POST("/event", addEvent)
 
 	router.POST("/v2/event", addV2Event)
-	router.POST("/leagacy/v2/event", addV2LegacyEvent)
+	router.POST("/legacy/v2/event", addV2LegacyEvent)
 
 	// dmps
 	router.POST("/dmps/event", addDMPSEvent)
@@ -97,7 +97,7 @@ func addV2LegacyEvent(context echo.Context) error {
 	}
 	log.L.Debugf("Received event: %+v", event)
 
-	jobs.ProcessLevacyV2Event(event)
+	jobs.ProcessLegacyV2Event(event)
 	return context.JSON(http.StatusOK, "Success.")
 }
 

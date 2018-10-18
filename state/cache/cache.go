@@ -45,6 +45,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 	//Forward All
 	list := forwarding.GetManagersForType(c.cacheType, forwarding.EVENTALL)
 	for i := range list {
+		log.L.Debugf("Going to event forwarder: %v", list[i])
 		list[i].Send(v)
 	}
 

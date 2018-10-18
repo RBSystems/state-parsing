@@ -143,9 +143,9 @@ func ProcessV2Event(event v2.Event) {
 	v2EventChan <- event
 }
 
-// ProcessLevacyV2Event adds <event> into a queue to be processed
-func ProcessLevacyV2Event(event v2.Event) {
-
+// ProcessLegacyV2Event adds <event> into a queue to be processed
+func ProcessLegacyV2Event(event v2.Event) {
+	v2LegacyEventChan <- event
 }
 
 // StartJobScheduler starts workers to run jobs, defined in the config.json file.
@@ -158,6 +158,7 @@ func StartJobScheduler() {
 
 	eventChan = make(chan elkreporting.ElkEvent, maxQueue)
 	v2EventChan = make(chan v2.Event, maxQueue)
+	v2LegacyEventChan = make(chan v2.Event, maxQueue)
 
 	// start action managers
 	go actions.StartActionManagers()
