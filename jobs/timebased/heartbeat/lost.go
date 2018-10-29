@@ -23,7 +23,7 @@ type LostJob struct {
 }
 
 const (
-	HeartbeatLost = "lost-heartbeat"
+	HeartbeatLost = "heartbeat-lost"
 	elkAlertField = "lost-heartbeat"
 
 	heartbeatLostQuery = `
