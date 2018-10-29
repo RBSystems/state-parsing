@@ -8,19 +8,23 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
+	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding/marking"
+	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/forwarding"
+	"github.com/byuoitav/state-parser/state/marking"
 )
 
-type HeartbeatLostJob struct {
+// LostJob .
+type LostJob struct {
 }
 
 const (
-	elkAlertField  = "lost-heartbeat"
-	HEARTBEAT_LOST = "heartbeat-lost"
+	HeartbeatLost = "lost-heartbeat"
+	elkAlertField = "lost-heartbeat"
 
 	heartbeatLostQuery = `
 	{
@@ -93,50 +97,48 @@ type heartbeatLostQueryResponse struct {
 		Total    int     `json:"total,omitempty"`
 		MaxScore float64 `json:"max_score,omitempty"`
 		Hits     []struct {
-			Index  string           `json:"_index,omitempty"`
-			Type   string           `json:"_type,omitempty"`
-			ID     string           `json:"_id,omitempty"`
-			Score  float64          `json:"_score,omitempty"`
-			Source elk.StaticDevice `json:"_source,omitempty"`
+			Index  string          `json:"_index,omitempty"`
+			Type   string          `json:"_type,omitempty"`
+			ID     string          `json:"_id,omitempty"`
+			Score  float64         `json:"_score,omitempty"`
+			Source sd.StaticDevice `json:"_source,omitempty"`
 		} `json:"hits,omitempty"`
 	} `json:"hits,omitempty"`
 }
 
-func (h *HeartbeatLostJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (h *LostJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting heartbeat lost job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatLostQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run heartbeat lost job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var hrresp heartbeatLostQueryResponse
 	gerr := json.Unmarshal(body, &hrresp)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run heartbeat lost job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	acts, err := h.processResponse(hrresp)
+	err = h.processResponse(hrresp, actionWrite)
 	if err != nil {
 		log.L.Warn("failed to process heartbeat lost response: %s", err.String())
-		return acts
 	}
 
 	log.L.Debugf("Finished heartbeat lost job.")
-	return acts
 }
 
-func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]action.Payload, *nerr.E) {
+func (h *LostJob) processResponse(resp heartbeatLostQueryResponse, actionWrite chan action.Payload) *nerr.E {
 	roomsToCheck := make(map[string]bool)
 	devicesToUpdate := make(map[string]elk.DeviceUpdateInfo)
 	actionsByRoom := make(map[string][]action.Payload)
-	toReturn := []action.Payload{}
 
 	if len(resp.Hits.Hits) == 0 {
-		log.L.Infof("[%s] No heartbeats lost", HEARTBEAT_LOST)
-		return toReturn, nil
+		log.L.Infof("[%s] No heartbeats lost", elkAlertField)
+		return nil
 	}
 
 	log.L.Infof("%v heartbeats lost.", len(resp.Hits.Hits))
@@ -154,15 +156,15 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 		roomsToCheck[curHit.Room] = true
 
 		// make sure that it's marked as alerting
-		if !curHit.Alerting || !curHit.Alerts[elkAlertField].Alerting {
+		if !*curHit.Alerting || !curHit.Alerts[elkAlertField].Alerting {
 			// we need to mark it to be updated as alerting
 			devicesToUpdate[resp.Hits.Hits[i].ID] = elk.DeviceUpdateInfo{
 				Name: resp.Hits.Hits[i].ID,
-				Info: curHit.LastHeartbeat,
+				Info: curHit.LastHeartbeat.Format(time.RFC3339),
 			}
 		}
 
-		if curHit.Suppress {
+		if *curHit.NotificationsSuppressed {
 			// we don't actually send the alert
 			log.L.Debugf("Skipping building alerts for %v", resp.Hits.Hits[i].ID)
 			continue
@@ -181,7 +183,7 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 				},
 				slack.AlertField{
 					Title: "Last Heartbeat",
-					Value: curHit.LastHeartbeat,
+					Value: curHit.LastHeartbeat.Format(time.RFC3339),
 					Short: true,
 				},
 			},
@@ -210,20 +212,20 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 	*/
 	rms, err := elk.GetRoomsBulk(func(vals map[string]bool) []string {
 		toReturn := []string{}
-		for k, _ := range vals {
+		for k := range vals {
 			toReturn = append(toReturn, k)
 		}
 		return toReturn
 	}(roomsToCheck))
 	if err != nil {
-		return toReturn, err
+		return err
 	}
 
 	alerting, suppressed := elk.AlertingSuppressedRooms(rms)
 
 	roomsToMark := []string{}
 	//check the rooms that we have in roomsToCheck to validate that we need to mark them as alerting
-	for k, _ := range roomsToCheck {
+	for k := range roomsToCheck {
 		if alerting[k] {
 			//add it to the list to mark as alerting
 			roomsToMark = append(roomsToMark, k)
@@ -237,14 +239,28 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 	// mark devices as alerting
 	log.L.Infof("Marking devices as alerting...")
 	for i := range devicesToUpdate {
-		//we need to make a copy of the Secondary Alert Structure so we can use it
-		secondaryAlertStructure := make(map[string]interface{})
-		secondaryAlertStructure["alert-sent"] = time.Now()
-		secondaryAlertStructure["alerting"] = true
-		secondaryAlertStructure["message"] = fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info)
+
+		//create the device
+
+		s := sd.StaticDevice{
+			DeviceID:    devicesToUpdate[i].Name,
+			UpdateTimes: make(map[string]time.Time),
+			Alerts:      make(map[string]sd.Alert),
+		}
+
+		s.UpdateTimes["alerts.lost-heartbeat"] = time.Now()
+		s.Alerts["lost-heartbeat"] = sd.Alert{
+			Alerting:  true,
+			AlertSent: time.Now(),
+			Message:   fmt.Sprintf("Time elapsed since last heartbeat: %v", devicesToUpdate[i].Info),
+		}
 
 		log.L.Debugf("Marking device %v as alerting.", devicesToUpdate[i])
-		marking.MarkDevicesAsAlerting([]string{devicesToUpdate[i].Name}, elkAlertField, secondaryAlertStructure)
+		_, _, err := cache.GetCache(forwarding.DEFAULT).CheckAndStoreDevice(s)
+		if err != nil {
+			log.L.Errorf("Couldn't mark device %v as alerting: %v", devicesToUpdate[i].Info, err.Error())
+		}
+
 	}
 
 	//now we check to make sure that the alerts we're going to send aren't in rooms that are suppressed - build
@@ -258,11 +274,9 @@ func (h *HeartbeatLostJob) processResponse(resp heartbeatLostQueryResponse) ([]a
 
 		//otherwise add them to the list to be returned
 		for i := range acts {
-			toReturn = append(toReturn, acts[i])
+			actionWrite <- acts[i]
 		}
 	}
 
-	log.L.Infof("Created %v actions.", len(toReturn))
-
-	return toReturn, nil
+	return nil
 }

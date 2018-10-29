@@ -4,20 +4,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
+	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
+// RoomUpdateJob .
 type RoomUpdateJob struct {
 }
 
 const (
-	ROOM_UPDATE = "room-update"
-
+	//RoomUpdate .
+	RoomUpdate      = "room-update"
 	roomUpdateQuery = `
 	{
 "_source": false,
@@ -115,44 +119,44 @@ type roomQueryResponse struct {
 	} `json:"aggregations"`
 }
 
+// Bucket bucket
 type Bucket struct {
 	Key      string `json:"key"`
 	DocCount int    `json:"doc_count"`
 }
 
-func (r *RoomUpdateJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (r *RoomUpdateJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting room update job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s,%s/_search", elk.DEVICE_INDEX, elk.ROOM_INDEX), []byte(roomUpdateQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run room update job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var data roomQueryResponse
 	gerr := json.Unmarshal(body, &data)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run room update job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	acts, err := r.processData(data)
+	err = r.processData(data, actionWrite)
 	if err != nil {
 		log.L.Warnf("failed to process room update data: %s", err.String())
-		return acts
 	}
 
 	log.L.Debugf("Finished room update job.")
-	return acts
 }
 
-func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *nerr.E) {
-	log.L.Debugf("[%s] Processing room update data.", ROOM_UPDATE)
-	updatePower := make(map[string]string)
-	updateAlerting := make(map[string]int)
+func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan action.Payload) *nerr.E {
+	log.L.Debugf("[%s] Processing room update data.", RoomUpdate)
+
+	updateRoom := make(map[string]sd.StaticRoom)
 
 	for _, room := range data.Aggregations.Rooms.Buckets {
-		log.L.Debugf("[%s] Processing room: %s", ROOM_UPDATE, room.Key)
+		log.L.Debugf("[%s] Processing room: %s", RoomUpdate, room.Key)
 
 		// make sure both indicies are there
 		if len(room.Index.Buckets) > 2 || len(room.Index.Buckets) == 0 {
@@ -161,15 +165,15 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 				indicies = append(indicies, index.Key)
 			}
 
-			log.L.Warnf("[%s] %s has >2 or 0 indicies. ignoring this room. indicies: %s", ROOM_UPDATE, room.Key, indicies)
+			log.L.Warnf("[%s] %s has >2 or 0 indicies. ignoring this room. indicies: %s", RoomUpdate, room.Key, indicies)
 			continue
 
 		} else if len(room.Index.Buckets) == 1 {
 			// one of the indicies is missing
 			if room.Index.Buckets[0].Key == elk.DEVICE_INDEX {
-				log.L.Infof("%s doesn't have a room index, so I'll create one for it.", room.Key)
+				log.L.Infof("%s doesn't have a room entry, so I'll create one for it.", room.Key)
 			} else if room.Index.Buckets[0].Key == elk.ROOM_INDEX {
-				log.L.Warnf("%s doesn't have a device index. this room should probably be deleted.", room.Key)
+				log.L.Warnf("%s doesn't have any device entries. this room should probably be deleted.", room.Key)
 				continue
 			} else {
 				log.L.Warnf("%s is missing it's room index and device index. it has index: %v", room.Key, room.Index.Buckets[0].Key)
@@ -209,6 +213,7 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 			}
 		}
 
+		var roomPower = ""
 		log.L.Debugf("\tProcessing room index: %v", roomIndex.Key)
 
 		if len(roomIndex.Power.Buckets) == 1 {
@@ -216,19 +221,19 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 
 			if roomIndex.Power.Buckets[0].Key == elk.POWER_STANDBY && poweredOn {
 				// the room is in standby, but there is at least one device powered on
-				updatePower[room.Key] = elk.POWER_ON
+				roomPower = elk.POWER_ON
 			} else if roomIndex.Power.Buckets[0].Key == elk.POWER_ON && !poweredOn {
 				// the room is on, but there are no devices that are powered on
-				updatePower[room.Key] = elk.POWER_STANDBY
+				roomPower = elk.POWER_STANDBY
 			}
 		} else if len(roomIndex.Power.Buckets) == 0 {
 			log.L.Infof("%s doesn't have a power state. i'll create one for it.", room.Key)
 
 			// set the power state to whatever it's supposed to be
 			if poweredOn {
-				updatePower[room.Key] = elk.POWER_ON
+				roomPower = elk.POWER_ON
 			} else {
-				updatePower[room.Key] = elk.POWER_STANDBY
+				roomPower = elk.POWER_STANDBY
 			}
 		} else {
 			// this room has more than one power state?
@@ -237,24 +242,48 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 			continue
 		}
 
+		if len(roomPower) > 0 {
+			//update the power
+			updateRoomEntry, ok := updateRoom[room.Key]
+			if !ok {
+				updateRoomEntry = sd.StaticRoom{
+					UpdateTimes: make(map[string]time.Time),
+					Power:       roomPower,
+				}
+
+				updateRoomEntry.UpdateTimes["power"] = time.Now()
+			} else {
+				updateRoomEntry.Power = roomPower
+				updateRoomEntry.UpdateTimes["power"] = time.Now()
+
+			}
+			updateRoom[room.Key] = updateRoomEntry
+		}
+
+		var roomAlerting *bool
+
+		//for taking pointers :eyeroll:
+		var True = true
+		var False = false
+
 		if len(roomIndex.Alerting.Buckets) == 1 {
 			log.L.Debugf("\t\troom alerting set to: %v", roomIndex.Alerting.Buckets[0].Key)
 
 			if roomIndex.Alerting.Buckets[0].Key == elk.ALERTING_FALSE && alerting {
 				// the room is in not alerting, but there is at least one device alerting
-				updateAlerting[room.Key] = elk.ALERTING_TRUE
+				roomAlerting = &True
 			} else if roomIndex.Alerting.Buckets[0].Key == elk.ALERTING_TRUE && !alerting {
 				// the room is alerting, but there are no devices that are alerting
-				updateAlerting[room.Key] = elk.ALERTING_FALSE
+				roomAlerting = &False
 			}
 		} else if len(roomIndex.Alerting.Buckets) == 0 {
 			log.L.Infof("%s doesn't have an alerting state. i'll create one for it.", room.Key)
 
-			// set the power state to whatever it's supposed to be
+			// set the alerting state to whatever it's supposed to be
 			if alerting {
-				updateAlerting[room.Key] = elk.ALERTING_TRUE
+				roomAlerting = &True
 			} else {
-				updateAlerting[room.Key] = elk.ALERTING_FALSE
+				roomAlerting = &False
 			}
 		} else {
 			// this room has more than one alerting state?
@@ -262,35 +291,39 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse) ([]action.Payload, *
 			log.L.Warnf("%s has more than one alerting state. alerting buckets: %v", roomIndex.Key, roomIndex.Power.Buckets)
 			continue
 		}
+
+		if roomAlerting != nil {
+			//update the power
+			updateRoomEntry, ok := updateRoom[room.Key]
+			if !ok {
+				updateRoomEntry = sd.StaticRoom{
+					UpdateTimes: make(map[string]time.Time),
+					Alerting:    roomAlerting,
+				}
+
+				updateRoomEntry.UpdateTimes["alerting"] = time.Now()
+			} else {
+				updateRoomEntry.Alerting = roomAlerting
+				updateRoomEntry.UpdateTimes["alerting"] = time.Now()
+
+			}
+			updateRoom[room.Key] = updateRoomEntry
+		}
 	}
 
-	// do stuff with powerOnRooms and alertingRooms
+	// update the rooms
+	for key, room := range updateRoom {
+		log.L.Infof("Sending room %v for updates", key)
 
-	for room, power := range updatePower {
-		// build state
-		state := forwarding.State{
-			ID:    room,
-			Key:   "power",
-			Value: power,
+		log.L.Debugf("Room info: %v", room)
+
+		_, _, err := cache.GetCache(forwarding.DEFAULT).CheckAndStoreRoom(room)
+		if err != nil {
+			log.L.Errorf("Problem caching the power state for room %v: %v", room, err.Error())
 		}
-
-		log.L.Infof("marking %s power as %v", room, power)
-		forwarding.BufferState(state, "room")
-	}
-
-	for room, alerting := range updateAlerting {
-		// build state
-		state := forwarding.State{
-			ID:    room,
-			Key:   "alerting",
-			Value: alerting == 1, // to turn it into a bool
-		}
-
-		log.L.Infof("marking %s alerting as %v", room, alerting)
-		forwarding.BufferState(state, "room")
 	}
 
 	log.L.Debugf("Successfully updated room state.")
 
-	return []action.Payload{}, nil
+	return nil
 }

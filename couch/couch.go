@@ -1,4 +1,4 @@
-package elk
+package couch
 
 import (
 	"bytes"
@@ -7,35 +7,29 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 )
 
-const (
-	ALERTING_TRUE  = 1
-	ALERTING_FALSE = 0
-	POWER_STANDBY  = "standby"
-	POWER_ON       = "on"
-
-	DEVICE_INDEX = "oit-static-av-devices"
-	ROOM_INDEX   = "oit-static-av-rooms"
-)
-
 var (
-	APIAddr  = os.Getenv("ELK_DIRECT_ADDRESS") // or should this be ELK_ADDR?
-	username = os.Getenv("ELK_SA_USERNAME")
-	password = os.Getenv("ELK_SA_PASSWORD")
+	username string
+	password string
+	once     sync.Once
 )
 
-func init() {
-	if len(APIAddr) == 0 || len(username) == 0 || len(password) == 0 {
-		log.L.Fatalf("ELASTIC_API_EVENTS, ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
-	}
+func initialize() {
+	log.L.Info("Initializing couch requests")
+	username = os.Getenv("COUCH_USER")
+	password = os.Getenv("COUCH_PASS")
 }
 
-func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
-	log.L.Debugf("Making ELK request against: %s", addr)
+//MakeRequest makes a generic Couch Request
+func MakeRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
+	once.Do(initialize)
+
+	log.L.Debugf("Making couch request against: %s", addr)
 
 	var reqBody []byte
 	var err error
@@ -88,11 +82,4 @@ func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr
 
 	return respBody, nil
 
-}
-
-func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
-
-	// format whole address
-	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)
-	return MakeGenericELKRequest(addr, method, body)
 }

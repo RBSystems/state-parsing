@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/byuoitav/common/events"
 	"github.com/byuoitav/common/log"
+	v2 "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
-	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
 var (
@@ -25,9 +25,11 @@ var (
 	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
 
-	runners       []*runner
-	eventChan     chan elkreporting.ElkEvent
-	heartbeatChan chan events.Event
+	runners   []*runner
+	eventChan chan elkreporting.ElkEvent
+
+	v2EventChan       chan v2.Event
+	v2LegacyEventChan chan v2.Event
 )
 
 type runner struct {
@@ -59,7 +61,7 @@ func init() {
 	// parse configuration
 	path := os.Getenv("JOB_CONFIG_LOCATION")
 	if len(path) < 1 {
-		path = "./config.json"
+		path = "./job-config.json"
 	}
 	log.L.Infof("Parsing job configuration from: %s", path)
 
@@ -117,8 +119,12 @@ func init() {
 			}
 
 			// build the regex if it's a match type
-			if strings.EqualFold(runner.Trigger.Type, "match") {
-				runner.buildMatchRegex()
+			if strings.EqualFold(runner.Trigger.Type, "new-match") {
+				runner.Trigger.NewMatch = runner.buildNewMatchRegex()
+			}
+
+			if strings.EqualFold(runner.Trigger.Type, "old-match") {
+				runner.Trigger.OldMatch = runner.buildOldMatchRegex()
 			}
 
 			log.L.Infof("Adding runner for job '%v', trigger #%v. Execution type: %v", runner.Config.Name, runner.TriggerIndex, runner.Trigger.Type)
@@ -132,9 +138,14 @@ func ProcessEvent(event elkreporting.ElkEvent) {
 	eventChan <- event
 }
 
-// ProcessHeartbeat adds <heartbeat> into a queue to be processed
-func ProcessHeartbeat(heartbeat events.Event) {
-	heartbeatChan <- heartbeat
+// ProcessV2Event adds <event> into a queue to be processed
+func ProcessV2Event(event v2.Event) {
+	v2EventChan <- event
+}
+
+// ProcessLegacyV2Event adds <event> into a queue to be processed
+func ProcessLegacyV2Event(event v2.Event) {
+	v2LegacyEventChan <- event
 }
 
 // StartJobScheduler starts workers to run jobs, defined in the config.json file.
@@ -146,20 +157,24 @@ func StartJobScheduler() {
 	wg := sync.WaitGroup{}
 
 	eventChan = make(chan elkreporting.ElkEvent, maxQueue)
-	heartbeatChan = make(chan events.Event, maxQueue)
+	v2EventChan = make(chan v2.Event, maxQueue)
+	v2LegacyEventChan = make(chan v2.Event, maxQueue)
 
 	// start action managers
 	go actions.StartActionManagers()
 
 	// start runners
 	var matchRunners []*runner
+	var v2MatchRunners []*runner
 	for _, runner := range runners {
 		switch runner.Trigger.Type {
 		case "daily":
 			go runner.runDaily()
 		case "interval":
 			go runner.runInterval()
-		case "match":
+		case "new-match":
+			v2MatchRunners = append(v2MatchRunners, runner)
+		case "old-match":
 			matchRunners = append(matchRunners, runner)
 		default:
 			log.L.Warnf("unknown trigger type '%v' for job %v|%v", runner.Trigger.Type, runner.Config.Name, runner.TriggerIndex)
@@ -177,18 +192,31 @@ func StartJobScheduler() {
 				case event := <-eventChan:
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
-						if matchRunners[i].doesEventMatch(&event) {
+						if matchRunners[i].Trigger.OldMatch.doesEventMatch(&event) {
 							go matchRunners[i].run(&event)
 						}
 					}
 
-				case heartbeat := <-heartbeatChan:
-					// forward heartbeat
-					go forwarding.Forward(heartbeat, elk.UpdateHeader{
-						Index: elk.GenerateIndexName(elk.OIT_AV_HEARTBEAT),
-						Type:  "heartbeat",
-					})
-					go forwarding.DistributeHeartbeat(heartbeat)
+				case event := <-v2EventChan:
+					// see if we need to execute any jobs from this event
+					for i := range v2MatchRunners {
+						if v2MatchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
+							go v2MatchRunners[i].run(&event)
+						}
+					}
+
+				case event := <-v2LegacyEventChan:
+					le := eventbased.LegacyEvent{
+						Event: event,
+					}
+
+					// see if we need to execute any jobs from this event
+					for i := range v2MatchRunners {
+						if v2MatchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
+							go v2MatchRunners[i].run(&le)
+						}
+					}
+
 				}
 			}
 		}()
@@ -199,7 +227,16 @@ func StartJobScheduler() {
 
 func (r *runner) run(context interface{}) {
 	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
-	actions.Execute(r.Job.Run(context))
+
+	actionChan := make(chan action.Payload, 50)
+	go func() {
+		for action := range actionChan {
+			actions.Execute(action)
+		}
+	}()
+
+	r.Job.Run(context, actionChan)
+	close(actionChan)
 	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 

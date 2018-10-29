@@ -1,78 +1,25 @@
-[
-    {
-        "name": "heartbeat-lost",
-        "triggers": [
-            {
-                "type": "interval",
-                "every": "30s"
-            }
-        ],
-        "enabled": true
-    },
-    {
-        "name": "heartbeat-restored",
-        "triggers": [
-            {
-                "type": "interval",
-                "every": "30s"
-            }
-        ],
-        "enabled": true
-    },
-    {
-        "name": "room-update",
-        "triggers": [
-            {
-                "type": "interval",
-                "every": "10s"
-            }
-        ],
-        "enabled": false
-    },
-    {
-        "name": "general-alert-clearing",
-        "triggers": [
-            {
-                "type": "interval",
-                "every": "10s"
-            }
-        ],
-        "enabled": false
-    },
-    {
-        "name": "simple-forwarding",
-        "triggers": [
-            {
-                "type": "match"
-            }
-        ],
-        "enabled": false
-    },
-    {
-        "name": "room-update.py",
-        "triggers": [
-            {
-                "type": "daily",
-                "at": "14:45:00-06:00"
-            },
-            {
-                "type": "interval",
-                "every": "5m"
-            },
-            {
-                "type": "match",
-                "match": {
-                    "hostname": "teton",
-                    "event": {
-                        "eventInfoKey": "button.*",
-                        "type": "CORE"
-                    }
-                }
-            },
-            {
-                "type": "match"
-            }
-        ],
-        "enabled": false
-    }
-]
+{
+    "name": "state-parser",
+    "port": ":10011",
+    "env-vars": [
+        "PROXY_ADDR",
+        "MAX_WORKERS",
+        "COUCH_PASS",
+        "MAX_QUEUE",
+        "ELK_SA_PASSWORD",
+        "ELASTIC_API_EVENTS_TWO",
+        "ELASTIC_HEARTBEAT_EVENTS",
+        "ELASTIC_DMPS_EVENTS",
+        "ELASTIC_API_EVENTS_DEV",
+        "MOM_ALERT_URL",
+        "SLACK_HEARTBEAT_CHANNEL",
+        "PI_HOSTNAME",
+        "ELK_DIRECT_ADDRESS",
+        "ELK_SA_USERNAME",
+        "ELASTIC_DMPS_HEARTBEATS",
+        "JOB_CONFIG_LOCATION",
+        "ELASTIC_API_EVENTS",
+        "COUCH_USER",
+        "JOB_SCRIPTS_PATH"
+    ]
+}

@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
+	"github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding/marking"
+	"github.com/byuoitav/state-parser/state/marking"
 )
 
-type HeartbeatRestoredJob struct {
+// RestoredJob .
+type RestoredJob struct {
 }
 
 const (
@@ -69,52 +72,50 @@ type heartbeatRestoredQueryResponse struct {
 		Total    int     `json:"total,omitempty"`
 		MaxScore float64 `json:"max_score,omitempty"`
 		Hits     []struct {
-			Index  string           `json:"_index,omitempty"`
-			Type   string           `json:"_type,omitempty"`
-			ID     string           `json:"_id,omitempty"`
-			Score  float64          `json:"_score,omitempty"`
-			Source elk.StaticDevice `json:"_source,omitempty"`
+			Index  string                       `json:"_index,omitempty"`
+			Type   string                       `json:"_type,omitempty"`
+			ID     string                       `json:"_id,omitempty"`
+			Score  float64                      `json:"_score,omitempty"`
+			Source statedefinition.StaticDevice `json:"_source,omitempty"`
 		} `json:"hits,omitempty"`
 	} `json:"hits,omitempty"`
 }
 
-func (h *HeartbeatRestoredJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (h *RestoredJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting heartbeat restored job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(heartbeatRestoredQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run heartbeat restored job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var hrresp heartbeatRestoredQueryResponse
 	gerr := json.Unmarshal(body, &hrresp)
 	if gerr != nil {
 		log.L.Warn("failed to unmarshal elk response to run heartbeat restored job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	acts, err := h.processResponse(hrresp)
+	err = h.processResponse(hrresp, actionWrite)
 	if err != nil {
 		log.L.Warn("failed to process heartbeat restored response: %s", err.String())
-		return acts
 	}
 
 	log.L.Debugf("Finished heartbeat restored job.")
-	return acts
 }
 
-func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryResponse) ([]action.Payload, *nerr.E) {
+func (h *RestoredJob) processResponse(resp heartbeatRestoredQueryResponse, actionWrite chan action.Payload) *nerr.E {
 	roomsToCheck := make(map[string]bool)
-	// devicesToUpdate :=
 	deviceIDsToUpdate := []string{}
 	actionsByRoom := make(map[string][]action.Payload)
-	toReturn := []action.Payload{}
+	//	toReturn := []action.Payload{}
 
 	// there are no devices that have heartbeats restored
 	if len(resp.Hits.Hits) <= 0 {
 		log.L.Infof("[%s] No heartbeats restored", HeartbeatRestored)
-		return toReturn, nil
+		return nil
 	}
 
 	// loop through all the devices that have had restored heartbeats
@@ -139,7 +140,7 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 		deviceIDsToUpdate = append(deviceIDsToUpdate, resp.Hits.Hits[i].ID)
 
 		// if a device's alerts aren't suppressed, create the alert
-		if device.Suppress {
+		if *device.NotificationsSuppressed {
 			continue
 		}
 
@@ -154,7 +155,7 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 				},
 				slack.AlertField{
 					Title: "Received at",
-					Value: device.LastHeartbeat,
+					Value: device.LastHeartbeat.Format(time.RFC3339),
 					Short: true,
 				},
 			},
@@ -176,19 +177,19 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 
 	// mark devices as not alerting
 	log.L.Infof("Marking %v devices as not alerting", len(deviceIDsToUpdate))
-	marking.MarkDevicesAsNotHeartbeatAlerting(deviceIDsToUpdate)
+	marking.ClearHeartbeatAlerts(deviceIDsToUpdate)
 
 	/* send alerts */
 	// get the rooms
 	rooms, err := elk.GetRoomsBulk(func(vals map[string]bool) []string {
 		ret := []string{}
-		for k, _ := range vals {
+		for k := range vals {
 			ret = append(ret, k)
 		}
 		return ret
 	}(roomsToCheck))
 	if err != nil {
-		return toReturn, err
+		return err
 	}
 
 	// figure out if a room's alerts are suppressed
@@ -202,9 +203,9 @@ func (h *HeartbeatRestoredJob) processResponse(resp heartbeatRestoredQueryRespon
 		}
 
 		for i := range acts {
-			toReturn = append(toReturn, acts[i])
+			actionWrite <- acts[i]
 		}
 	}
 
-	return toReturn, nil
+	return nil
 }

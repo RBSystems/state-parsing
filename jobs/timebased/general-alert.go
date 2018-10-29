@@ -4,19 +4,22 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/forwarding"
+	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
+// GeneralAlertClearingJob .
 type GeneralAlertClearingJob struct {
 }
 
 const (
-	GENERAL_ALERT_CLEARING = "general-alert-clearing"
-
+	GeneralAlertClearing      = "general-alert-clearing"
 	generalAlertClearingQuery = `{
 	"_source": [
 		"hostname"
@@ -59,37 +62,38 @@ type generalAlertClearingQueryResponse struct {
 	} `json:"hits"`
 }
 
-func (g *GeneralAlertClearingJob) Run(context interface{}) []action.Payload {
+// Run runs the job
+func (g *GeneralAlertClearingJob) Run(context interface{}, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting general-alert clearing job")
 
 	// The query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(generalAlertClearingQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run general alert clearing job: %s", err.String())
-		return []action.Payload{}
+		return
 	}
 
 	var resp generalAlertClearingQueryResponse
 	gerr := json.Unmarshal(body, &resp)
 	if err != nil {
 		log.L.Warn("couldn't unmarshal elk response to run general alert clearing job: %s", gerr)
-		return []action.Payload{}
+		return
 	}
 
-	log.L.Debugf("[%s] Processing response data", GENERAL_ALERT_CLEARING)
+	log.L.Debugf("[%s] Processing response data", "general-alert-clearing")
 
-	alertcleared := forwarding.State{
-		Key:   "alerting",
-		Value: false,
-	}
+	F := false
 
 	// go through and mark each of these rooms as not alerting, in the general
 	for _, hit := range resp.Hits.Hits {
 		log.L.Debugf("Marking general alerting on %s as false.", hit.ID)
-		alertcleared.ID = hit.ID
-		forwarding.BufferState(alertcleared, "device")
+
+		device := statedefinition.StaticDevice{Alerting: &F, DeviceID: hit.ID}
+		device.UpdateTimes = make(map[string]time.Time)
+		device.UpdateTimes["alerting"] = time.Now()
+
+		cache.GetCache(forwarding.DEFAULT).CheckAndStoreDevice(device)
 	}
 
-	log.L.Debugf("[%s] Finished general alert clearing job.", GENERAL_ALERT_CLEARING)
-	return []action.Payload{}
+	log.L.Debugf("[%s] Finished general alert clearing job.", "general-alert-clearing")
 }
