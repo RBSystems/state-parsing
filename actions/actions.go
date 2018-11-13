@@ -14,6 +14,8 @@ const (
 	Slack = "slack"
 	// Mom ..
 	Mom = "mom"
+	//Email ..
+	Email = "email"
 )
 
 // An Action is a struct that will execute action payloads created by jobs.

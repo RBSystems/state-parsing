@@ -190,6 +190,7 @@ func StartJobScheduler() {
 			for {
 				select {
 				case event := <-eventChan:
+					log.L.Debugf("Got an event")
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
 						if matchRunners[i].Trigger.OldMatch.doesEventMatch(&event) {
@@ -206,6 +207,7 @@ func StartJobScheduler() {
 					}
 
 				case event := <-v2LegacyEventChan:
+					log.L.Debugf("Got a legacy event")
 					le := eventbased.LegacyEvent{
 						Event: event,
 					}

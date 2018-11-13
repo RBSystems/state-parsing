@@ -43,10 +43,19 @@
         "name": "simple-forwarding",
         "triggers": [
             {
-                "type": "match"
+                "type": "new-match"
             }
         ],
-        "enabled": false
+        "enabled": true
+    },
+    {
+        "name": "simple-forwarding",
+        "triggers": [
+            {
+                "type": "old-match"
+            }
+        ],
+        "enabled": true
     },
     {
         "name": "room-update.py",
