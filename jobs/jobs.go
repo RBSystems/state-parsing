@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/jobs/actiongen"
 	"github.com/byuoitav/state-parser/jobs/eventbased"
 	"github.com/byuoitav/state-parser/jobs/timebased"
 	"github.com/byuoitav/state-parser/jobs/timebased/heartbeat"
@@ -23,9 +24,10 @@ var Jobs = map[string]Job{
 
 // JobConfig .
 type JobConfig struct {
-	Name     string    `json:"name"`
-	Triggers []Trigger `json:"triggers"`
-	Enabled  bool      `json:"enabled"`
+	Name     string           `json:"name"`
+	Triggers []Trigger        `json:"triggers"`
+	Enabled  bool             `json:"enabled"`
+	Action   actiongen.Config `json:"action"`
 }
 
 // Trigger .

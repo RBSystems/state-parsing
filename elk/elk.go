@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
@@ -66,7 +67,9 @@ func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr
 		req.Header.Add("content-type", "application/json")
 	}
 
-	client := http.Client{}
+	client := http.Client{
+		Timeout: 3 * time.Second,
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {

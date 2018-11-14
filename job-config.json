@@ -1,87 +1,26 @@
 [
     {
-        "name": "heartbeat-lost",
+        "name": "heartbeat-lost-email",
         "triggers": [
             {
-                "type": "interval",
-                "every": "30s"
-            }
-        ],
-        "enabled": true
-    },
-    {
-        "name": "heartbeat-restored",
-        "triggers": [
-            {
-                "type": "interval",
-                "every": "30s"
-            }
-        ],
-        "enabled": true
-    },
-    {
-        "name": "room-update",
-        "triggers": [
-            {
-                "type": "interval",
-                "every": "10s"
-            }
-        ],
-        "enabled": false
-    },
-    {
-        "name": "general-alert-clearing",
-        "triggers": [
-            {
-                "type": "interval",
-                "every": "10s"
-            }
-        ],
-        "enabled": false
-    },
-    {
-        "name": "simple-forwarding",
-        "triggers": [
-            {
-                "type": "new-match"
-            }
-        ],
-        "enabled": true
-    },
-    {
-        "name": "simple-forwarding",
-        "triggers": [
-            {
-                "type": "old-match"
-            }
-        ],
-        "enabled": true
-    },
-    {
-        "name": "room-update.py",
-        "triggers": [
-            {
-                "type": "daily",
-                "at": "14:45:00-06:00"
-            },
-            {
-                "type": "interval",
-                "every": "5m"
-            },
-            {
-                "type": "match",
-                "match": {
-                    "hostname": "teton",
-                    "event": {
-                        "eventInfoKey": "button.*",
-                        "type": "CORE"
-                    }
+                "type": "new-match",
+                "new-match": {
+                    "generating-system": "linux-knight"
                 }
-            },
-            {
-                "type": "match"
             }
         ],
-        "enabled": false
+        "enabled": true, 
+        "action": {
+            "action-type": "email", 
+            "fields": {
+                "irecipients": "joe_blodgett@byu.edu,danny_randall@byu.edu",
+                "sender": "av-alerts@byu.edu",
+                "user": "", 
+                "pass": "",
+                "subject": "this is a test",
+                "body": "Hello danny, you got an event from {{AffectedRoom.RoomID}}.",
+                "smtp-addr": "gateway.byu.edu:25"
+            }
+        }
     }
 ]

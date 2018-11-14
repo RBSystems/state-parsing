@@ -5,6 +5,7 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/actions/email"
 	"github.com/byuoitav/state-parser/actions/mom"
 	"github.com/byuoitav/state-parser/actions/slack"
 )
@@ -28,6 +29,7 @@ var Actions = map[string]Action{
 	// fill actions in here
 	Slack: &slack.Action{ChannelIdentifier: os.Getenv("SLACK_HEARTBEAT_CHANNEL")},
 	Mom:   &mom.Action{},
+	Email: &email.Action{},
 }
 
 func init() {

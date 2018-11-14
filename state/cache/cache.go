@@ -49,10 +49,12 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		list[i].Send(v)
 	}
 
-	//if it's an error, we don't want to try and store it, as it probably won't correlate to a device field
-	if HasTag(events.Error, v.EventTags) {
+	//if it's an doesn't correspond to core or detail state we don't want to store it.
+	if !events.ContainsAnyTags(v, events.CoreState, events.DetailState) {
 		return false, nil
 	}
+
+	//check for detail or corestate, those are the only ones we save
 
 	//Cache
 	changes, newDev, err := c.StoreDeviceEvent(sd.State{
@@ -73,7 +75,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 	}
 
 	//if there are changes and it's not a heartbeat event
-	if changes && !events.HasTag(v, events.Heartbeat) {
+	if changes && !events.ContainsAnyTags(v, events.Heartbeat) {
 
 		log.L.Debugf("Event resulted in changes")
 
