@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"regexp"
 
+	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/v2/events"
 )
 
@@ -49,7 +50,7 @@ type NewMatchConfig struct {
 }
 
 func (r *runner) buildNewMatchRegex() *NewMatchConfig {
-	m := &NewMatchConfig{}
+	m := r.Trigger.NewMatch
 	m.Count = 0
 
 	// build the regex for each field
@@ -113,11 +114,14 @@ func (r *runner) buildNewMatchRegex() *NewMatchConfig {
 		m.Count++
 	}
 
+	log.L.Infof("Count: %v", m)
+
 	return m
 }
 
 func (m *NewMatchConfig) doesEventMatch(event *events.Event) bool {
 	if m.Count == 0 {
+		log.L.Debugf("No runners")
 		return true
 	}
 
@@ -157,6 +161,7 @@ func (m *NewMatchConfig) doesEventMatch(event *events.Event) bool {
 	if m.Regex.Key != nil {
 		reg := m.Regex.Key.Copy()
 		if !reg.MatchString(event.Key) {
+			log.L.Debugf("returrning false.")
 			return false
 		}
 	}
