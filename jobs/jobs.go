@@ -2,6 +2,7 @@ package jobs
 
 import (
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/jobs/actiongen"
 	"github.com/byuoitav/state-parser/jobs/eventbased"
 	"github.com/byuoitav/state-parser/jobs/timebased"
 	"github.com/byuoitav/state-parser/jobs/timebased/heartbeat"
@@ -14,19 +15,19 @@ type Job interface {
 
 // Jobs .
 var Jobs = map[string]Job{
-	"heartbeat-lost":         &heartbeat.LostJob{},
-	"heartbeat-restored":     &heartbeat.RestoredJob{},
-	"room-update":            &timebased.RoomUpdateJob{},
-	"general-alert-clearing": &timebased.GeneralAlertClearingJob{},
-	"simple-forwarding":      &eventbased.SimpleForwardingJob{},
-	"duplicate-errors":       &eventbased.DuplicateErrorsJob{},
+	heartbeat.HeartbeatLost:        &heartbeat.LostJob{},
+	heartbeat.HeartbeatRestored:    &heartbeat.RestoredJob{},
+	timebased.RoomUpdate:           &timebased.RoomUpdateJob{},
+	timebased.GeneralAlertClearing: &timebased.GeneralAlertClearingJob{},
+	eventbased.SimpleForwarding:    &eventbased.SimpleForwardingJob{},
 }
 
 // JobConfig .
 type JobConfig struct {
-	Name     string    `json:"name"`
-	Triggers []Trigger `json:"triggers"`
-	Enabled  bool      `json:"enabled"`
+	Name     string           `json:"name"`
+	Triggers []Trigger        `json:"triggers"`
+	Enabled  bool             `json:"enabled"`
+	Action   actiongen.Config `json:"action"`
 }
 
 // Trigger .

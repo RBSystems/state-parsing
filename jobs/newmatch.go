@@ -11,22 +11,22 @@ import (
 type NewMatchConfig struct {
 	Count int
 
-	GeneratingSystem string   `json:"generating-system"`
-	Timestamp        string   `json:"timestamp"`
-	EventTags        []string `json:"event-tags"`
-	Key              string   `json:"key"`
-	Value            string   `json:"value"`
-	User             string   `json:"user"`
-	Data             string   `json:"data,omitempty"`
+	GeneratingSystem string   `json:"GeneratingSystem"`
+	Timestamp        string   `json:"Timestamp"`
+	EventTags        []string `json:"EventTags"`
+	Key              string   `json:"Key"`
+	Value            string   `json:"Value"`
+	User             string   `json:"User"`
+	Data             string   `json:"Data,omitempty"`
 	AffectedRoom     struct {
-		BuildingID string `json:"buildingID,omitempty"`
-		RoomID     string `json:"roomID,omitempty"`
-	} `json:"affected-room"`
+		BuildingID string `json:"BuildingID,omitempty"`
+		RoomID     string `json:"RoomID,omitempty"`
+	} `json:"AffectedRoom"`
 	TargetDevice struct {
-		BuildingID string `json:"buildingID,omitempty"`
-		RoomID     string `json:"roomID,omitempty"`
-		DeviceID   string `json:"deviceID,omitempty"`
-	} `json:"target-device"`
+		BuildingID string `json:"BuildingID,omitempty"`
+		RoomID     string `json:"RoomID,omitempty"`
+		DeviceID   string `json:"DeviceID,omitempty"`
+	} `json:"TargetDevice"`
 
 	Regex struct {
 		GeneratingSystem *regexp.Regexp

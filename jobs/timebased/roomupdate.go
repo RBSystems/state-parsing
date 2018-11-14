@@ -20,7 +20,8 @@ type RoomUpdateJob struct {
 }
 
 const (
-	roomUpdate      = "room-update"
+	//RoomUpdate .
+	RoomUpdate      = "room-update"
 	roomUpdateQuery = `
 	{
 "_source": false,
@@ -150,12 +151,12 @@ func (r *RoomUpdateJob) Run(context interface{}, actionWrite chan action.Payload
 }
 
 func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan action.Payload) *nerr.E {
-	log.L.Debugf("[%s] Processing room update data.", roomUpdate)
+	log.L.Debugf("[%s] Processing room update data.", RoomUpdate)
 
 	updateRoom := make(map[string]sd.StaticRoom)
 
 	for _, room := range data.Aggregations.Rooms.Buckets {
-		log.L.Debugf("[%s] Processing room: %s", roomUpdate, room.Key)
+		log.L.Debugf("[%s] Processing room: %s", RoomUpdate, room.Key)
 
 		// make sure both indicies are there
 		if len(room.Index.Buckets) > 2 || len(room.Index.Buckets) == 0 {
@@ -164,7 +165,7 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan act
 				indicies = append(indicies, index.Key)
 			}
 
-			log.L.Warnf("[%s] %s has >2 or 0 indicies. ignoring this room. indicies: %s", roomUpdate, room.Key, indicies)
+			log.L.Warnf("[%s] %s has >2 or 0 indicies. ignoring this room. indicies: %s", RoomUpdate, room.Key, indicies)
 			continue
 
 		} else if len(room.Index.Buckets) == 1 {

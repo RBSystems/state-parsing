@@ -16,6 +16,10 @@ import (
 	"github.com/fatih/color"
 )
 
+const (
+	SimpleForwarding = "simple-forwarding"
+)
+
 var (
 	// APIForward is the url to forward events to
 	APIForward = os.Getenv("ELASTIC_API_EVENTS")
@@ -34,10 +38,6 @@ var (
 )
 
 func init() {
-	if len(APIForward) == 0 || len(HeartbeatForward) == 0 {
-		log.L.Fatalf("$ELASTIC_API_EVENTS and $ELASTIC_HEARTBEAT_EVENTS must be set.")
-	}
-	log.L.Infof("\n\nForwarding URLs:\n\tAPI Forward:\t\t%v\n\tSecond API Forward\t\t%v\n\tHeartbeat Forward:\t%v\n", APIForward, SecondAPIForward, HeartbeatForward)
 }
 
 // SimpleForwardingJob is exported to add it as a job.

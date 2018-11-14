@@ -144,6 +144,9 @@ func (e *ElkStaticRoomForwarder) start() {
 }
 
 func (e *ElkStaticDeviceForwarder) bufferevent(event sd.StaticDevice) {
+	if len(event.DeviceID) < 1 {
+		return
+	}
 
 	if len(event.DeviceID) < 1 {
 		return

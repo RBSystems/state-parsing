@@ -19,6 +19,7 @@ type GeneralAlertClearingJob struct {
 }
 
 const (
+	GeneralAlertClearing      = "general-alert-clearing"
 	generalAlertClearingQuery = `{
 	"_source": [
 		"hostname"

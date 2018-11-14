@@ -11,10 +11,12 @@ import (
 	"time"
 
 	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/common/nerr"
 	v2 "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/jobs/actiongen"
 	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
@@ -61,7 +63,7 @@ func init() {
 	// parse configuration
 	path := os.Getenv("JOB_CONFIG_LOCATION")
 	if len(path) < 1 {
-		path = "./config.json"
+		path = "./job-config.json"
 	}
 	log.L.Infof("Parsing job configuration from: %s", path)
 
@@ -100,7 +102,7 @@ func init() {
 		}
 
 		// if it isn't valid, then check if it's a valid script
-		if !isValid {
+		if !isValid && len(config.Action.Type) < 1 {
 			if _, err := os.Stat(scriptPath + config.Name); err != nil {
 				log.L.Fatalf("job '%s' doesn't exist, and doesn't have a script that matches its name.", config.Name)
 			}
@@ -190,6 +192,7 @@ func StartJobScheduler() {
 			for {
 				select {
 				case event := <-eventChan:
+					log.L.Debugf("Got an event")
 					// see if we need to execute any jobs from this event
 					for i := range matchRunners {
 						if matchRunners[i].Trigger.OldMatch.doesEventMatch(&event) {
@@ -206,6 +209,7 @@ func StartJobScheduler() {
 					}
 
 				case event := <-v2LegacyEventChan:
+					log.L.Debugf("Got a legacy event")
 					le := eventbased.LegacyEvent{
 						Event: event,
 					}
@@ -225,6 +229,35 @@ func StartJobScheduler() {
 	wg.Wait()
 }
 
+func (r *runner) GenAction(context interface{}, c chan action.Payload) {
+
+	defer func() {
+		close(c)
+	}()
+	var a action.Payload
+	var err *nerr.E
+
+	switch v := context.(type) {
+	case *elkreporting.ElkEvent:
+		//translate
+		a, err = actiongen.GenerateAction(r.Config.Action, eventbased.TranslateEvent(*v), "")
+	case elkreporting.ElkEvent:
+		//translate
+		a, err = actiongen.GenerateAction(r.Config.Action, eventbased.TranslateEvent(v), "")
+	case v2.Event:
+		a, err = actiongen.GenerateAction(r.Config.Action, v, "")
+	case *v2.Event:
+		a, err = actiongen.GenerateAction(r.Config.Action, *v, "")
+	default:
+		return
+	}
+	if err != nil {
+		log.L.Warnf("Couldn't generate action %v:%s", err.Error(), err.Stack)
+		return
+	}
+	c <- a
+}
+
 func (r *runner) run(context interface{}) {
 	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 
@@ -235,8 +268,15 @@ func (r *runner) run(context interface{}) {
 		}
 	}()
 
-	r.Job.Run(context, actionChan)
-	close(actionChan)
+	//it's a direct generation
+	if r.Config.Action.Type != "" {
+		log.L.Debugf("[%s|%v] Generating an action.", r.Config.Name, r.TriggerIndex)
+		r.GenAction(context, actionChan)
+	} else {
+
+		r.Job.Run(context, actionChan)
+		close(actionChan)
+	}
 	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 

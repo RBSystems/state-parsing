@@ -9,12 +9,12 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
+	"github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/slack"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/marking"
-	"github.com/byuoitav/common/state/statedefinition"
 )
 
 // RestoredJob .
@@ -22,12 +22,16 @@ type RestoredJob struct {
 }
 
 const (
+	HeartbeatRestored = "heartbeat-restored"
+
 	heartbeatRestoredQuery = `
-	{  "_source": [
+	{
+  "_source": [
     "hostname",
     "last-heartbeat",
-	"notifications-suppressed"], 
-	"query": {
+    "notifications-suppressed"
+  ],
+  "query": {
     "bool": {
       "must": [
         {
@@ -51,7 +55,8 @@ const (
     }
   },
   "size": 1000
-  }`
+}
+`
 )
 
 type heartbeatRestoredQueryResponse struct {
@@ -109,7 +114,7 @@ func (h *RestoredJob) processResponse(resp heartbeatRestoredQueryResponse, actio
 
 	// there are no devices that have heartbeats restored
 	if len(resp.Hits.Hits) <= 0 {
-		log.L.Infof("[%s] No heartbeats restored", "heartbeat-restored")
+		log.L.Infof("[%s] No heartbeats restored", HeartbeatRestored)
 		return nil
 	}
 
