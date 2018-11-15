@@ -40,11 +40,11 @@ type ElkTimeseriesForwarder struct {
 }
 
 //returns a default elk event forwarder after setting it up.
-func GetDefaultElkTimeSeries(URL string, index func() string) *ElkTimeseriesForwarder {
+func GetDefaultElkTimeSeries(URL string, index func() string, interval time.Duration) *ElkTimeseriesForwarder {
 	toReturn := &ElkTimeseriesForwarder{
 		incomingChannel: make(chan events.Event, 1000),
 		ElkStaticForwarder: ElkStaticForwarder{
-			interval: time.Second * 15,
+			interval: interval,
 			url:      URL,
 			index:    index,
 		},

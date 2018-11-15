@@ -1,9 +1,7 @@
 package jobs
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -13,9 +11,9 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	v2 "github.com/byuoitav/common/v2/events"
-	"github.com/byuoitav/event-translator-microservice/elkreporting"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/jobs/actiongen"
 	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
@@ -27,8 +25,7 @@ var (
 	// MaxQueue is the maximum number of events/heartbeats that can be queued
 	MaxQueue = os.Getenv("MAX_QUEUE")
 
-	runners   []*runner
-	eventChan chan elkreporting.ElkEvent
+	runners []*runner
 
 	v2EventChan       chan v2.Event
 	v2LegacyEventChan chan v2.Event
@@ -36,8 +33,8 @@ var (
 
 type runner struct {
 	Job          Job
-	Config       JobConfig
-	Trigger      Trigger
+	Config       config.JobConfig
+	Trigger      config.Trigger
 	TriggerIndex int
 }
 
@@ -60,34 +57,16 @@ func init() {
 		log.L.Fatalf("$MAX_QUEUE must be a number")
 	}
 
-	// parse configuration
-	path := os.Getenv("JOB_CONFIG_LOCATION")
-	if len(path) < 1 {
-		path = "./job-config.json"
-	}
-	log.L.Infof("Parsing job configuration from: %s", path)
-
 	// get path for scripts
 	scriptPath := os.Getenv("JOB_SCRIPTS_PATH")
 	if len(scriptPath) < 1 {
 		scriptPath = "./scripts/" // default script path
 	}
 
-	// read job configuration
-	b, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.L.Fatalf("failed to read job configuration: %s", err)
-	}
-
-	// unmarshal job config
-	var jobConfigs []JobConfig
-	err = json.Unmarshal(b, &jobConfigs)
-	if err != nil {
-		log.L.Fatalf("failed to parse job configuration: %s", err)
-	}
+	c := config.GetConfig()
 
 	// validate all jobs exist, create the script jobs
-	for _, config := range jobConfigs {
+	for _, config := range c.Jobs {
 		if !config.Enabled {
 			continue
 		}
@@ -125,19 +104,10 @@ func init() {
 				runner.Trigger.NewMatch = runner.buildNewMatchRegex()
 			}
 
-			if strings.EqualFold(runner.Trigger.Type, "old-match") {
-				runner.Trigger.OldMatch = runner.buildOldMatchRegex()
-			}
-
 			log.L.Infof("Adding runner for job '%v', trigger #%v. Execution type: %v", runner.Config.Name, runner.TriggerIndex, runner.Trigger.Type)
 			runners = append(runners, runner)
 		}
 	}
-}
-
-// ProcessEvent adds <event> into a queue to be processed
-func ProcessEvent(event elkreporting.ElkEvent) {
-	eventChan <- event
 }
 
 // ProcessV2Event adds <event> into a queue to be processed
@@ -158,7 +128,6 @@ func StartJobScheduler() {
 	log.L.Infof("Starting job scheduler. Running %v jobs with %v workers with a max of %v events queued at once.", len(runners), maxWorkers, maxQueue)
 	wg := sync.WaitGroup{}
 
-	eventChan = make(chan elkreporting.ElkEvent, maxQueue)
 	v2EventChan = make(chan v2.Event, maxQueue)
 	v2LegacyEventChan = make(chan v2.Event, maxQueue)
 
@@ -191,19 +160,11 @@ func StartJobScheduler() {
 		go func() {
 			for {
 				select {
-				case event := <-eventChan:
-					log.L.Debugf("Got an event")
-					// see if we need to execute any jobs from this event
-					for i := range matchRunners {
-						if matchRunners[i].Trigger.OldMatch.doesEventMatch(&event) {
-							go matchRunners[i].run(&event)
-						}
-					}
 
 				case event := <-v2EventChan:
 					// see if we need to execute any jobs from this event
 					for i := range v2MatchRunners {
-						if v2MatchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
+						if v2MatchRunners[i].Trigger.NewMatch.DoesEventMatch(&event) {
 							go v2MatchRunners[i].run(&event)
 						}
 					}
@@ -216,7 +177,7 @@ func StartJobScheduler() {
 
 					// see if we need to execute any jobs from this event
 					for i := range v2MatchRunners {
-						if v2MatchRunners[i].Trigger.NewMatch.doesEventMatch(&event) {
+						if v2MatchRunners[i].Trigger.NewMatch.DoesEventMatch(&event) {
 							go v2MatchRunners[i].run(&le)
 						}
 					}
@@ -238,12 +199,6 @@ func (r *runner) GenAction(context interface{}, c chan action.Payload) {
 	var err *nerr.E
 
 	switch v := context.(type) {
-	case *elkreporting.ElkEvent:
-		//translate
-		a, err = actiongen.GenerateAction(r.Config.Action, eventbased.TranslateEvent(*v), "")
-	case elkreporting.ElkEvent:
-		//translate
-		a, err = actiongen.GenerateAction(r.Config.Action, eventbased.TranslateEvent(v), "")
 	case v2.Event:
 		a, err = actiongen.GenerateAction(r.Config.Action, v, "")
 	case *v2.Event:

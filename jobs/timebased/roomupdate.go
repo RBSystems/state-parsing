@@ -10,9 +10,9 @@ import (
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/cache"
-	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 // RoomUpdateJob .
@@ -317,7 +317,7 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan act
 
 		log.L.Debugf("Room info: %v", room)
 
-		_, _, err := cache.GetCache(forwarding.DEFAULT).CheckAndStoreRoom(room)
+		_, _, err := cache.GetCache(config.DEFAULT).CheckAndStoreRoom(room)
 		if err != nil {
 			log.L.Errorf("Problem caching the power state for room %v: %v", room, err.Error())
 		}

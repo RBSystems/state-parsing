@@ -5,6 +5,7 @@ import (
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
@@ -19,6 +20,7 @@ type Cache interface {
 	StoreAndForwardEvent(event events.Event) (bool, *nerr.E)
 }
 
+//Caches .
 var Caches map[string]Cache
 
 func init() {
@@ -28,6 +30,7 @@ func init() {
 	log.L.Infof("Caches Initialized.")
 }
 
+//GetCache .
 func GetCache(cacheType string) Cache {
 	return Caches[cacheType]
 }
@@ -43,7 +46,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 	log.L.Debugf("Event: %+v", v)
 
 	//Forward All
-	list := forwarding.GetManagersForType(c.cacheType, forwarding.EVENTALL)
+	list := forwarding.GetManagersForType(c.cacheType, config.EVENT, config.ALL)
 	for i := range list {
 		log.L.Debugf("Going to event forwarder: %v", list[i])
 		list[i].Send(v)
@@ -69,7 +72,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		return false, err.Addf("Couldn't store and forward device event")
 	}
 
-	list = forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEALL)
+	list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(newDev)
 	}
@@ -80,11 +83,11 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		log.L.Debugf("Event resulted in changes")
 
 		//get the event stuff to forward
-		list = forwarding.GetManagersForType(c.cacheType, forwarding.EVENTDELTA)
+		list = forwarding.GetManagersForType(c.cacheType, config.EVENT, config.ALL)
 		for i := range list {
 			list[i].Send(v)
 		}
-		list = forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEDELTA)
+		list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(newDev)
 		}
@@ -163,12 +166,12 @@ func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 	}
 
 	if resp.Changes {
-		list := forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEDELTA)
+		list := forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(resp.NewDevice)
 		}
 
-		list = forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEALL)
+		list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.ALL)
 		for i := range list {
 			list[i].Send(resp.NewDevice)
 		}

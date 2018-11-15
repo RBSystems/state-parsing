@@ -12,9 +12,9 @@ import (
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/slack"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/cache"
-	"github.com/byuoitav/state-parser/state/forwarding"
 	"github.com/byuoitav/state-parser/state/marking"
 )
 
@@ -256,7 +256,7 @@ func (h *LostJob) processResponse(resp heartbeatLostQueryResponse, actionWrite c
 		}
 
 		log.L.Debugf("Marking device %v as alerting.", devicesToUpdate[i])
-		_, _, err := cache.GetCache(forwarding.DEFAULT).CheckAndStoreDevice(s)
+		_, _, err := cache.GetCache(config.DEFAULT).CheckAndStoreDevice(s)
 		if err != nil {
 			log.L.Errorf("Couldn't mark device %v as alerting: %v", devicesToUpdate[i].Info, err.Error())
 		}

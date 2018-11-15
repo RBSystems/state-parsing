@@ -1,5 +1,4 @@
 {
-    "name": "state-parser",
     "port": ":10011",
     "env-vars": [
         "PROXY_ADDR",
@@ -21,5 +20,6 @@
         "ELASTIC_API_EVENTS",
         "COUCH_USER",
         "JOB_SCRIPTS_PATH"
-    ]
+    ],
+    "name": "state-parser"
 }

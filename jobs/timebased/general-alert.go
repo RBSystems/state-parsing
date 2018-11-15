@@ -9,9 +9,9 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/cache"
-	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 // GeneralAlertClearingJob .
@@ -92,7 +92,7 @@ func (g *GeneralAlertClearingJob) Run(context interface{}, actionWrite chan acti
 		device.UpdateTimes = make(map[string]time.Time)
 		device.UpdateTimes["alerting"] = time.Now()
 
-		cache.GetCache(forwarding.DEFAULT).CheckAndStoreDevice(device)
+		cache.GetCache(config.DEFAULT).CheckAndStoreDevice(device)
 	}
 
 	log.L.Debugf("[%s] Finished general alert clearing job.", "general-alert-clearing")

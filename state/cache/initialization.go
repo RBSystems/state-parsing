@@ -8,8 +8,8 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
-	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 const maxSize = 10000
@@ -21,52 +21,31 @@ const defaultDMPSIndex = "oit-static-av-devices-legacy-v2"
 func InitializeCaches() {
 	Caches = make(map[string]Cache)
 
-	//get DEFAULT devices
-	defaultDevs, err := GetStaticDevices(defaultDevIndex)
-	if err != nil {
-		log.L.Errorf(err.Addf("Couldn't get information for default device cache").Error())
-	} /*
-		//get DEFAULT rooms
-		defaultRooms, err := GetStaticRooms(defRoomIndx)
-		if err != nil {
-			log.L.Errorf(err.Addf("Couldn't get information for default room cache").Error())
+	c := config.GetConfig()
+
+	for _, i := range c.Caches {
+		log.L.Infof("Initializing cache %v", i.Name)
+		var devs []statedefinition.StaticDevice
+		var rooms []statedefinition.StaticRoom
+		var er *nerr.E
+		//depending on storage, data, and cache type depends on what function we call.
+		switch i.StorageType {
+		case config.Elk:
+			//within the elk type
+			devs, er = GetElkStaticDevices(i.ELKinfo.DeviceIndex, i.ELKinfo.URL)
+			if er != nil {
+				log.L.Errorf(er.Addf("Couldn't get information for device cache %v", i.Name).Error())
+			}
+
 		}
-	*/
-
-	//defaultDevs := []statedefinition.StaticDevice{}
-	defaultRooms := []statedefinition.StaticRoom{}
-	cache := makeCache(defaultDevs, defaultRooms, forwarding.DEFAULT)
-
-	Caches[forwarding.DEFAULT] = cache
-	log.L.Infof("Default Caches initialized. %v devices and %v rooms", len(defaultDevs), len(defaultRooms))
-
-	//get DMPS devices
-	dmpsDevs, err := GetStaticDevices(defaultDMPSIndex)
-	if err != nil {
-		log.L.Errorf(err.Addf("Couldn't get information for dmps device cache").Error())
+		cache := makeCache(devs, rooms, i.CacheType)
+		Caches[i.CacheType] = cache
+		log.L.Infof("Cache %v initialized with type %v. %v devices and %v rooms", i.Name, i.CacheType, len(devs), len(rooms))
 	}
-
-	dmpsrooms := []statedefinition.StaticRoom{}
-	dmpscache := makeCache(dmpsDevs, dmpsrooms, forwarding.DMPS)
-
-	Caches[forwarding.DMPS] = dmpscache
-	log.L.Infof("DMPS Caches initialized. %v devices and %v rooms", len(dmpsDevs), len(dmpsrooms))
-	/*
-		//get DMPS rooms
-		dmpsRooms, err := GetStaticRooms(dmpsRoomIndx)
-		if err != nil {
-			log.L.Errorf(err.Addf("Couldn't get information for dmps room cache").Error())
-		}
-
-		cache = makeCache(dmpsDevs, dmpsRooms)
-		Caches[DMPS] = &cache
-
-		log.L.Infof("DMPS Caches initialized. %v devices and %v rooms", len(dmpsDevs), len(dmpsRooms))
-	*/
 }
 
-//GetStaticDevices queries the provided index in ELK and unmarshals the records into a list of static devices
-func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
+//GetElkStaticDevices queries the provided index in ELK and unmarshals the records into a list of static devices
+func GetElkStaticDevices(index, url string) ([]statedefinition.StaticDevice, *nerr.E) {
 	log.L.Debugf("Getting device information from %v", index)
 	query := elk.GenericQuery{
 		Size: maxSize,
@@ -77,7 +56,7 @@ func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
 		return []statedefinition.StaticDevice{}, nerr.Translate(er).Addf("Couldn't marshal generic query %v", query)
 	}
 
-	resp, err := elk.MakeELKRequest("GET", fmt.Sprintf("/%v/_search", index), b)
+	resp, err := elk.MakeGenericELKRequest(fmt.Sprintf("%v/%v/_search", url, index), "GET", b)
 	if err != nil {
 		return []statedefinition.StaticDevice{}, err.Addf("Couldn't retrieve static index %v for cache", index)
 	}
@@ -98,8 +77,8 @@ func GetStaticDevices(index string) ([]statedefinition.StaticDevice, *nerr.E) {
 	return toReturn, nil
 }
 
-//GetStaticRooms retrieves the list of static rooms from the privided elk index - assumes the ELK_DIRECT_ADDRESS env variable.
-func GetStaticRooms(index string) ([]statedefinition.StaticRoom, *nerr.E) {
+//GetElkStaticRooms retrieves the list of static rooms from the privided elk index - assumes the ELK_DIRECT_ADDRESS env variable.
+func GetElkStaticRooms(index string) ([]statedefinition.StaticRoom, *nerr.E) {
 	query := elk.GenericQuery{
 		Size: maxSize,
 	}
@@ -137,8 +116,6 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 		cacheType: cacheType,
 	}
 
-	//toMerge := []statedefinition.StaticDevice{}
-
 	//go through and create our maps
 	toReturn.deviceCache = make(map[string]DeviceItemManager)
 	for i := range devices {
@@ -159,17 +136,6 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 			continue
 		}
 
-		/*
-			if devices[i].DeviceType == "" {
-				//get the device type
-				a := statedefinition.StaticDevice{
-					DeviceID:   devices[i].DeviceID,
-					DeviceType: GetDeviceTypeByID(devices[i].DeviceID),
-				}
-				toMerge = append(toMerge, a)
-			}
-		*/
-
 		respChan := make(chan DeviceTransactionResponse, 1)
 		v.WriteRequests <- DeviceTransactionRequest{
 			MergeDeviceEdit: true,
@@ -183,21 +149,6 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 		}
 		toReturn.deviceCache[devices[i].DeviceID] = v
 	}
-	/*
-		//do it at some point
-		go func(v []statedefinition.StaticDevice) {
-			log.L.Info(color.HiBlueString("Adding device type for %v devices in 10 seconds", len(v)))
-			time.Sleep(10 * time.Second)
-			log.L.Info(color.HiBlueString("Adding device type for %v devices now", len(v)))
-			for _, i := range v {
-				dev, _ := GetCache(DEFAULT).GetDeviceRecord(i.DeviceID)
-				dev.DeviceType = i.DeviceType
-				dev.UpdateTimes["device-type"] = time.Now()
-
-				GetCache(DEFAULT).CheckAndStoreDevice(dev)
-			}
-		}(toMerge)
-	*/
 
 	toReturn.roomCache = make(map[string]RoomItemManager)
 	for i := range rooms {
