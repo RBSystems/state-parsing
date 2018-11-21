@@ -80,7 +80,7 @@ func init() {
 			}
 		}
 
-		// if it isn't valid, then check if it's a valid script
+		// if it isn't valid, and it's not autogenerating an action, then check if it's a valid script
 		if !isValid && len(config.Action.Type) < 1 {
 			if _, err := os.Stat(scriptPath + config.Name); err != nil {
 				log.L.Fatalf("job '%s' doesn't exist, and doesn't have a script that matches its name.", config.Name)

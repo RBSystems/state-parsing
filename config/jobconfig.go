@@ -11,19 +11,20 @@ import (
 
 // JobConfig .
 type JobConfig struct {
-	Name     string           `json:"name"`
-	Triggers []Trigger        `json:"triggers"`
-	Enabled  bool             `json:"enabled"`
-	Action   actiongen.Config `json:"action"`
+	Name     string                 `json:"name"`
+	Type     string                 `json:"type"`
+	Triggers []Trigger              `json:"triggers"`
+	Enabled  bool                   `json:"enabled"`
+	Context  map[string]interface{} `json:"context"`
+	Action   actiongen.Config       `json:"action"`
 }
 
 // Trigger .
 type Trigger struct {
 	Type     string          `json:"type"`      // required for all
-	At       string          `json:"at"`        // required for 'time'
-	Every    string          `json:"every"`     // required for 'interval'
+	At       string          `json:"at"`        // required for 'time and state'
+	Every    string          `json:"every"`     // required for 'interval and state '
 	NewMatch *NewMatchConfig `json:"new-match"` // required for 'event'
-	OldMatch *OldMatchConfig `json:"old-match"` // required for 'event'
 }
 
 //NewMatchConfig .
@@ -63,43 +64,6 @@ type NewMatchConfig struct {
 			BuildingID *regexp.Regexp
 			RoomID     *regexp.Regexp
 			DeviceID   *regexp.Regexp
-		}
-	}
-}
-
-// OldMatchConfig contains the logic for building/matching regex for events that come in
-type OldMatchConfig struct {
-	Count int
-
-	Hostname         string `json:"hostname,omitempty"`
-	Timestamp        string `json:"timestamp,omitempty"`
-	LocalEnvironment string `json:"localEnvironment,omitempty"`
-	Building         string `json:"building,omitempty"`
-	Room             string `json:"room,omitempty"`
-
-	Event struct {
-		Type           string `json:"type,omitempty"`
-		Requestor      string `json:"requestor,omitempty"`
-		EventCause     string `json:"eventCause,omitempty"`
-		Device         string `json:"device,omitempty"`
-		EventInfoKey   string `json:"eventInfoKey,omitempty"`
-		EventInfoValue string `json:"eventInfoValue,omitempty"`
-	} `json:"event,omitempty"`
-
-	Regex struct {
-		Hostname         *regexp.Regexp
-		Timestamp        *regexp.Regexp
-		LocalEnvironment *regexp.Regexp
-		Building         *regexp.Regexp
-		Room             *regexp.Regexp
-
-		Event struct {
-			Type           *regexp.Regexp
-			Requestor      *regexp.Regexp
-			EventCause     *regexp.Regexp
-			Device         *regexp.Regexp
-			EventInfoKey   *regexp.Regexp
-			EventInfoValue *regexp.Regexp
 		}
 	}
 }
