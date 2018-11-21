@@ -52,6 +52,7 @@ func (s *SimpleForwardingJob) GetName() string {
 
 // Run fowards events to an elk timeseries index.
 func (s *SimpleForwardingJob) Run(context config.JobInputContext, actionWrite chan action.Payload) {
+	log.L.Debugf("Running simple forwarding job.")
 
 	var err *nerr.E
 	//	cache.GetCache(forwarding.DEFAULT)

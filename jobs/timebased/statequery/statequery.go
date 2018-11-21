@@ -1,6 +1,8 @@
 package statequery
 
 import (
+	"reflect"
+
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
@@ -56,22 +58,26 @@ type QueryJob struct {
 //Run .
 func (j *QueryJob) Run(input config.JobInputContext, actionWrite chan action.Payload) {
 
-	ok := false
+	ok := true
 
 	//check for the values in the input config that we need
 	tmp, o := input.InputConfig["query"]
 	ok = ok && o
+	log.L.Debugf("%v-%v", reflect.TypeOf(tmp), ok)
 
 	Query, o := tmp.(string)
 	ok = ok && o
 
 	tmp, o = input.InputConfig["cache-type"]
 	ok = ok && o
+	log.L.Debugf("%v-%v", reflect.TypeOf(tmp), ok)
 
 	Cache, o := tmp.(string)
 	ok = ok && o
+
 	tmp, o = input.InputConfig["data-type"]
 	ok = ok && o
+	log.L.Debugf("%v-%v", reflect.TypeOf(tmp), ok)
 
 	datatype, o := tmp.(string)
 	ok = ok && o

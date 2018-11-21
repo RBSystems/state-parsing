@@ -239,20 +239,6 @@ func TestCompareQueryStructs(t *testing.T) {
 	fmt.Printf("Answer %v\n", v)
 	as.False(v)
 
-	val, er = ParseQuery(`"C" > "-100d"`)
-	if er != nil {
-		t.Error(er.Error())
-		t.FailNow()
-	}
-
-	v, er = val.rootNode.Evaluate(a)
-	if er != nil {
-		t.Error(er.Error())
-		t.FailNow()
-	}
-	fmt.Printf("Answer %v\n", v)
-	as.True(v)
-
 	val, er = ParseQuery(`"D" > "-29"`)
 	if er != nil {
 		t.Error(er.Error())

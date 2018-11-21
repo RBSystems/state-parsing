@@ -19,10 +19,6 @@ type GenActionJob struct{}
 
 //Run .
 func (r *GenActionJob) Run(input config.JobInputContext, c chan action.Payload) {
-
-	defer func() {
-		close(c)
-	}()
 	var a action.Payload
 	var err *nerr.E
 
