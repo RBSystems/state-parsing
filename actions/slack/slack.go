@@ -34,7 +34,7 @@ func init() {
 
 	proxyS := os.Getenv("PROXY_ADDR")
 	if len(proxyS) == 0 {
-		log.L.Fatalf("PROXY_ADDR must be set.")
+		return
 	}
 
 	proxyURL, err = url.Parse(proxyS)
@@ -74,8 +74,13 @@ func startSlackManager(channelIdentifier string) {
 
 	var attachments []Attachment
 
-	// pretty simple, just a post, the only thing that could be an issue is the proxies
-	client := &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}}
+	var client *http.Client
+	if proxyURL != nil {
+		// pretty simple, just a post, the only thing that could be an issue is the proxies
+		client = &http.Client{Transport: &http.Transport{Proxy: http.ProxyURL(proxyURL)}, Timeout: 3 * time.Second}
+	} else {
+		client = &http.Client{Timeout: 3 * time.Second}
+	}
 
 	go func() {
 		for {

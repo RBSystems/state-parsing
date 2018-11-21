@@ -36,7 +36,7 @@ func InitializeCaches() {
 			if er != nil {
 				log.L.Errorf(er.Addf("Couldn't get information for device cache %v", i.Name).Error())
 			}
-
+		default:
 		}
 		cache := makeCache(devs, rooms, i.CacheType)
 		Caches[i.CacheType] = cache

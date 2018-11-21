@@ -1,25 +1,23 @@
 {
     "port": ":10011",
     "env-vars": [
-        "PROXY_ADDR",
-        "MAX_WORKERS",
+        "COUCH_USER",
+        "JOB_SCRIPTS_PATH",
         "COUCH_PASS",
+        "SERVICE_CONFIG_LOCATION",
         "MAX_QUEUE",
-        "ELK_SA_PASSWORD",
-        "ELASTIC_API_EVENTS_TWO",
-        "ELASTIC_HEARTBEAT_EVENTS",
         "ELASTIC_DMPS_EVENTS",
-        "ELASTIC_API_EVENTS_DEV",
         "MOM_ALERT_URL",
         "SLACK_HEARTBEAT_CHANNEL",
-        "PI_HOSTNAME",
-        "ELK_DIRECT_ADDRESS",
-        "ELK_SA_USERNAME",
-        "ELASTIC_DMPS_HEARTBEATS",
-        "JOB_CONFIG_LOCATION",
+        "ELK_SA_PASSWORD",
         "ELASTIC_API_EVENTS",
-        "COUCH_USER",
-        "JOB_SCRIPTS_PATH"
+        "ELASTIC_API_EVENTS_TWO",
+        "ELK_DIRECT_ADDRESS",
+        "ELASTIC_HEARTBEAT_EVENTS",
+        "ELASTIC_DMPS_HEARTBEATS",
+        "PROXY_ADDR",
+        "ELK_SA_USERNAME",
+        "MAX_WORKERS"
     ],
     "name": "state-parser"
 }

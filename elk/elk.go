@@ -29,12 +29,6 @@ var (
 	password = os.Getenv("ELK_SA_PASSWORD")
 )
 
-func init() {
-	if len(APIAddr) == 0 || len(username) == 0 || len(password) == 0 {
-		log.L.Fatalf("ELASTIC_API_EVENTS, ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
-	}
-}
-
 func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 	log.L.Debugf("Making ELK request against: %s", addr)
 
@@ -94,6 +88,9 @@ func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr
 }
 
 func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
+	if len(APIAddr) == 0 || len(username) == 0 || len(password) == 0 {
+		log.L.Fatalf("ELASTIC_API_EVENTS, ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
+	}
 
 	// format whole address
 	addr := fmt.Sprintf("%s%s", APIAddr, endpoint)
