@@ -9,6 +9,7 @@ import (
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/slack"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/jobs/eventstore"
 )
 
@@ -34,9 +35,9 @@ func init() {
 }
 
 // Run is executed each time an event comes through
-func (*DuplicateErrorsJob) Run(context interface{}, actionWrite chan action.Payload) {
+func (*DuplicateErrorsJob) Run(input config.JobInputContext, actionWrite chan action.Payload) {
 	// validate that context contains the correct type
-	event, ok := context.(*events.Event)
+	event, ok := input.Context.(*events.Event)
 	if !ok {
 		log.L.Warnf("DuplicateErrorsJob only works with v2 events.")
 	}

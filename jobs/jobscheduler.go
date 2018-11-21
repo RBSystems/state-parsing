@@ -9,12 +9,10 @@ import (
 	"time"
 
 	"github.com/byuoitav/common/log"
-	"github.com/byuoitav/common/nerr"
 	v2 "github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/state-parser/actions"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/config"
-	"github.com/byuoitav/state-parser/jobs/actiongen"
 	"github.com/byuoitav/state-parser/jobs/eventbased"
 )
 
@@ -73,15 +71,15 @@ func init() {
 
 		// check if job exists
 		isValid := false
-		for name := range Jobs {
-			if strings.EqualFold(config.Name, name) {
+		for key := range Jobs {
+			if strings.EqualFold(config.Type, key) {
 				isValid = true
 				break
 			}
 		}
 
 		// if it isn't valid, and it's not autogenerating an action, then check if it's a valid script
-		if !isValid && len(config.Action.Type) < 1 {
+		if !isValid {
 			if _, err := os.Stat(scriptPath + config.Name); err != nil {
 				log.L.Fatalf("job '%s' doesn't exist, and doesn't have a script that matches its name.", config.Name)
 			}
@@ -93,7 +91,7 @@ func init() {
 		// build a runner for each trigger
 		for i, trigger := range config.Triggers {
 			runner := &runner{
-				Job:          Jobs[config.Name],
+				Job:          Jobs[config.Type],
 				Config:       config,
 				Trigger:      trigger,
 				TriggerIndex: i,
@@ -190,29 +188,6 @@ func StartJobScheduler() {
 	wg.Wait()
 }
 
-func (r *runner) GenAction(context interface{}, c chan action.Payload) {
-
-	defer func() {
-		close(c)
-	}()
-	var a action.Payload
-	var err *nerr.E
-
-	switch v := context.(type) {
-	case v2.Event:
-		a, err = actiongen.GenerateAction(r.Config.Action, v, "")
-	case *v2.Event:
-		a, err = actiongen.GenerateAction(r.Config.Action, *v, "")
-	default:
-		return
-	}
-	if err != nil {
-		log.L.Warnf("Couldn't generate action %v:%s", err.Error(), err.Stack)
-		return
-	}
-	c <- a
-}
-
 func (r *runner) run(context interface{}) {
 	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
 
@@ -223,15 +198,15 @@ func (r *runner) run(context interface{}) {
 		}
 	}()
 
-	//it's a direct generation
-	if r.Config.Action.Type != "" {
-		log.L.Debugf("[%s|%v] Generating an action.", r.Config.Name, r.TriggerIndex)
-		r.GenAction(context, actionChan)
-	} else {
-
-		r.Job.Run(context, actionChan)
-		close(actionChan)
+	//we build our input config
+	InputConfig := config.JobInputContext{
+		Context:     context,
+		InputConfig: r.Config.JobInputConfig,
+		Action:      r.Config.Action,
 	}
+	r.Job.Run(InputConfig, actionChan)
+	close(actionChan)
+
 	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
 }
 

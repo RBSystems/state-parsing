@@ -125,8 +125,13 @@ type Bucket struct {
 	DocCount int    `json:"doc_count"`
 }
 
+//GetName .
+func (r *RoomUpdateJob) GetName() string {
+	return RoomUpdate
+}
+
 // Run runs the job
-func (r *RoomUpdateJob) Run(context interface{}, actionWrite chan action.Payload) {
+func (r *RoomUpdateJob) Run(input config.JobInputContext, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting room update job...")
 
 	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s,%s/_search", elk.DEVICE_INDEX, elk.ROOM_INDEX), []byte(roomUpdateQuery))

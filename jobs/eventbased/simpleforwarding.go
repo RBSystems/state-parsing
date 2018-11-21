@@ -45,12 +45,17 @@ type LegacyEvent struct {
 	v2.Event
 }
 
+//GetName .
+func (s *SimpleForwardingJob) GetName() string {
+	return SimpleForwarding
+}
+
 // Run fowards events to an elk timeseries index.
-func (*SimpleForwardingJob) Run(context interface{}, actionWrite chan action.Payload) {
+func (s *SimpleForwardingJob) Run(context config.JobInputContext, actionWrite chan action.Payload) {
 
 	var err *nerr.E
 	//	cache.GetCache(forwarding.DEFAULT)
-	switch v := context.(type) {
+	switch v := context.Context.(type) {
 	case v2.Event:
 		_, err = cache.GetCache(config.DEFAULT).StoreAndForwardEvent(v)
 	case *v2.Event:

@@ -1,6 +1,9 @@
 package cache
 
 import (
+	"sync"
+	"time"
+
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
@@ -15,6 +18,8 @@ type Cache interface {
 	GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E)
 	CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom, *nerr.E)
 	GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E)
+	GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E)
+	GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E)
 
 	StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E)
 	StoreAndForwardEvent(event events.Event) (bool, *nerr.E)
@@ -36,7 +41,9 @@ func GetCache(cacheType string) Cache {
 }
 
 type memorycache struct {
+	devicelock  sync.RWMutex
 	deviceCache map[string]DeviceItemManager
+	roomlock    sync.RWMutex
 	roomCache   map[string]RoomItemManager
 
 	cacheType string
@@ -106,13 +113,18 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 		return false, sd.StaticDevice{}, nerr.Create("State must include device ID", "invaid-parameter")
 	}
 
+	c.devicelock.RLock()
 	manager, ok := c.deviceCache[toSave.ID]
+	c.devicelock.RUnlock()
 	if !ok {
 		log.L.Debugf("Creating a new device manager for %v", toSave.ID)
 
 		//we need to create a new manager and set it up
 		manager = GetNewDeviceManager(toSave.ID)
+
+		c.devicelock.Lock()
 		c.deviceCache[toSave.ID] = manager
+		c.devicelock.Unlock()
 	}
 
 	respChan := make(chan DeviceTransactionResponse, 1)
@@ -143,10 +155,16 @@ func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 		return false, sd.StaticDevice{}, nerr.Create("Static Device must have an ID field to be loaded into the databaset", "invalid-device")
 	}
 
+	c.devicelock.RLock()
 	manager, ok := c.deviceCache[device.DeviceID]
+	c.devicelock.RUnlock()
 
 	if !ok {
 		manager = GetNewDeviceManager(device.DeviceID)
+
+		c.devicelock.Lock()
+		c.deviceCache[device.DeviceID] = manager
+		c.devicelock.Unlock()
 	}
 
 	respChan := make(chan DeviceTransactionResponse, 1)
@@ -238,4 +256,65 @@ func (c *memorycache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
 
 	manager.ReadRequests <- respChan
 	return <-respChan, nil
+}
+
+func (c *memorycache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
+	toReturn := []sd.StaticDevice{}
+
+	expected := len(c.deviceCache)
+	ReadChannel := make(chan sd.StaticDevice, expected)
+
+	c.devicelock.RLock()
+	for _, v := range c.deviceCache {
+		v.ReadRequests <- ReadChannel
+	}
+	c.devicelock.RUnlock()
+
+	timeoutTimer := time.NewTimer(1 * time.Second)
+
+	received := 0
+	for {
+		select {
+		case <-timeoutTimer.C:
+			log.L.Infof("ReadAll devices timed out..")
+			return toReturn, nil
+		case v := <-ReadChannel:
+			toReturn = append(toReturn, v)
+			received++
+			if received >= expected {
+				log.L.Debugf("Got all responses from the read all devices")
+				return toReturn, nil
+			}
+		}
+	}
+}
+func (c *memorycache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
+	toReturn := []sd.StaticRoom{}
+
+	expected := len(c.deviceCache)
+	ReadChannel := make(chan sd.StaticRoom, expected)
+
+	c.roomlock.RLock()
+	for _, v := range c.roomCache {
+		v.ReadRequests <- ReadChannel
+	}
+	c.roomlock.RUnlock()
+
+	timeoutTimer := time.NewTimer(1 * time.Second)
+
+	received := 0
+	for {
+		select {
+		case <-timeoutTimer.C:
+			log.L.Infof("ReadAll rooms timed out..")
+			return toReturn, nil
+		case v := <-ReadChannel:
+			toReturn = append(toReturn, v)
+			received++
+			if received >= expected {
+				log.L.Debugf("Got all responses from the read all rooms")
+				return toReturn, nil
+			}
+		}
+	}
 }

@@ -11,12 +11,12 @@ import (
 
 // JobConfig .
 type JobConfig struct {
-	Name     string                 `json:"name"`
-	Type     string                 `json:"type"`
-	Triggers []Trigger              `json:"triggers"`
-	Enabled  bool                   `json:"enabled"`
-	Context  map[string]interface{} `json:"context"`
-	Action   actiongen.Config       `json:"action"`
+	Name           string                 `json:"name"`
+	Type           string                 `json:"type"`
+	Triggers       []Trigger              `json:"triggers"`
+	Enabled        bool                   `json:"enabled"`
+	JobInputConfig map[string]interface{} `json:"input-config"`
+	Action         actiongen.Config       `json:"action"`
 }
 
 // Trigger .
@@ -25,6 +25,13 @@ type Trigger struct {
 	At       string          `json:"at"`        // required for 'time and state'
 	Every    string          `json:"every"`     // required for 'interval and state '
 	NewMatch *NewMatchConfig `json:"new-match"` // required for 'event'
+}
+
+// JobInputContext .
+type JobInputContext struct {
+	InputConfig map[string]interface{} // the config provided.
+	Context     interface{}            //the whatever that caused the job to get run.
+	Action      actiongen.Config       //from the Action field in the job config
 }
 
 //NewMatchConfig .

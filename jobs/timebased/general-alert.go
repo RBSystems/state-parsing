@@ -62,8 +62,13 @@ type generalAlertClearingQueryResponse struct {
 	} `json:"hits"`
 }
 
+// GetName .
+func (g *GeneralAlertClearingJob) GetName() string {
+	return GeneralAlertClearing
+}
+
 // Run runs the job
-func (g *GeneralAlertClearingJob) Run(context interface{}, actionWrite chan action.Payload) {
+func (g *GeneralAlertClearingJob) Run(input config.JobInputContext, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting general-alert clearing job")
 
 	// The query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.

@@ -6,7 +6,6 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/state-parser/actions/action"
 	"github.com/byuoitav/state-parser/actions/email"
 )
@@ -23,7 +22,7 @@ var EmailRequiredFields = map[string]string{
 }
 
 //GenEmailAction .
-func GenEmailAction(config Config, event events.Event, device string) (action.Payload, *nerr.E) {
+func GenEmailAction(config Config, i interface{}, device string) (action.Payload, *nerr.E) {
 	toReturn := action.Payload{}
 
 	//check the fields
@@ -34,43 +33,43 @@ func GenEmailAction(config Config, event events.Event, device string) (action.Pa
 
 	//do the thing.
 	context := email.Info{}
-	context.Subject, er = ReplaceParameters(config.Fields["subject"], event)
+	context.Subject, er = ReplaceParameters(config.Fields["subject"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")
 	}
-	context.Sender, er = ReplaceParameters(config.Fields["sender"], event)
+	context.Sender, er = ReplaceParameters(config.Fields["sender"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")
 	}
-	context.User, er = ReplaceParameters(config.Fields["user"], event)
+	context.User, er = ReplaceParameters(config.Fields["user"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")
 	}
-	context.Pass, er = ReplaceParameters(config.Fields["pass"], event)
+	context.Pass, er = ReplaceParameters(config.Fields["pass"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")
 	}
-	context.Subject, er = ReplaceParameters(config.Fields["subject"], event)
+	context.Subject, er = ReplaceParameters(config.Fields["subject"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")
 	}
-	context.Body, er = ReplaceParameters(config.Fields["body"], event)
+	context.Body, er = ReplaceParameters(config.Fields["body"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")
 	}
-	context.SMTPAddr, er = ReplaceParameters(config.Fields["smtp-addr"], event)
+	context.SMTPAddr, er = ReplaceParameters(config.Fields["smtp-addr"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")
 	}
 
-	rec, er := ReplaceParameters(config.Fields["recipients"], event)
+	rec, er := ReplaceParameters(config.Fields["recipients"], i)
 	if er != nil {
 		log.L.Debugf("Problem replacing: %v", er.Error())
 		return toReturn, er.Addf("Couldn't generate email action")

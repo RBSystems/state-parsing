@@ -7,7 +7,6 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/state-parser/actions/action"
 	reflections "gopkg.in/oleiade/reflections.v1"
 )
@@ -26,7 +25,7 @@ func init() {
 	paramRe = regexp.MustCompile(`{{.*?}}`)
 }
 
-var actionGenerators = map[string]func(Config, events.Event, string) (action.Payload, *nerr.E){
+var actionGenerators = map[string]func(Config, interface{}, string) (action.Payload, *nerr.E){
 	Email: GenEmailAction,
 	Slack: GenSlackAction,
 }
@@ -41,15 +40,15 @@ type Config struct {
 }
 
 //GenerateAction .
-func GenerateAction(t Config, e events.Event, d string) (action.Payload, *nerr.E) {
+func GenerateAction(t Config, i interface{}, d string) (action.Payload, *nerr.E) {
 	if v, ok := actionGenerators[t.Type]; ok {
-		return v(t, e, d)
+		return v(t, i, d)
 	}
 	return action.Payload{}, nerr.Create(fmt.Sprintf("unkown type %v", t.Type), "invalid-type")
 }
 
 //ReplaceParameters .
-func ReplaceParameters(s string, e events.Event) (string, *nerr.E) {
+func ReplaceParameters(s string, baseinter interface{}) (string, *nerr.E) {
 
 	//find if there are any parameters in s
 	matches := paramRe.FindAllString(s, -1)
@@ -57,11 +56,12 @@ func ReplaceParameters(s string, e events.Event) (string, *nerr.E) {
 		//no changes
 		return s, nil
 	}
-	var inter interface{}
 	var err error
+	var inter interface{}
 
 	for i := range matches {
-		inter = e
+		inter = baseinter
+
 		cur := strings.Trim(matches[i], "{}")
 
 		log.L.Debugf("getting field: %v", cur)

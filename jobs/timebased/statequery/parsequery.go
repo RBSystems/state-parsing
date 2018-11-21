@@ -187,15 +187,16 @@ type token struct {
 }
 
 var tokenMap = map[rune]string{
-	'|': OR,
-	'&': AND,
-	'(': OPENPAREN,
-	')': CLOSEPAREN,
-	'!': NOT,
-	'>': OPERATOR,
-	'=': EQ,
-	'<': OPERATOR,
-	'"': QUOTE,
+	'|':  OR,
+	'&':  AND,
+	'(':  OPENPAREN,
+	')':  CLOSEPAREN,
+	'!':  NOT,
+	'>':  OPERATOR,
+	'=':  EQ,
+	'<':  OPERATOR,
+	'"':  QUOTE,
+	'\'': QUOTE,
 }
 
 func getTokens(query string) ([]token, *nerr.E) {
@@ -246,7 +247,7 @@ func getTokens(query string) ([]token, *nerr.E) {
 			literal := []rune{}
 			for {
 				i++
-				if runequery[i] == '"' {
+				if runequery[i] == '"' || runequery[i] == '\'' {
 					log.L.Debugf("Found end of literal.", poss)
 					break
 				}

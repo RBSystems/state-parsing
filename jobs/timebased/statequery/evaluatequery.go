@@ -12,14 +12,7 @@ import (
 	reflections "gopkg.in/oleiade/reflections.v1"
 )
 
-const relativeTimeRegex = `(-?\d+)([smhd])`
-
 var timeRe *regexp.Regexp
-
-func init() {
-	timeRe = regexp.MustCompile(relativeTimeRegex)
-
-}
 
 //Evaluate evaluates the static devices against this node and it's subnodes
 func (q *QueryNode) Evaluate(i interface{}) (bool, *nerr.E) {
@@ -128,32 +121,12 @@ func (q *QueryNode) compareFields(in interface{}) (bool, *nerr.E) {
 			return false, nerr.Create(fmt.Sprintf("Couldn't compare %v and %v. An error occurred extracting value from struct.", q.Right, q.Left), "invalid-comparison")
 		}
 
-		//parse out the time
-		matches := timeRe.FindStringSubmatch(q.Right)
-		if len(matches[0]) == 0 {
-			return false, nerr.Create(fmt.Sprintf("Invalid time comparison string %v. Must be in the format %v", q.Right, relativeTimeRegex), "invalid-comparison")
-		}
-
-		//build our durationZa
-		intval, err := strconv.Atoi(matches[1])
-		if err != nil {
-			return false, nerr.Create(fmt.Sprintf("Couldn't parse int %v. Invalid time comparison string %v. Must be in the format %v", matches[1], q.Right, relativeTimeRegex), "invalid-comparison")
-		}
-
 		t := time.Now()
-		d := time.Duration(intval)
-		switch matches[2] {
-		case "s":
-			t = t.Add(d * time.Second)
-		case "m":
-			t = t.Add(d * time.Minute)
-		case "h":
-			t = t.Add(d * time.Hour)
-		case "d":
-			t = t.AddDate(0, 0, intval)
-		default:
-			return false, nerr.Create(fmt.Sprintf("Invalid intterval %v, must be one of [smhd].", matches[2]), "invalid-comparison")
+		d, err := time.ParseDuration(q.Right)
+		if err != nil {
+			return false, nerr.Translate(err).Addf("Couldn't parse duration %v", q.Right)
 		}
+		t = t.Add(d)
 
 		//figure out the difference.
 		switch q.Value {
