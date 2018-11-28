@@ -72,7 +72,7 @@ func (g *GeneralAlertClearingJob) Run(input config.JobInputContext, actionWrite 
 	log.L.Debugf("Starting general-alert clearing job")
 
 	// The query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
-	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(generalAlertClearingQuery))
+	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", ""), []byte(generalAlertClearingQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run general alert clearing job: %s", err.String())
 		return

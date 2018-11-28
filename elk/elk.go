@@ -18,9 +18,6 @@ const (
 	ALERTING_FALSE = 0
 	POWER_STANDBY  = "standby"
 	POWER_ON       = "on"
-
-	DEVICE_INDEX = "oit-static-av-devices"
-	ROOM_INDEX   = "oit-static-av-rooms"
 )
 
 var (
@@ -29,8 +26,13 @@ var (
 	password = os.Getenv("ELK_SA_PASSWORD")
 )
 
+//MakeGenericELLKRequest .
 func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr.E) {
 	log.L.Debugf("Making ELK request against: %s", addr)
+
+	if len(username) == 0 || len(password) == 0 {
+		log.L.Fatalf("ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
+	}
 
 	var reqBody []byte
 	var err error
@@ -87,9 +89,10 @@ func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr
 
 }
 
+//MakeELKRequest .
 func MakeELKRequest(method, endpoint string, body interface{}) ([]byte, *nerr.E) {
-	if len(APIAddr) == 0 || len(username) == 0 || len(password) == 0 {
-		log.L.Fatalf("ELASTIC_API_EVENTS, ELK_SA_USERNAME, or ELK_SA_PASSWORD is not set.")
+	if len(APIAddr) == 0 {
+		log.L.Fatalf("ELK_DIRECT_ADDRESS is not set.")
 	}
 
 	// format whole address
