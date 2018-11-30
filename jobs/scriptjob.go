@@ -8,6 +8,7 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/config"
 )
 
 // ScriptJob .
@@ -16,7 +17,7 @@ type ScriptJob struct {
 }
 
 // Run runs the script
-func (j *ScriptJob) Run(ctx interface{}, actionWrite chan action.Payload) {
+func (j *ScriptJob) Run(input config.JobInputContext, actionWrite chan action.Payload) {
 	if len(j.Path) == 0 {
 		log.L.Errorf("path for a script job wasn't set. can't run this job.")
 		return
@@ -40,4 +41,9 @@ func (j *ScriptJob) Run(ctx interface{}, actionWrite chan action.Payload) {
 	}
 
 	log.L.Infof("Script %s ran successfuly.")
+}
+
+//GetName .
+func (j *ScriptJob) GetName() string {
+	return "script"
 }

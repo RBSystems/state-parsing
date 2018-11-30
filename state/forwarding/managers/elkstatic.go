@@ -148,6 +148,10 @@ func (e *ElkStaticDeviceForwarder) bufferevent(event sd.StaticDevice) {
 		return
 	}
 
+	if len(event.DeviceID) < 1 {
+		return
+	}
+
 	//check to see if we already have one for this device
 	v, ok := e.buffer[event.DeviceID]
 	if !ok {
@@ -170,9 +174,11 @@ func (e *ElkStaticDeviceForwarder) bufferevent(event sd.StaticDevice) {
 }
 
 func (e *ElkStaticRoomForwarder) bufferevent(event sd.StaticRoom) {
+
 	if len(event.RoomID) < 1 {
 		return
 	}
+
 	v, ok := e.buffer[event.RoomID]
 	if !ok {
 		Header := HeaderIndex{

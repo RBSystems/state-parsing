@@ -3,8 +3,8 @@ package actions
 import (
 	"os"
 
-	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/actions/email"
 	"github.com/byuoitav/state-parser/actions/mom"
 	"github.com/byuoitav/state-parser/actions/slack"
 )
@@ -28,11 +28,5 @@ var Actions = map[string]Action{
 	// fill actions in here
 	Slack: &slack.Action{ChannelIdentifier: os.Getenv("SLACK_HEARTBEAT_CHANNEL")},
 	Mom:   &mom.Action{},
-}
-
-func init() {
-	slackHeartbeat := os.Getenv("SLACK_HEARTBEAT_CHANNEL")
-	if len(slackHeartbeat) == 0 {
-		log.L.Fatalf("SLACK_HEARTBEAT_CHANNEL must be set.")
-	}
+	Email: &email.Action{},
 }

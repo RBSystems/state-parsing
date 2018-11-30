@@ -10,9 +10,9 @@ import (
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/cache"
-	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 // RoomUpdateJob .
@@ -125,11 +125,16 @@ type Bucket struct {
 	DocCount int    `json:"doc_count"`
 }
 
+//GetName .
+func (r *RoomUpdateJob) GetName() string {
+	return RoomUpdate
+}
+
 // Run runs the job
-func (r *RoomUpdateJob) Run(context interface{}, actionWrite chan action.Payload) {
+func (r *RoomUpdateJob) Run(input config.JobInputContext, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting room update job...")
 
-	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s,%s/_search", elk.DEVICE_INDEX, elk.ROOM_INDEX), []byte(roomUpdateQuery))
+	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s,%s/_search", "", ""), []byte(roomUpdateQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run room update job: %s", err.String())
 		return
@@ -170,9 +175,9 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan act
 
 		} else if len(room.Index.Buckets) == 1 {
 			// one of the indicies is missing
-			if room.Index.Buckets[0].Key == elk.DEVICE_INDEX {
+			if room.Index.Buckets[0].Key == "" {
 				log.L.Infof("%s doesn't have a room entry, so I'll create one for it.", room.Key)
-			} else if room.Index.Buckets[0].Key == elk.ROOM_INDEX {
+			} else if room.Index.Buckets[0].Key == "" {
 				log.L.Warnf("%s doesn't have any device entries. this room should probably be deleted.", room.Key)
 				continue
 			} else {
@@ -188,7 +193,7 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan act
 		alerting := false
 
 		// make sure index's are correct
-		if deviceIndex.Key != elk.DEVICE_INDEX {
+		if deviceIndex.Key != "" {
 			deviceIndex = room.Index.Buckets[1]
 			roomIndex = room.Index.Buckets[0]
 		}
@@ -317,7 +322,7 @@ func (r *RoomUpdateJob) processData(data roomQueryResponse, actionWrite chan act
 
 		log.L.Debugf("Room info: %v", room)
 
-		_, _, err := cache.GetCache(forwarding.DEFAULT).CheckAndStoreRoom(room)
+		_, _, err := cache.GetCache(config.DEFAULT).CheckAndStoreRoom(room)
 		if err != nil {
 			log.L.Errorf("Problem caching the power state for room %v: %v", room, err.Error())
 		}

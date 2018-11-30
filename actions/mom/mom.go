@@ -18,16 +18,16 @@ var momAlertURL string
 
 func init() {
 	momAlertURL = os.Getenv("MOM_ALERT_URL")
-
-	if len(momAlertURL) == 0 {
-		log.L.Fatalf("MOM_ALERT_URL not set.")
-	}
 }
 
 type Action struct {
 }
 
 func (m *Action) Execute(a action.Payload) action.Result {
+	if len(momAlertURL) == 0 {
+		log.L.Fatalf("MOM_ALERT_URL not set.")
+	}
+
 	log.L.Infof("Executing mom action for %v", a.Device)
 
 	result := action.Result{

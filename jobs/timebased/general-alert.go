@@ -9,9 +9,9 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/actions/action"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/byuoitav/state-parser/state/cache"
-	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
 // GeneralAlertClearingJob .
@@ -62,12 +62,17 @@ type generalAlertClearingQueryResponse struct {
 	} `json:"hits"`
 }
 
+// GetName .
+func (g *GeneralAlertClearingJob) GetName() string {
+	return GeneralAlertClearing
+}
+
 // Run runs the job
-func (g *GeneralAlertClearingJob) Run(context interface{}, actionWrite chan action.Payload) {
+func (g *GeneralAlertClearingJob) Run(input config.JobInputContext, actionWrite chan action.Payload) {
 	log.L.Debugf("Starting general-alert clearing job")
 
 	// The query is constructed such that only elements that have a general alerting set to true, but no specific alersts return.
-	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", elk.DEVICE_INDEX), []byte(generalAlertClearingQuery))
+	body, err := elk.MakeELKRequest(http.MethodPost, fmt.Sprintf("/%s/_search", ""), []byte(generalAlertClearingQuery))
 	if err != nil {
 		log.L.Warn("failed to make elk request to run general alert clearing job: %s", err.String())
 		return
@@ -92,7 +97,7 @@ func (g *GeneralAlertClearingJob) Run(context interface{}, actionWrite chan acti
 		device.UpdateTimes = make(map[string]time.Time)
 		device.UpdateTimes["alerting"] = time.Now()
 
-		cache.GetCache(forwarding.DEFAULT).CheckAndStoreDevice(device)
+		cache.GetCache(config.DEFAULT).CheckAndStoreDevice(device)
 	}
 
 	log.L.Debugf("[%s] Finished general alert clearing job.", "general-alert-clearing")

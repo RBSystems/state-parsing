@@ -1,10 +1,14 @@
 package cache
 
 import (
+	"sync"
+	"time"
+
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/state/forwarding"
 )
 
@@ -14,11 +18,14 @@ type Cache interface {
 	GetDeviceRecord(deviceID string) (sd.StaticDevice, *nerr.E)
 	CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom, *nerr.E)
 	GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E)
+	GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E)
+	GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E)
 
 	StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E)
 	StoreAndForwardEvent(event events.Event) (bool, *nerr.E)
 }
 
+//Caches .
 var Caches map[string]Cache
 
 func init() {
@@ -28,12 +35,15 @@ func init() {
 	log.L.Infof("Caches Initialized.")
 }
 
+//GetCache .
 func GetCache(cacheType string) Cache {
 	return Caches[cacheType]
 }
 
 type memorycache struct {
+	devicelock  sync.RWMutex
 	deviceCache map[string]DeviceItemManager
+	roomlock    sync.RWMutex
 	roomCache   map[string]RoomItemManager
 
 	cacheType string
@@ -43,16 +53,18 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 	log.L.Debugf("Event: %+v", v)
 
 	//Forward All
-	list := forwarding.GetManagersForType(c.cacheType, forwarding.EVENTALL)
+	list := forwarding.GetManagersForType(c.cacheType, config.EVENT, config.ALL)
 	for i := range list {
 		log.L.Debugf("Going to event forwarder: %v", list[i])
 		list[i].Send(v)
 	}
 
-	//if it's an error, we don't want to try and store it, as it probably won't correlate to a device field
-	if HasTag(events.Error, v.EventTags) {
+	//if it's an doesn't correspond to core or detail state we don't want to store it.
+	if !events.ContainsAnyTags(v, events.CoreState, events.DetailState) {
 		return false, nil
 	}
+
+	//check for detail or corestate, those are the only ones we save
 
 	//Cache
 	changes, newDev, err := c.StoreDeviceEvent(sd.State{
@@ -67,22 +79,22 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		return false, err.Addf("Couldn't store and forward device event")
 	}
 
-	list = forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEALL)
+	list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.ALL)
 	for i := range list {
 		list[i].Send(newDev)
 	}
 
 	//if there are changes and it's not a heartbeat event
-	if changes && !events.HasTag(v, events.Heartbeat) {
+	if changes && !events.ContainsAnyTags(v, events.Heartbeat) {
 
 		log.L.Debugf("Event resulted in changes")
 
 		//get the event stuff to forward
-		list = forwarding.GetManagersForType(c.cacheType, forwarding.EVENTDELTA)
+		list = forwarding.GetManagersForType(c.cacheType, config.EVENT, config.ALL)
 		for i := range list {
 			list[i].Send(v)
 		}
-		list = forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEDELTA)
+		list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(newDev)
 		}
@@ -101,13 +113,18 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 		return false, sd.StaticDevice{}, nerr.Create("State must include device ID", "invaid-parameter")
 	}
 
+	c.devicelock.RLock()
 	manager, ok := c.deviceCache[toSave.ID]
+	c.devicelock.RUnlock()
 	if !ok {
 		log.L.Debugf("Creating a new device manager for %v", toSave.ID)
 
 		//we need to create a new manager and set it up
 		manager = GetNewDeviceManager(toSave.ID)
+
+		c.devicelock.Lock()
 		c.deviceCache[toSave.ID] = manager
+		c.devicelock.Unlock()
 	}
 
 	respChan := make(chan DeviceTransactionResponse, 1)
@@ -138,10 +155,16 @@ func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 		return false, sd.StaticDevice{}, nerr.Create("Static Device must have an ID field to be loaded into the databaset", "invalid-device")
 	}
 
+	c.devicelock.RLock()
 	manager, ok := c.deviceCache[device.DeviceID]
+	c.devicelock.RUnlock()
 
 	if !ok {
 		manager = GetNewDeviceManager(device.DeviceID)
+
+		c.devicelock.Lock()
+		c.deviceCache[device.DeviceID] = manager
+		c.devicelock.Unlock()
 	}
 
 	respChan := make(chan DeviceTransactionResponse, 1)
@@ -161,12 +184,12 @@ func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 	}
 
 	if resp.Changes {
-		list := forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEDELTA)
+		list := forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(resp.NewDevice)
 		}
 
-		list = forwarding.GetManagersForType(c.cacheType, forwarding.DEVICEALL)
+		list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.ALL)
 		for i := range list {
 			list[i].Send(resp.NewDevice)
 		}
@@ -233,4 +256,65 @@ func (c *memorycache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
 
 	manager.ReadRequests <- respChan
 	return <-respChan, nil
+}
+
+func (c *memorycache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
+	toReturn := []sd.StaticDevice{}
+
+	expected := len(c.deviceCache)
+	ReadChannel := make(chan sd.StaticDevice, expected)
+
+	c.devicelock.RLock()
+	for _, v := range c.deviceCache {
+		v.ReadRequests <- ReadChannel
+	}
+	c.devicelock.RUnlock()
+
+	timeoutTimer := time.NewTimer(1 * time.Second)
+
+	received := 0
+	for {
+		select {
+		case <-timeoutTimer.C:
+			log.L.Infof("ReadAll devices timed out..")
+			return toReturn, nil
+		case v := <-ReadChannel:
+			toReturn = append(toReturn, v)
+			received++
+			if received >= expected {
+				log.L.Debugf("Got all responses from the read all devices")
+				return toReturn, nil
+			}
+		}
+	}
+}
+func (c *memorycache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
+	toReturn := []sd.StaticRoom{}
+
+	expected := len(c.deviceCache)
+	ReadChannel := make(chan sd.StaticRoom, expected)
+
+	c.roomlock.RLock()
+	for _, v := range c.roomCache {
+		v.ReadRequests <- ReadChannel
+	}
+	c.roomlock.RUnlock()
+
+	timeoutTimer := time.NewTimer(1 * time.Second)
+
+	received := 0
+	for {
+		select {
+		case <-timeoutTimer.C:
+			log.L.Infof("ReadAll rooms timed out..")
+			return toReturn, nil
+		case v := <-ReadChannel:
+			toReturn = append(toReturn, v)
+			received++
+			if received >= expected {
+				log.L.Debugf("Got all responses from the read all rooms")
+				return toReturn, nil
+			}
+		}
+	}
 }

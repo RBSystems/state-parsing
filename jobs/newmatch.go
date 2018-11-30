@@ -1,55 +1,16 @@
 package jobs
 
 import (
-	"encoding/json"
 	"regexp"
 
-	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/state-parser/config"
 )
 
 // NewMatchConfig contains the logic for building/matching regex for events that come in
-type NewMatchConfig struct {
-	Count int
 
-	GeneratingSystem string   `json:"generating-system"`
-	Timestamp        string   `json:"timestamp"`
-	EventTags        []string `json:"event-tags"`
-	Key              string   `json:"key"`
-	Value            string   `json:"value"`
-	User             string   `json:"user"`
-	Data             string   `json:"data,omitempty"`
-	AffectedRoom     struct {
-		BuildingID string `json:"buildingID,omitempty"`
-		RoomID     string `json:"roomID,omitempty"`
-	} `json:"affected-room"`
-	TargetDevice struct {
-		BuildingID string `json:"buildingID,omitempty"`
-		RoomID     string `json:"roomID,omitempty"`
-		DeviceID   string `json:"deviceID,omitempty"`
-	} `json:"target-device"`
-
-	Regex struct {
-		GeneratingSystem *regexp.Regexp
-		Timestamp        *regexp.Regexp
-		EventTags        []*regexp.Regexp
-		Key              *regexp.Regexp
-		Value            *regexp.Regexp
-		User             *regexp.Regexp
-		Data             *regexp.Regexp
-		AffectedRoom     struct {
-			BuildingID *regexp.Regexp
-			RoomID     *regexp.Regexp
-		}
-		TargetDevice struct {
-			BuildingID *regexp.Regexp
-			RoomID     *regexp.Regexp
-			DeviceID   *regexp.Regexp
-		}
-	}
-}
-
-func (r *runner) buildNewMatchRegex() *NewMatchConfig {
-	m := &NewMatchConfig{}
+func (r *runner) buildNewMatchRegex() *config.NewMatchConfig {
+	m := r.Trigger.NewMatch
 	m.Count = 0
 
 	// build the regex for each field
@@ -113,116 +74,7 @@ func (r *runner) buildNewMatchRegex() *NewMatchConfig {
 		m.Count++
 	}
 
+	log.L.Infof("Count: %v", m)
+
 	return m
-}
-
-func (m *NewMatchConfig) doesEventMatch(event *events.Event) bool {
-	if m.Count == 0 {
-		return true
-	}
-
-	if m.Regex.GeneratingSystem != nil {
-		reg := m.Regex.GeneratingSystem.Copy()
-		if !reg.MatchString(event.GeneratingSystem) {
-			return false
-		}
-	}
-
-	if m.Regex.Timestamp != nil {
-		reg := m.Regex.Timestamp.Copy()
-		if !reg.MatchString(event.Timestamp.String()) {
-			return false
-		}
-	}
-
-	if len(m.Regex.EventTags) > 0 {
-		matched := 0
-
-		for _, regex := range m.Regex.EventTags {
-			reg := regex.Copy()
-
-			for _, tag := range event.EventTags {
-				if reg.MatchString(tag) {
-					matched++
-					break
-				}
-			}
-		}
-
-		if matched != len(m.Regex.EventTags) {
-			return false
-		}
-	}
-
-	if m.Regex.Key != nil {
-		reg := m.Regex.Key.Copy()
-		if !reg.MatchString(event.Key) {
-			return false
-		}
-	}
-
-	if m.Regex.Value != nil {
-		reg := m.Regex.Value.Copy()
-		if !reg.MatchString(event.Value) {
-			return false
-		}
-	}
-
-	if m.Regex.User != nil {
-		reg := m.Regex.User.Copy()
-		if !reg.MatchString(event.User) {
-			return false
-		}
-	}
-
-	if m.Regex.Data != nil {
-		reg := m.Regex.Data.Copy()
-		// convert event.Data to a json string
-		bytes, err := json.Marshal(event.Data)
-		if err != nil {
-			return false
-		}
-
-		// or should i do fmt.Sprintf?
-		if !reg.MatchString(string(bytes[:])) {
-			return false
-		}
-	}
-
-	if m.Regex.TargetDevice.BuildingID != nil {
-		reg := m.Regex.TargetDevice.BuildingID.Copy()
-		if !reg.MatchString(event.TargetDevice.BuildingID) {
-			return false
-		}
-	}
-
-	if m.Regex.TargetDevice.RoomID != nil {
-		reg := m.Regex.TargetDevice.RoomID.Copy()
-		if !reg.MatchString(event.TargetDevice.RoomID) {
-			return false
-		}
-	}
-
-	if m.Regex.TargetDevice.DeviceID != nil {
-		reg := m.Regex.TargetDevice.DeviceID.Copy()
-		if !reg.MatchString(event.TargetDevice.DeviceID) {
-			return false
-		}
-	}
-
-	if m.Regex.AffectedRoom.BuildingID != nil {
-		reg := m.Regex.AffectedRoom.BuildingID.Copy()
-		if !reg.MatchString(event.AffectedRoom.BuildingID) {
-			return false
-		}
-	}
-
-	if m.Regex.AffectedRoom.RoomID != nil {
-		reg := m.Regex.AffectedRoom.RoomID.Copy()
-		if !reg.MatchString(event.AffectedRoom.RoomID) {
-			return false
-		}
-	}
-
-	return true
 }
