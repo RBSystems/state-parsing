@@ -19,6 +19,7 @@ var stringtype = reflect.TypeOf("")
 var timetype = reflect.TypeOf(time.Now())
 var booltype = reflect.TypeOf((*bool)(nil))
 var inttype = reflect.TypeOf((*int)(nil))
+var float64type = reflect.TypeOf((*float64)(nil))
 
 func init() {
 	alertRegex = regexp.MustCompile(`alerts\..+`)
@@ -83,6 +84,10 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 		strvalue = fmt.Sprintf("%v", value)
 	case *bool:
 		strvalue = fmt.Sprintf("%v", *(value.(*bool)))
+	case float64:
+		strvalue = fmt.Sprintf("%v", value)
+	case *float64:
+		strvalue = fmt.Sprintf("%v", *(value.(*float64)))
 	case time.Time:
 		strvalue = fmt.Sprintf("\"%v\"", value.(time.Time).Format(time.RFC3339Nano))
 	case string:
@@ -197,6 +202,28 @@ func SetDeviceField(key string, value interface{}, updateTime time.Time, t sd.St
 				t.UpdateTimes[key] = updateTime
 
 				prevValue := curval.Interface().(*int)
+				if prevValue != nil && *prevValue == a {
+					//no change
+					return false, t, nil
+				}
+
+				//set it
+				curval.Set(reflect.ValueOf(&a))
+
+				return true, t, nil
+			case float64type:
+				log.L.Debugf("float64")
+				var a float64
+				err := json.Unmarshal([]byte(strvalue), &a)
+				if err != nil {
+					log.L.Warnf("%+v", err)
+					return false, t, nerr.Translate(err).Addf("Couldn't unmarshal strvalue %v into the field %v.", strvalue, key)
+				}
+
+				//update the time that it was 'last' set
+				t.UpdateTimes[key] = updateTime
+
+				prevValue := curval.Interface().(*float64)
 				if prevValue != nil && *prevValue == a {
 					//no change
 					return false, t, nil

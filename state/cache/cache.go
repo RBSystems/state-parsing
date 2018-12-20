@@ -90,7 +90,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 	}
 
 	//if there are changes and it's not a heartbeat event
-	if changes && !events.ContainsAnyTags(v, events.Heartbeat) {
+	if changes && !events.ContainsAnyTags(v, events.Heartbeat, events.HardwareInfo) {
 
 		log.L.Debugf("Event resulted in changes")
 
