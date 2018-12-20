@@ -28,6 +28,7 @@ func init() {
 		case config.ELKSTATIC:
 			switch i.DataType {
 			case config.ROOM:
+				log.L.Infof("Initializing manager %v", curName)
 				managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkStaticRoomForwarder(
 					i.Elk.URL,
 					GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
@@ -35,6 +36,7 @@ func init() {
 					i.Elk.Upsert,
 				))
 			case config.DEVICE:
+				log.L.Infof("Initializing manager %v", curName)
 				managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkStaticDeviceForwarder(
 					i.Elk.URL,
 					GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
@@ -43,12 +45,14 @@ func init() {
 				))
 			}
 		case config.ELKTIMESERIES:
+			log.L.Infof("Initializing manager %v", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultElkTimeSeries(
 				i.Elk.URL,
 				GetIndexFunction(i.Elk.IndexPattern, i.Elk.IndexRotationInterval),
 				time.Duration(i.Interval)*time.Second,
 			))
 		case config.COUCH:
+			log.L.Infof("Initializing manager %v", curName)
 			managerMap[curName] = append(managerMap[curName], managers.GetDefaultCouchDeviceBuffer(
 				i.Couch.URL,
 				i.Couch.DatabaseName,
@@ -66,7 +70,7 @@ func GetManagersForType(cacheType, dataType, eventType string) []BufferManager {
 	log.L.Debugf("Getting %s managers for %v-%v", cacheType, dataType, eventType)
 	v, ok := managerMap[fmt.Sprintf("%s-%s-%s", cacheType, dataType, eventType)]
 	if !ok {
-		log.L.Errorf("Unknown cache type: %v", cacheType)
+		log.L.Errorf("Unknown manager type: %v", fmt.Sprintf("%s-%s-%s", cacheType, dataType, eventType))
 		return []BufferManager{}
 	}
 	return v

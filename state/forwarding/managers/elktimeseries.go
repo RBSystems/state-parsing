@@ -160,7 +160,7 @@ func forward(caller, url string, toSend []ElkBulkUpdateItem) {
 		return
 	}
 	if elkresp.Errors {
-		log.L.Errorf("%v Errors received from ELK during bulk update %v", caller, resp)
+		log.L.Errorf("%v Errors received from ELK during bulk update %s", caller, resp)
 		return
 	}
 	log.L.Debugf("%v Successfully sent bulk ELK updates", caller)

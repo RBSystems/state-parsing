@@ -19,7 +19,7 @@ import (
 const (
 	slackurl = "https://hooks.slack.com/services/"
 
-	messageFrequency = 1 * time.Minute
+	messageFrequency = 5 * time.Second
 )
 
 var (

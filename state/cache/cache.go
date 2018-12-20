@@ -29,14 +29,19 @@ type Cache interface {
 var Caches map[string]Cache
 
 func init() {
+	pre, _ := log.GetLevel()
+	log.SetLevel("info")
 	log.L.Infof("Initializing Caches")
 	//start
 	InitializeCaches()
 	log.L.Infof("Caches Initialized.")
+	log.SetLevel(pre)
 }
 
 //GetCache .
 func GetCache(cacheType string) Cache {
+	log.L.Debugf("Getting cache %v", cacheType)
+	log.L.Debugf("%v", Caches)
 	return Caches[cacheType]
 }
 

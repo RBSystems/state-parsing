@@ -1,5 +1,6 @@
 package slack
 
+//Attachment .
 type Attachment struct {
 	Fallback  string       `json:"fallback,omitempty"`
 	Pretext   string       `json:"pretext,omitempty"`
@@ -10,6 +11,7 @@ type Attachment struct {
 	Fields    []AlertField `json:"fields,omitempty"`
 }
 
+//AlertField .
 type AlertField struct {
 	Title string `json:"title,omitemtpy"`
 	Value string `json:"value,omitemtpy"`

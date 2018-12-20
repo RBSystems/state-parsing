@@ -68,6 +68,7 @@ func (s *SimpleForwardingJob) Run(context config.JobInputContext, actionWrite ch
 		_, err = cache.GetCache(config.LEGACY).StoreAndForwardEvent(v.Event)
 
 	default:
+		log.L.Debugf("default %v", context)
 	}
 
 	if err != nil {
