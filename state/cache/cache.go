@@ -95,7 +95,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		log.L.Debugf("Event resulted in changes")
 
 		//get the event stuff to forward
-		list = forwarding.GetManagersForType(c.cacheType, config.EVENT, config.ALL)
+		list = forwarding.GetManagersForType(c.cacheType, config.EVENT, config.DELTA)
 		for i := range list {
 			list[i].Send(v)
 		}
