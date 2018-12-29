@@ -10,6 +10,7 @@ import (
 	"github.com/byuoitav/common/v2/events"
 	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/state/forwarding"
+	"github.com/robfig/cron"
 )
 
 //Cache is our state cache - it's meant to be a representation of the static indexes
@@ -52,6 +53,8 @@ type memorycache struct {
 	roomCache   map[string]RoomItemManager
 
 	cacheType string
+
+	pushCron *cron.Cron
 }
 
 func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
@@ -60,16 +63,14 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 	//Forward All
 	list := forwarding.GetManagersForType(c.cacheType, config.EVENT, config.ALL)
 	for i := range list {
-		log.L.Debugf("Going to event forwarder: %v", list[i])
+		//log.L.Debugf("Going to event forwarder: %v", list[i])
 		list[i].Send(v)
 	}
 
 	//if it's an doesn't correspond to core or detail state we don't want to store it.
-	if !events.ContainsAnyTags(v, events.CoreState, events.DetailState) {
+	if !events.ContainsAnyTags(v, events.CoreState, events.DetailState, events.Heartbeat) {
 		return false, nil
 	}
-
-	//check for detail or corestate, those are the only ones we save
 
 	//Cache
 	changes, newDev, err := c.StoreDeviceEvent(sd.State{
@@ -89,7 +90,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		list[i].Send(newDev)
 	}
 
-	//if there are changes and it's not a heartbeat event
+	//if there are changes and it's not a heartbeat/hardware event
 	if changes && !events.ContainsAnyTags(v, events.Heartbeat, events.HardwareInfo) {
 
 		log.L.Debugf("Event resulted in changes")
@@ -99,6 +100,7 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 		for i := range list {
 			list[i].Send(v)
 		}
+
 		list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.DELTA)
 		for i := range list {
 			list[i].Send(newDev)
@@ -250,6 +252,39 @@ func (c *memorycache) CheckAndStoreRoom(room sd.StaticRoom) (bool, sd.StaticRoom
 	return resp.Changes, resp.NewRoom, nil
 }
 
+func (c *memorycache) PushAllDevices() {
+
+	//get all the records
+	log.L.Infof("Pushing updates for all devices to DELTA and ALL indexes")
+
+	devs, err := c.GetAllDeviceRecords()
+	if err != nil {
+		log.L.Errorf(err.Addf("Couldn't push all devices").Error())
+		return
+	}
+	list := forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.DELTA)
+	for i := range list {
+		for j := range devs {
+			er := list[i].Send(devs[j])
+			if er != nil {
+				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+			}
+		}
+	}
+
+	list = forwarding.GetManagersForType(c.cacheType, config.DEVICE, config.ALL)
+	for i := range list {
+		for j := range devs {
+			er := list[i].Send(devs[j])
+			if er != nil {
+				log.L.Warnf("Problem sending all update for devices %v. %v", devs[j].DeviceID, er.Error())
+			}
+		}
+	}
+
+	log.L.Infof("Done sending update for all devices")
+}
+
 //GetRoomRecord returns a room
 func (c *memorycache) GetRoomRecord(roomID string) (sd.StaticRoom, *nerr.E) {
 	manager, ok := c.roomCache[roomID]
@@ -293,6 +328,7 @@ func (c *memorycache) GetAllDeviceRecords() ([]sd.StaticDevice, *nerr.E) {
 		}
 	}
 }
+
 func (c *memorycache) GetAllRoomRecords() ([]sd.StaticRoom, *nerr.E) {
 	toReturn := []sd.StaticRoom{}
 

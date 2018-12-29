@@ -6,8 +6,8 @@ import (
 
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
-	"github.com/byuoitav/common/v2/events"
 	sd "github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/common/v2/events"
 )
 
 /*

@@ -10,12 +10,12 @@ import (
 	"github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
+	"github.com/robfig/cron"
 )
 
 const maxSize = 10000
 
-const defaultDevIndex = "oit-static-av-devices-v2"
-const defaultDMPSIndex = "oit-static-av-devices-legacy-v2"
+const pushCron = "0 0 0 * * *"
 
 //InitializeCaches initializes the caches with data from ELK
 func InitializeCaches() {
@@ -114,10 +114,23 @@ func makeCache(devices []statedefinition.StaticDevice, rooms []statedefinition.S
 
 	toReturn := memorycache{
 		cacheType: cacheType,
+		pushCron:  cron.New(),
 	}
+
+	log.L.Infof("adding the cron push")
+	//build our push cron
+	er := toReturn.pushCron.AddFunc(pushCron, toReturn.PushAllDevices)
+	if er != nil {
+		log.L.Errorf("Couldn't add the push all devices cron job to the cache")
+
+	}
+
+	//starting the cron job
+	toReturn.pushCron.Start()
 
 	//go through and create our maps
 	toReturn.deviceCache = make(map[string]DeviceItemManager)
+
 	for i := range devices {
 		//check for duplicate
 		v, ok := toReturn.deviceCache[devices[i].DeviceID]

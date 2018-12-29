@@ -12,6 +12,8 @@ import (
 )
 
 func main() {
+	log.SetLevel("debug")
+
 	go jobs.StartJobScheduler()
 
 	port := ":10011"
@@ -46,8 +48,10 @@ func addV2Event(context echo.Context) error {
 	var event v2.Event
 	err := context.Bind(&event)
 	if err != nil {
+		log.L.Debugf("Bad event: %v", err.Error())
 		return context.JSON(http.StatusBadRequest, fmt.Sprintf("Invalid request body; not a valid event: %v", err))
 	}
+
 	log.L.Debugf("Received event: %+v", event)
 
 	jobs.ProcessV2Event(event)
