@@ -6,13 +6,16 @@ import (
 
 	"github.com/byuoitav/common/log"
 	v2 "github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/jobs"
+	"github.com/byuoitav/state-parser/state/cache"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
+	echopprof "github.com/sevenNt/echo-pprof"
 )
 
 func main() {
-	log.SetLevel("debug")
+	log.SetLevel("warn")
 
 	go jobs.StartJobScheduler()
 
@@ -22,12 +25,16 @@ func main() {
 	router.Use(middleware.CORS())
 
 	router.GET("/test", status)
+	router.GET("/cachestatus", cacheStatus)
+	router.GET("/queuestatus", queueStatus)
 
 	router.POST("/v2/event", addV2Event)
 	router.POST("/legacy/v2/event", addV2LegacyEvent)
 
 	router.PUT("/log-level/:level", log.SetLogLevel)
 	router.GET("/log-level", log.GetLogLevel)
+
+	echopprof.Wrap(router)
 
 	server := http.Server{
 		Addr:           port,
@@ -38,6 +45,34 @@ func main() {
 	if err != nil {
 		log.L.Fatalf("error running server: %s", err)
 	}
+}
+
+type CacheStatusStruct struct {
+	DeviceCount int
+	DeviceList  []string
+}
+
+func queueStatus(context echo.Context) error {
+	return context.JSON(http.StatusOK, jobs.GetQueueSize())
+}
+
+func cacheStatus(context echo.Context) error {
+	toReturn := map[string]CacheStatusStruct{}
+
+	config := config.GetConfig()
+
+	for _, ca := range config.Caches {
+		c := cache.GetCache(ca.CacheType)
+		//asser it's a mem
+		count, l, _ := c.GetDeviceManagerList()
+		toReturn[ca.CacheType] = CacheStatusStruct{
+			DeviceList:  l,
+			DeviceCount: count,
+		}
+
+	}
+
+	return context.JSON(http.StatusOK, toReturn)
 }
 
 func status(context echo.Context) error {

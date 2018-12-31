@@ -37,7 +37,7 @@ type DeviceTransactionResponse struct {
 	Error     *nerr.E         //if there were errors
 }
 
-func GetNewDeviceManager(id string) DeviceItemManager {
+func GetNewDeviceManager(id string) (DeviceItemManager, *nerr.E) {
 	a := DeviceItemManager{
 		WriteRequests: make(chan DeviceTransactionRequest, 100),
 		ReadRequests:  make(chan chan sd.StaticDevice, 100),
@@ -46,7 +46,7 @@ func GetNewDeviceManager(id string) DeviceItemManager {
 	rm := strings.Split(id, "-")
 	if len(rm) != 3 {
 		log.L.Errorf("Invalid Device %v", id)
-		return DeviceItemManager{}
+		return DeviceItemManager{}, nerr.Create("Can't build device manager: invalid ID", "invalid-id")
 	}
 
 	F := false //build a standard device
@@ -64,7 +64,7 @@ func GetNewDeviceManager(id string) DeviceItemManager {
 	}
 
 	go StartDeviceManager(a, device)
-	return a
+	return a, nil
 }
 
 //GetNewDeviceManagerWithDevice will assume overwriting of all the info, won't initialize to default values
@@ -97,7 +97,7 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 			if write.MergeDeviceEdit {
 				if write.MergeDevice.DeviceID != device.DeviceID {
 					write.ResponseChan <- DeviceTransactionResponse{Error: nerr.Create("Can't change the ID of a device", "invalid-operation"), NewDevice: device, Changes: false}
-
+					continue
 				}
 				_, merged, changes, err = sd.CompareDevices(device, write.MergeDevice)
 

@@ -24,6 +24,8 @@ type Cache interface {
 
 	StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E)
 	StoreAndForwardEvent(event events.Event) (bool, *nerr.E)
+
+	GetDeviceManagerList() (int, []string, *nerr.E)
 }
 
 //Caches .
@@ -55,6 +57,15 @@ type memorycache struct {
 	cacheType string
 
 	pushCron *cron.Cron
+}
+
+func (c *memorycache) GetDeviceManagerList() (int, []string, *nerr.E) {
+	toReturn := []string{}
+	for k := range c.deviceCache {
+		toReturn = append(toReturn, k)
+	}
+
+	return len(c.deviceCache), toReturn, nil
 }
 
 func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
@@ -115,7 +126,8 @@ func (c *memorycache) StoreAndForwardEvent(v events.Event) (bool, *nerr.E) {
 	Defer use to CheckAndStoreDevice for internal use, as there are significant speed gains.
 */
 func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, *nerr.E) {
-
+	//	log.SetLevel("info")
+	//	defer log.SetLevel("warn")
 	if len(toSave.ID) < 1 {
 		return false, sd.StaticDevice{}, nerr.Create("State must include device ID", "invaid-parameter")
 	}
@@ -124,10 +136,14 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 	manager, ok := c.deviceCache[toSave.ID]
 	c.devicelock.RUnlock()
 	if !ok {
-		log.L.Debugf("Creating a new device manager for %v", toSave.ID)
+		log.L.Infof("Creating a new device manager for %v", toSave.ID)
 
+		var err *nerr.E
 		//we need to create a new manager and set it up
-		manager = GetNewDeviceManager(toSave.ID)
+		manager, err = GetNewDeviceManager(toSave.ID)
+		if err != nil {
+			return false, sd.StaticDevice{}, err.Addf("couldn't store device event")
+		}
 
 		c.devicelock.Lock()
 		c.deviceCache[toSave.ID] = manager
@@ -167,7 +183,11 @@ func (c *memorycache) CheckAndStoreDevice(device sd.StaticDevice) (bool, sd.Stat
 	c.devicelock.RUnlock()
 
 	if !ok {
-		manager = GetNewDeviceManager(device.DeviceID)
+		var err *nerr.E
+		manager, err = GetNewDeviceManager(device.DeviceID)
+		if err != nil {
+			return false, device, err.Addf("Couldn't check and store device")
+		}
 
 		c.devicelock.Lock()
 		c.deviceCache[device.DeviceID] = manager

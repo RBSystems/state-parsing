@@ -108,6 +108,27 @@ func init() {
 	}
 }
 
+//QueueStatus .
+type QueueStatus struct {
+	Cap  int
+	Util int
+}
+
+//GetQueueSize .
+func GetQueueSize() map[string]QueueStatus {
+	toReturn := map[string]QueueStatus{}
+	toReturn["v2"] = QueueStatus{
+		Cap:  cap(v2EventChan),
+		Util: len(v2EventChan),
+	}
+	toReturn["legacyv2"] = QueueStatus{
+		Cap:  cap(v2LegacyEventChan),
+		Util: len(v2LegacyEventChan),
+	}
+
+	return toReturn
+}
+
 // ProcessV2Event adds <event> into a queue to be processed
 func ProcessV2Event(event v2.Event) {
 	v2EventChan <- event
@@ -155,7 +176,8 @@ func StartJobScheduler() {
 		log.L.Debugf("Starting event worker %v", i)
 		wg.Add(1)
 
-		go func() {
+		go func(workerNum int) {
+			name := strconv.Itoa(workerNum)
 			for {
 				select {
 
@@ -163,7 +185,7 @@ func StartJobScheduler() {
 					// see if we need to execute any jobs from this event
 					for i := range v2MatchRunners {
 						if v2MatchRunners[i].Trigger.NewMatch.DoesEventMatch(&event) {
-							go v2MatchRunners[i].run(&event)
+							v2MatchRunners[i].run(&event, name)
 						}
 					}
 
@@ -176,22 +198,23 @@ func StartJobScheduler() {
 					// see if we need to execute any jobs from this event
 					for i := range v2MatchRunners {
 						if v2MatchRunners[i].Trigger.NewMatch.DoesEventMatch(&event) {
-							go v2MatchRunners[i].run(&le)
+							v2MatchRunners[i].run(&le, name)
 						}
 					}
 
 				}
 			}
-		}()
+		}(i)
 	}
 
 	wg.Wait()
 }
 
-func (r *runner) run(context interface{}) {
-	log.L.Debugf("[%s|%v] Running job...", r.Config.Name, r.TriggerIndex)
+func (r *runner) run(context interface{}, id string) {
+	log.L.Debugf("[%s|%v|%v] Running job... Context: %v\n", r.Config.Name, r.TriggerIndex, id, context)
 
 	actionChan := make(chan action.Payload, 50)
+
 	go func() {
 		for action := range actionChan {
 			actions.Execute(action)
@@ -204,10 +227,10 @@ func (r *runner) run(context interface{}) {
 		InputConfig: r.Config.JobInputConfig,
 		Action:      r.Config.Action,
 	}
-	r.Job.Run(InputConfig, actionChan)
-	close(actionChan)
 
-	log.L.Debugf("[%s|%v] Finished.", r.Config.Name, r.TriggerIndex)
+	r.Job.Run(InputConfig, actionChan)
+
+	log.L.Debugf("[%s|%v] Finished.\n", r.Config.Name, r.TriggerIndex)
 }
 
 func (r *runner) runDaily() {
@@ -233,7 +256,7 @@ func (r *runner) runDaily() {
 
 	for {
 		<-timer.C
-		r.run(nil)
+		r.run(nil, "timer")
 
 		timer.Reset(24 * time.Hour)
 	}
@@ -250,6 +273,6 @@ func (r *runner) runInterval() {
 
 	ticker := time.NewTicker(interval)
 	for range ticker.C {
-		r.run(nil)
+		r.run(nil, "ticker")
 	}
 }
