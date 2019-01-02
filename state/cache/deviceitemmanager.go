@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -11,8 +12,9 @@ import (
 )
 
 /*
-Device Item Manager handles managing access to a single device in a cache. Changes to the device are submitted via the IncomingWriteChan and reads are submitted via the IncomingReadChan.
-*/type DeviceItemManager struct {
+DeviceItemManager handles managing access to a single device in a cache. Changes to the device are submitted via the IncomingWriteChan and reads are submitted via the IncomingReadChan.
+*/
+type DeviceItemManager struct {
 	WriteRequests chan DeviceTransactionRequest //channel to buffer changes to the device.
 	ReadRequests  chan chan sd.StaticDevice
 }
@@ -31,12 +33,14 @@ type DeviceTransactionRequest struct {
 	Event     sd.State
 }
 
+//DeviceTransactionResponse .
 type DeviceTransactionResponse struct {
 	Changes   bool            //if the Transaction Request resulted in changes
 	NewDevice sd.StaticDevice //the updated device with the changes included in the Transaction request included
 	Error     *nerr.E         //if there were errors
 }
 
+//GetNewDeviceManager .
 func GetNewDeviceManager(id string) (DeviceItemManager, *nerr.E) {
 	a := DeviceItemManager{
 		WriteRequests: make(chan DeviceTransactionRequest, 100),
@@ -46,7 +50,7 @@ func GetNewDeviceManager(id string) (DeviceItemManager, *nerr.E) {
 	rm := strings.Split(id, "-")
 	if len(rm) != 3 {
 		log.L.Errorf("Invalid Device %v", id)
-		return DeviceItemManager{}, nerr.Create("Can't build device manager: invalid ID", "invalid-id")
+		return DeviceItemManager{}, nerr.Create(fmt.Sprintf("Can't build device manager: invalid ID %v", id), "invalid-id")
 	}
 
 	F := false //build a standard device
