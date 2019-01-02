@@ -185,7 +185,7 @@ func StartJobScheduler() {
 					// see if we need to execute any jobs from this event
 					for i := range v2MatchRunners {
 						if v2MatchRunners[i].Trigger.NewMatch.DoesEventMatch(&event) {
-							v2MatchRunners[i].run(&event, name)
+							go v2MatchRunners[i].run(&event, name)
 						}
 					}
 
@@ -198,7 +198,7 @@ func StartJobScheduler() {
 					// see if we need to execute any jobs from this event
 					for i := range v2MatchRunners {
 						if v2MatchRunners[i].Trigger.NewMatch.DoesEventMatch(&event) {
-							v2MatchRunners[i].run(&le, name)
+							go v2MatchRunners[i].run(&le, name)
 						}
 					}
 
@@ -229,6 +229,7 @@ func (r *runner) run(context interface{}, id string) {
 	}
 
 	r.Job.Run(InputConfig, actionChan)
+	close(actionChan)
 
 	log.L.Debugf("[%s|%v] Finished.\n", r.Config.Name, r.TriggerIndex)
 }
