@@ -97,6 +97,9 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 	for {
 		select {
 		case write := <-m.WriteRequests:
+			if write.ResponseChan != nil {
+				continue
+			}
 
 			if write.MergeDeviceEdit {
 				if write.MergeDevice.DeviceID != device.DeviceID {
@@ -105,7 +108,7 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 				}
 				_, merged, changes, err = sd.CompareDevices(device, write.MergeDevice)
 
-				if err != nil && write.ResponseChan != nil {
+				if err != nil {
 					write.ResponseChan <- DeviceTransactionResponse{Error: err, Changes: false}
 					continue
 				}
@@ -121,6 +124,7 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 						}
 					}
 				}
+
 				if HasTag(events.Heartbeat, write.Event.Tags) {
 					changes, merged, err = SetDeviceField(
 						"last-heartbeat",
@@ -136,16 +140,22 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 						device,
 					)
 				}
-				if err != nil && write.ResponseChan != nil {
+				if err != nil {
 					write.ResponseChan <- DeviceTransactionResponse{Error: err, Changes: false}
 					continue
 				}
 
-				//if it has a user-generated tag
+				// if it has a user-generated tag
 				if HasTag(events.UserGenerated, write.Event.Tags) {
 					merged.LastUserInput = write.Event.Time
+					device = merged
 				}
-				merged.LastStateReceived = write.Event.Time
+
+				// i'm just going to assume yeah, ask joe later
+				if HasTag(events.CoreState, write.Event.Tags) || HasTag(events.DetailState, write.Event.Tags) {
+					merged.LastStateReceived = write.Event.Time
+					device = merged
+				}
 			}
 
 			if changes {
@@ -153,10 +163,7 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 				device = merged
 			}
 
-			if write.ResponseChan != nil {
-				write.ResponseChan <- DeviceTransactionResponse{Error: err, NewDevice: device, Changes: changes}
-			}
-
+			write.ResponseChan <- DeviceTransactionResponse{Error: err, NewDevice: device, Changes: changes}
 		case read := <-m.ReadRequests:
 			//just send it back
 			if read != nil {
