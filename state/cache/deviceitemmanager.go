@@ -97,7 +97,7 @@ func StartDeviceManager(m DeviceItemManager, device sd.StaticDevice) {
 	for {
 		select {
 		case write := <-m.WriteRequests:
-			if write.ResponseChan != nil {
+			if write.ResponseChan == nil {
 				continue
 			}
 
