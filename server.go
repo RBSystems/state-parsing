@@ -9,6 +9,7 @@ import (
 	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/jobs"
 	"github.com/byuoitav/state-parser/state/cache"
+	"github.com/byuoitav/state-parser/state/forwarding"
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	echopprof "github.com/sevenNt/echo-pprof"
@@ -18,6 +19,16 @@ func main() {
 	log.SetLevel("warn")
 
 	go jobs.StartJobScheduler()
+
+	c := config.GetConfig()
+
+	pre, _ := log.GetLevel()
+
+	log.SetLevel("info")
+	log.L.Infof("Initializing Caches")
+	cache.InitializeCaches(c.Caches, forwarding.GetManagersForType)
+	log.L.Infof("Caches Initialized.")
+	log.SetLevel(pre)
 
 	port := ":10011"
 	router := echo.New()
@@ -47,6 +58,7 @@ func main() {
 	}
 }
 
+//CacheStatusStruct .
 type CacheStatusStruct struct {
 	DeviceCount int
 	DeviceList  []string

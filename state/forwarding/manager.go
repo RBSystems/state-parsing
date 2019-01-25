@@ -2,9 +2,11 @@ package forwarding
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/byuoitav/common/log"
+	"github.com/byuoitav/state-parser/base"
 	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/state/forwarding/managers"
 )
@@ -16,12 +18,15 @@ type BufferManager interface {
 
 //Key is made up of the CacheType-DataType-EventType
 //e.g. default-device-all or legacy-event-all
-var managerMap map[string][]BufferManager
+var managerMap map[string][]base.BufferManager
 
 func init() {
 	log.L.Infof("Initializing buffer managers")
+	if os.Getenv("NO_INIT") != "" {
+		return
+	}
 	c := config.GetConfig()
-	managerMap = make(map[string][]BufferManager)
+	managerMap = make(map[string][]base.BufferManager)
 	for _, i := range c.Forwarders {
 		curName := fmt.Sprintf(fmt.Sprintf("%v-%v-%v", i.CacheType, i.DataType, i.EventType))
 		switch i.Type {
@@ -66,12 +71,12 @@ func init() {
 }
 
 //GetManagersForType a
-func GetManagersForType(cacheType, dataType, eventType string) []BufferManager {
+func GetManagersForType(cacheType, dataType, eventType string) []base.BufferManager {
 	log.L.Debugf("Getting %s managers for %v-%v", cacheType, dataType, eventType)
 	v, ok := managerMap[fmt.Sprintf("%s-%s-%s", cacheType, dataType, eventType)]
 	if !ok {
 		log.L.Errorf("Unknown manager type: %v", fmt.Sprintf("%s-%s-%s", cacheType, dataType, eventType))
-		return []BufferManager{}
+		return nil
 	}
 	return v
 }

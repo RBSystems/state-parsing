@@ -8,6 +8,7 @@ import (
 	"github.com/byuoitav/common/nerr"
 	sd "github.com/byuoitav/common/state/statedefinition"
 	"github.com/byuoitav/common/v2/events"
+	"github.com/byuoitav/state-parser/base"
 	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/state/forwarding"
 	"github.com/robfig/cron"
@@ -26,20 +27,11 @@ type Cache interface {
 	StoreAndForwardEvent(event events.Event) (bool, *nerr.E)
 
 	GetDeviceManagerList() (int, []string, *nerr.E)
+	GetForwarderList() func(string, string, string) []base.BufferManager
 }
 
 //Caches .
 var Caches map[string]Cache
-
-func init() {
-	pre, _ := log.GetLevel()
-	log.SetLevel("info")
-	log.L.Infof("Initializing Caches")
-	//start
-	InitializeCaches()
-	log.L.Infof("Caches Initialized.")
-	log.SetLevel(pre)
-}
 
 //GetCache .
 func GetCache(cacheType string) Cache {
@@ -57,6 +49,17 @@ type memorycache struct {
 	cacheType string
 
 	pushCron *cron.Cron
+
+	forwarderFunc func(string, string, string) []base.BufferManager
+}
+
+func (c *memorycache) GetForwarderList() func(string, string, string) []base.BufferManager {
+	if c.forwarderFunc == nil {
+		return func(string, string, string) []base.BufferManager {
+			return []base.BufferManager{}
+		}
+	}
+	return c.forwarderFunc
 }
 
 func (c *memorycache) GetDeviceManagerList() (int, []string, *nerr.E) {
@@ -132,9 +135,8 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 		return false, sd.StaticDevice{}, nerr.Create("State must include device ID", "invaid-parameter")
 	}
 
-	c.devicelock.RLock()
+	c.devicelock.Lock()
 	manager, ok := c.deviceCache[toSave.ID]
-	c.devicelock.RUnlock()
 	if !ok {
 		log.L.Infof("Creating a new device manager for %v", toSave.ID)
 
@@ -142,13 +144,13 @@ func (c *memorycache) StoreDeviceEvent(toSave sd.State) (bool, sd.StaticDevice, 
 		//we need to create a new manager and set it up
 		manager, err = GetNewDeviceManager(toSave.ID)
 		if err != nil {
+			c.devicelock.Unlock()
 			return false, sd.StaticDevice{}, err.Addf("couldn't store device event")
 		}
 
-		c.devicelock.Lock()
 		c.deviceCache[toSave.ID] = manager
-		c.devicelock.Unlock()
 	}
+	c.devicelock.Unlock()
 
 	respChan := make(chan DeviceTransactionResponse, 1)
 

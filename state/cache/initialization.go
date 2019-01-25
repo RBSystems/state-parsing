@@ -8,6 +8,7 @@ import (
 	"github.com/byuoitav/common/log"
 	"github.com/byuoitav/common/nerr"
 	"github.com/byuoitav/common/state/statedefinition"
+	"github.com/byuoitav/state-parser/base"
 	"github.com/byuoitav/state-parser/config"
 	"github.com/byuoitav/state-parser/elk"
 	"github.com/robfig/cron"
@@ -18,12 +19,10 @@ const maxSize = 10000
 const pushCron = "0 0 0 * * *"
 
 //InitializeCaches initializes the caches with data from ELK
-func InitializeCaches() {
+func InitializeCaches(c []config.Cache, f func(string, string, string) []base.BufferManager) {
 	Caches = make(map[string]Cache)
 
-	c := config.GetConfig()
-
-	for _, i := range c.Caches {
+	for _, i := range c {
 		log.L.Infof("Initializing cache %v", i.Name)
 		var devs []statedefinition.StaticDevice
 		var rooms []statedefinition.StaticRoom
