@@ -34,6 +34,7 @@ func (r *GenActionJob) Run(input config.JobInputContext, c chan action.Payload) 
 		log.L.Warnf("Couldn't generate action %v:%s", err.Error(), err.Stack)
 		return
 	}
+
 	c <- a
 }
 
