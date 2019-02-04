@@ -113,6 +113,17 @@ func addV2LegacyEvent(context echo.Context) error {
 	}
 	log.L.Debugf("Received event: %+v", event)
 
+	//hack to fix the items destined for static index
+	//that aren't coming in with the right tag
+	if event.Key == "software-version" || event.Key == "hardware-version" || event.Key == "volume" || event.Key == "muted" {
+		event.AddToTags("core-state")
+	}
+
+	if event.Key == "IP Address" {
+		event.Key = "ip-address"
+		event.AddToTags("core-state")
+	}
+
 	jobs.ProcessLegacyV2Event(event)
 	return context.JSON(http.StatusOK, "Success.")
 }

@@ -11,10 +11,7 @@ import (
 	"github.com/byuoitav/state-parser/state/forwarding/managers"
 )
 
-//BufferManager is meant to handle buffering events/updates to the eventual forever home of the information
-type BufferManager interface {
-	Send(toSend interface{}) error
-}
+
 
 //Key is made up of the CacheType-DataType-EventType
 //e.g. default-device-all or legacy-event-all
