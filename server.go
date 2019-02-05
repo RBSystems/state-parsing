@@ -124,6 +124,10 @@ func addV2LegacyEvent(context echo.Context) error {
 		event.AddToTags("core-state")
 	}
 
+	if event.Key == "battery-charge-hours-minutes" && event.Value == "Calc" {
+		return nil
+	}
+
 	jobs.ProcessLegacyV2Event(event)
 	return context.JSON(http.StatusOK, "Success.")
 }
