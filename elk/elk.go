@@ -49,6 +49,8 @@ func MakeGenericELKRequest(addr, method string, body interface{}) ([]byte, *nerr
 		}
 	}
 
+	log.L.Debugf("Elk Body: %s", reqBody)
+
 	// create the request
 	req, err := http.NewRequest(method, addr, bytes.NewReader(reqBody))
 	if err != nil {
